@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
-import { Sun, Moon, Monitor, Database, Shield, Trash2, Gauge, Key, Plus, Copy, X } from "lucide-react";
+import { Sun, Moon, Monitor, Database, Shield, Trash2, Gauge, Key, Plus, Copy, X, Globe } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -166,6 +166,29 @@ export default function SettingsPage() {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium">
+              <Globe className="mr-1 inline h-4 w-4" />
+              {t("language")}
+            </label>
+            <Select
+              value={typeof document !== "undefined" ? (document.cookie.match(/locale=(\w+)/)?.[1] || "en") : "en"}
+              onChange={async (e) => {
+                await fetch("/api/locale", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ locale: e.target.value }),
+                });
+                window.location.reload();
+              }}
+              className="w-auto"
+              aria-label={t("language")}
+            >
+              <option value="en">English</option>
+              <option value="es">Español</option>
+            </Select>
           </div>
         </CardContent>
       </Card>
