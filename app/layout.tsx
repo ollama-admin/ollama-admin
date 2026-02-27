@@ -23,12 +23,15 @@ export default async function RootLayout({
   return (
     <html lang={locale} suppressHydrationWarning>
       <body className="min-h-screen antialiased">
+        <a href="#main-content" className="skip-nav">
+          Skip to main content
+        </a>
         <NextIntlClientProvider messages={messages}>
           <ThemeProvider>
             <ToastProvider>
               <div className="flex h-screen">
                 <Sidebar />
-                <main className="flex-1 overflow-auto pt-14 md:pt-0">{children}</main>
+                <main id="main-content" className="flex-1 overflow-auto pt-14 md:pt-0">{children}</main>
               </div>
             </ToastProvider>
           </ThemeProvider>
