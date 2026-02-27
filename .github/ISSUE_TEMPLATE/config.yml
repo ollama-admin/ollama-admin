@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or discussion
+    url: https://github.com/ollama-tools/ollama-admin/discussions
+    about: For questions and general discussion please use Discussions, not Issues
+  - name: Security vulnerability
+    url: https://github.com/ollama-tools/ollama-admin/security/advisories/new
+    about: Please report security vulnerabilities privately
