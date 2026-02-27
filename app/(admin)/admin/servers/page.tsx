@@ -209,7 +209,7 @@ export default function ServersPage() {
             type="url"
             value={form.gpuAgentUrl}
             onChange={(e) => setForm({ ...form, gpuAgentUrl: e.target.value })}
-            placeholder="http://localhost:9999"
+            placeholder="http://localhost:11435"
           />
           <div className="flex items-center gap-2">
             <input

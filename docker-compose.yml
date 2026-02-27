@@ -33,13 +33,15 @@ services:
   # Then set: DATABASE_URL=postgresql://ollamaadmin:changeme@postgres:5432/ollamaadmin
 
   # Optional: GPU monitoring agent
+  # Uncomment to enable GPU monitoring. Requires NVIDIA Container Toolkit.
+  # Then set GPU Agent URL to http://gpu-agent:11435 in your server config.
   # gpu-agent:
-  #   image: registry.harbor.io/ollama-admin/gpu-agent:latest
+  #   build: ./gpu-agent
   #   runtime: nvidia
   #   environment:
   #     NVIDIA_VISIBLE_DEVICES: all
   #   ports:
-  #     - "9999:9999"
+  #     - "11435:11435"
   #   restart: unless-stopped
 
 volumes:
