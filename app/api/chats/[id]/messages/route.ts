@@ -31,7 +31,12 @@ export async function POST(
     },
   });
 
+  const chatParams = chat.parameters ? JSON.parse(chat.parameters) : {};
+
   const ollamaMessages = [
+    ...(chatParams.systemPrompt
+      ? [{ role: "system" as const, content: chatParams.systemPrompt }]
+      : []),
     ...chat.messages.map((m) => ({
       role: m.role as "user" | "assistant" | "system",
       content: m.content,
@@ -44,6 +49,20 @@ export async function POST(
     },
   ];
 
+  const options: Record<string, unknown> = {};
+  if (chatParams.temperature !== undefined)
+    options.temperature = chatParams.temperature;
+  if (chatParams.topK !== undefined) options.top_k = chatParams.topK;
+  if (chatParams.topP !== undefined) options.top_p = chatParams.topP;
+  if (chatParams.repeatPenalty !== undefined)
+    options.repeat_penalty = chatParams.repeatPenalty;
+  if (chatParams.seed !== undefined) options.seed = chatParams.seed;
+  if (chatParams.numCtx !== undefined) options.num_ctx = chatParams.numCtx;
+  if (chatParams.numPredict !== undefined)
+    options.num_predict = chatParams.numPredict;
+  if (chatParams.stop)
+    options.stop = chatParams.stop.split(",").map((s: string) => s.trim());
+
   const startTime = Date.now();
 
   const ollamaRes = await fetch(`${chat.server.url}/api/chat`, {
@@ -53,6 +72,8 @@ export async function POST(
       model: chat.model,
       messages: ollamaMessages,
       stream: true,
+      ...(Object.keys(options).length > 0 ? { options } : {}),
+      ...(chatParams.keepAlive ? { keep_alive: chatParams.keepAlive } : {}),
     }),
   });
 
