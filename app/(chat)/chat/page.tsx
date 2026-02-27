@@ -302,7 +302,7 @@ export default function ChatPage() {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-auto p-4">
+        <div className="flex-1 overflow-auto p-4" aria-live="polite" aria-relevant="additions">
           {!currentChatId ? (
             <div className="flex h-full items-center justify-center">
               <EmptyState
