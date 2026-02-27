@@ -59,6 +59,13 @@
     "emptyAction": "New Conversation",
     "tokens": "tokens",
     "latency": "latency",
+    "editMessage": "Edit message",
+    "editSend": "Save & resend",
+    "editCancel": "Cancel",
+    "regenerate": "Regenerate response",
+    "exportMarkdown": "Export as Markdown",
+    "exportJson": "Export as JSON",
+    "attachImage": "Attach image",
     "parameters": {
       "title": "Parameters",
       "temperature": "Temperature",
