@@ -223,11 +223,27 @@
   },
   "settings": {
     "title": "Settings",
+    "appearance": "Appearance",
     "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeAuto": "Auto",
     "density": "UI Density",
     "compact": "Compact",
     "normal": "Normal",
     "spacious": "Spacious",
-    "language": "Language"
+    "language": "Language",
+    "loggingPrivacy": "Logging & Privacy",
+    "logRetentionDays": "Log retention (days)",
+    "storePrompts": "Store prompt content",
+    "storePromptsYes": "Yes — store full prompts and responses",
+    "storePromptsNo": "No — store only metadata (tokens, latency)",
+    "saveChanges": "Save Changes",
+    "saved": "Settings saved",
+    "purgeLogs": "Purge Old Logs",
+    "logsPurged": "Old logs deleted",
+    "database": "Database",
+    "connected": "Connected",
+    "databaseType": "SQLite (default)"
   }
 }
