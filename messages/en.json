@@ -258,6 +258,10 @@
     "saved": "Settings saved",
     "purgeLogs": "Purge Old Logs",
     "logsPurged": "Old logs deleted",
+    "rateLimit": "Rate Limiting",
+    "rateLimitMax": "Max requests per window",
+    "rateLimitWindow": "Window size (seconds)",
+    "rateLimitDescription": "Limits apply per IP address to proxy, chat, and compare endpoints.",
     "database": "Database",
     "connected": "Connected",
     "databaseType": "SQLite (default)"
