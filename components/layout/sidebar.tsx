@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback } from "react";
@@ -128,12 +129,15 @@ export function Sidebar() {
 
   const sidebarContent = (
     <>
-      <div className={cn("flex h-14 items-center border-b px-4 font-semibold", collapsed && "justify-center px-2")}>
-        {collapsed ? (
-          <span className="text-lg">O</span>
-        ) : (
-          <span>Ollama Admin</span>
-        )}
+      <div className={cn("flex h-14 items-center gap-2.5 border-b px-4 font-semibold", collapsed && "justify-center px-2")}>
+        <Image
+          src="/logo-32.png"
+          alt="Ollama Admin"
+          width={24}
+          height={24}
+          className="shrink-0 rounded"
+        />
+        {!collapsed && <span>Ollama Admin</span>}
       </div>
 
       <div className="flex items-center justify-end border-b px-2 py-1">
@@ -209,7 +213,10 @@ export function Sidebar() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex h-14 items-center justify-between border-b px-4">
-              <span className="font-semibold">Ollama Admin</span>
+              <div className="flex items-center gap-2.5">
+                <Image src="/logo-32.png" alt="Ollama Admin" width={24} height={24} className="rounded" />
+                <span className="font-semibold">Ollama Admin</span>
+              </div>
               <button
                 onClick={() => setMobileOpen(false)}
                 className="rounded-md p-1 hover:bg-[hsl(var(--accent))]"
