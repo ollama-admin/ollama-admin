@@ -20,6 +20,18 @@ services:
       - ollama-admin-data:/data
     restart: unless-stopped
 
+  # Optional: PostgreSQL (uncomment to use instead of SQLite)
+  # postgres:
+  #   image: postgres:16-alpine
+  #   environment:
+  #     POSTGRES_USER: ollamaadmin
+  #     POSTGRES_PASSWORD: changeme
+  #     POSTGRES_DB: ollamaadmin
+  #   volumes:
+  #     - postgres-data:/var/lib/postgresql/data
+  #   restart: unless-stopped
+  # Then set: DATABASE_URL=postgresql://ollamaadmin:changeme@postgres:5432/ollamaadmin
+
   # Optional: GPU monitoring agent
   # gpu-agent:
   #   image: registry.harbor.io/ollama-admin/gpu-agent:latest
@@ -32,3 +44,4 @@ services:
 
 volumes:
   ollama-admin-data:
+  # postgres-data:
