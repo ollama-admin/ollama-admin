@@ -162,6 +162,23 @@
       "totalTokens": "Total tokens",
       "latency": "Latency",
       "status": "Status"
+    },
+    "metrics": {
+      "title": "Metrics",
+      "dateRange": "Time range",
+      "last7days": "Last 7 days",
+      "last30days": "Last 30 days",
+      "last90days": "Last 90 days",
+      "totalRequests": "Total Requests",
+      "topModel": "Top Model",
+      "avgLatency": "Avg Latency",
+      "errorRate": "Error Rate",
+      "requestsOverTime": "Requests Over Time",
+      "tokensByModel": "Tokens by Model",
+      "avgLatencyByModel": "Avg Latency by Model",
+      "mostUsedModels": "Most Used Models",
+      "emptyTitle": "No metrics yet",
+      "emptyDescription": "Metrics will appear as requests flow through the gateway."
     }
   },
   "setup": {
