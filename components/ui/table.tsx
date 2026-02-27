@@ -1,11 +1,18 @@
 import { forwardRef, type HTMLAttributes, type ThHTMLAttributes, type TdHTMLAttributes } from "react";
 import { cn } from "@/lib/cn";
 
-/** Accessible table wrapper with overflow handling. */
-const Table = forwardRef<HTMLTableElement, HTMLAttributes<HTMLTableElement>>(
-  ({ className, ...props }, ref) => (
+/** Accessible table wrapper with overflow handling and optional caption. */
+interface TableProps extends HTMLAttributes<HTMLTableElement> {
+  caption?: string;
+}
+
+const Table = forwardRef<HTMLTableElement, TableProps>(
+  ({ className, caption, children, ...props }, ref) => (
     <div className="w-full overflow-x-auto">
-      <table ref={ref} className={cn("w-full text-left text-sm", className)} {...props} />
+      <table ref={ref} className={cn("w-full text-left text-sm", className)} {...props}>
+        {caption && <caption className="sr-only">{caption}</caption>}
+        {children}
+      </table>
     </div>
   )
 );

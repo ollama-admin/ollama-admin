@@ -240,14 +240,14 @@ export default function ModelsPage() {
       </div>
 
       {pullStatus && (
-        <div className="mt-2 space-y-1">
+        <div className="mt-2 space-y-1" aria-live="polite">
           <p className="text-sm">{pullStatus}</p>
           {pullProgress !== null && <ProgressBar value={pullProgress} />}
         </div>
       )}
 
       <div className="mt-6">
-        <Table>
+        <Table caption="Installed models">
           <TableHeader>
             <tr>
               <TableHead>{t("name")}</TableHead>

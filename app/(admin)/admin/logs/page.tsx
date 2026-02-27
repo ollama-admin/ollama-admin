@@ -135,7 +135,7 @@ export default function LogsPage() {
       ) : (
         <>
           <div className="mt-6">
-            <Table>
+            <Table caption="API request logs">
               <TableHeader>
                 <tr>
                   <TableHead>{t("timestamp")}</TableHead>
