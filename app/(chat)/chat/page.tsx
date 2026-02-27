@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { EmptyState } from "@/components/ui/empty-state";
+import { TypingIndicator } from "@/components/ui/typing-indicator";
 import { useToast } from "@/components/ui/toast";
 
 interface ChatSummary {
@@ -333,6 +334,13 @@ export default function ChatPage() {
                   </div>
                 </div>
               ))}
+              {streaming && !streamingContent && (
+                <div className="flex justify-start">
+                  <div className="max-w-[80%] rounded-lg bg-[hsl(var(--muted))] px-4 py-3">
+                    <TypingIndicator />
+                  </div>
+                </div>
+              )}
               {streamingContent && (
                 <div className="flex justify-start">
                   <div className="max-w-[80%] rounded-lg bg-[hsl(var(--muted))] px-4 py-2.5">
