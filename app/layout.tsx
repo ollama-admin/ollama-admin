@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { ThemeProvider } from "@/components/providers/theme-provider";
+import { DensityProvider } from "@/components/providers/density-provider";
 import { ToastProvider } from "@/components/ui/toast";
 import { Sidebar } from "@/components/layout/sidebar";
 import "./globals.css";
@@ -32,12 +33,14 @@ export default async function RootLayout({
         </a>
         <NextIntlClientProvider messages={messages}>
           <ThemeProvider>
+            <DensityProvider>
             <ToastProvider>
               <div className="flex h-screen">
                 <Sidebar />
                 <main id="main-content" className="flex-1 overflow-auto pt-14 md:pt-0">{children}</main>
               </div>
             </ToastProvider>
+            </DensityProvider>
           </ThemeProvider>
         </NextIntlClientProvider>
       </body>

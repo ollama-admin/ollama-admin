@@ -23,6 +23,15 @@
     --ring: 217 91% 60%;
     --success: 142 76% 36%;
     --warning: 38 92% 50%;
+
+    --density-spacing-xs: 0.25rem;
+    --density-spacing-sm: 0.5rem;
+    --density-spacing-md: 0.75rem;
+    --density-spacing-lg: 1rem;
+    --density-spacing-xl: 1.5rem;
+    --density-text-sm: 0.8125rem;
+    --density-text-base: 0.875rem;
+    --density-row-height: 2.5rem;
   }
 
   .dark {
