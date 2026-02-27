@@ -30,6 +30,7 @@
     "logs": "Logs",
     "metrics": "Metrics",
     "gpu": "GPU",
+    "alerts": "Alerts",
     "settings": "Settings"
   },
   "dashboard": {
@@ -210,6 +211,30 @@
       "utilization": "GPU Utilization",
       "emptyTitle": "No servers configured",
       "emptyDescription": "Add an Ollama server to monitor GPU usage."
+    },
+    "alerts": {
+      "title": "Alerts",
+      "activeAlerts": "Active Alerts",
+      "allClear": "All alerts clear — no thresholds exceeded.",
+      "createAlert": "Create Alert",
+      "configuredAlerts": "Configured Alerts",
+      "alertType": "Alert type",
+      "thresholdPlaceholder": "Threshold",
+      "threshold": "Threshold",
+      "add": "Add",
+      "created": "Alert created",
+      "deleted": "Alert deleted",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "enable": "Enable",
+      "disable": "Disable",
+      "deleteAlert": "Delete alert",
+      "gpu_temperature": "GPU Temperature",
+      "gpu_vram": "GPU VRAM Usage",
+      "error_rate": "Error Rate",
+      "latency": "Avg Latency",
+      "emptyTitle": "No alerts configured",
+      "emptyDescription": "Create alerts to monitor GPU temperature, VRAM usage, error rates, and latency."
     }
   },
   "setup": {
