@@ -90,6 +90,16 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streamingContent]);
 
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (input.trim() || streaming) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [input, streaming]);
+
   const loadChat = async (id: string) => {
     const res = await fetch(`/api/chats/${id}`);
     const data = await res.json();
@@ -380,6 +390,9 @@ export default function ChatPage() {
                 </Button>
               )}
             </div>
+            <p className="mt-1 text-center text-xs text-[hsl(var(--muted-foreground))]">
+              Press <kbd className="rounded border px-1 py-0.5 text-[10px]">Ctrl</kbd>+<kbd className="rounded border px-1 py-0.5 text-[10px]">Enter</kbd> to send
+            </p>
           </div>
         )}
       </div>
