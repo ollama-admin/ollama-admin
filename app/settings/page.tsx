@@ -1,11 +1,16 @@
-import { useTranslations } from "next-intl";
+import { Settings } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export default function SettingsPage() {
-  const t = useTranslations("settings");
-
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold">{t("title")}</h1>
+      <h1 className="text-2xl font-bold">Settings</h1>
+      <EmptyState
+        icon={Settings}
+        title="Coming soon"
+        description="Application preferences, authentication settings, and log retention configuration will be available in a future release."
+        className="mt-12"
+      />
     </div>
   );
 }
