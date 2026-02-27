@@ -4,6 +4,11 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { MessageSquare, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { EmptyState } from "@/components/ui/empty-state";
+import { useToast } from "@/components/ui/toast";
 
 interface ChatSummary {
   id: string;
@@ -34,6 +39,7 @@ interface OllamaModel {
 export default function ChatPage() {
   const t = useTranslations("chat");
   const router = useRouter();
+  const { toast } = useToast();
   const [chats, setChats] = useState<ChatSummary[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [servers, setServers] = useState<Server[]>([]);
@@ -95,18 +101,22 @@ export default function ChatPage() {
   const createNewChat = async () => {
     if (!selectedServer || !selectedModel) return;
 
-    const res = await fetch("/api/chats", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: selectedModel,
-        serverId: selectedServer,
-      }),
-    });
-    const chat = await res.json();
-    setCurrentChatId(chat.id);
-    setMessages([]);
-    fetchChats();
+    try {
+      const res = await fetch("/api/chats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: selectedModel,
+          serverId: selectedServer,
+        }),
+      });
+      const chat = await res.json();
+      setCurrentChatId(chat.id);
+      setMessages([]);
+      fetchChats();
+    } catch {
+      toast("Error creating conversation", "error");
+    }
   };
 
   const sendMessage = async () => {
@@ -195,12 +205,17 @@ export default function ChatPage() {
   };
 
   const deleteChat = async (id: string) => {
-    await fetch(`/api/chats/${id}`, { method: "DELETE" });
-    if (currentChatId === id) {
-      setCurrentChatId(null);
-      setMessages([]);
+    try {
+      await fetch(`/api/chats/${id}`, { method: "DELETE" });
+      if (currentChatId === id) {
+        setCurrentChatId(null);
+        setMessages([]);
+      }
+      fetchChats();
+      toast("Conversation deleted", "success");
+    } catch {
+      toast("Error deleting conversation", "error");
     }
-    fetchChats();
   };
 
   return (
@@ -208,21 +223,20 @@ export default function ChatPage() {
       {/* Chat sidebar */}
       <div className="flex w-64 flex-col border-r">
         <div className="border-b p-3">
-          <button
+          <Button
             onClick={createNewChat}
             disabled={!selectedServer || !selectedModel}
-            className="w-full rounded-md bg-[hsl(var(--primary))] px-3 py-2 text-sm text-[hsl(var(--primary-foreground))] disabled:opacity-50"
+            className="w-full"
           >
             {t("newConversation")}
-          </button>
+          </Button>
         </div>
         <div className="border-b p-2">
-          <input
-            type="text"
+          <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t("searchConversations")}
-            className="w-full rounded-md border bg-transparent px-2 py-1.5 text-xs"
+            className="h-8 text-xs"
           />
         </div>
         <div className="flex-1 overflow-auto">
@@ -230,7 +244,7 @@ export default function ChatPage() {
             <div
               key={chat.id}
               onClick={() => loadChat(chat.id)}
-              className={`group flex cursor-pointer items-center justify-between border-b px-3 py-2.5 text-sm hover:bg-[hsl(var(--accent))] ${
+              className={`group flex cursor-pointer items-center justify-between border-b px-3 py-2.5 text-sm transition-colors hover:bg-[hsl(var(--accent))] ${
                 currentChatId === chat.id ? "bg-[hsl(var(--accent))]" : ""
               }`}
             >
@@ -245,9 +259,10 @@ export default function ChatPage() {
                   e.stopPropagation();
                   deleteChat(chat.id);
                 }}
-                className="ml-2 hidden text-xs text-[hsl(var(--destructive))] group-hover:block"
+                className="ml-2 hidden rounded p-0.5 text-[hsl(var(--destructive))] hover:bg-[hsl(var(--accent))] group-hover:block"
+                aria-label="Delete conversation"
               >
-<X className="h-3.5 w-3.5" />
+                <X className="h-3.5 w-3.5" />
               </button>
             </div>
           ))}
@@ -263,39 +278,37 @@ export default function ChatPage() {
       <div className="flex flex-1 flex-col">
         {/* Top bar */}
         <div className="flex items-center gap-3 border-b px-4 py-2">
-          <select
+          <Select
             value={selectedServer}
             onChange={(e) => setSelectedServer(e.target.value)}
-            className="rounded-md border bg-transparent px-2 py-1.5 text-sm"
+            className="w-auto"
             aria-label={t("selectServer")}
           >
             {servers.map((s) => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
-          </select>
-          <select
+          </Select>
+          <Select
             value={selectedModel}
             onChange={(e) => setSelectedModel(e.target.value)}
-            className="rounded-md border bg-transparent px-2 py-1.5 text-sm"
+            className="w-auto"
             aria-label={t("selectModel")}
           >
             {models.map((m) => (
               <option key={m.name} value={m.name}>{m.name}</option>
             ))}
-          </select>
+          </Select>
         </div>
 
         {/* Messages */}
         <div className="flex-1 overflow-auto p-4">
           {!currentChatId ? (
-            <div className="flex h-full items-center justify-center text-center">
-              <div>
-                <MessageSquare className="mx-auto h-12 w-12 text-[hsl(var(--muted-foreground))]" />
-                <h2 className="mt-4 text-xl font-semibold">{t("emptyTitle")}</h2>
-                <p className="mt-2 text-[hsl(var(--muted-foreground))]">
-                  {t("emptyDescription")}
-                </p>
-              </div>
+            <div className="flex h-full items-center justify-center">
+              <EmptyState
+                icon={MessageSquare}
+                title={t("emptyTitle")}
+                description={t("emptyDescription")}
+              />
             </div>
           ) : (
             <div className="mx-auto max-w-3xl space-y-4">
@@ -347,23 +360,16 @@ export default function ChatPage() {
                 }}
                 placeholder={t("typeMessage")}
                 rows={1}
-                className="flex-1 resize-none rounded-md border bg-transparent px-3 py-2 text-sm"
+                className="flex-1 resize-none rounded-md border bg-transparent px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
               />
               {streaming ? (
-                <button
-                  onClick={stopGeneration}
-                  className="rounded-md border border-[hsl(var(--destructive))] px-4 py-2 text-sm text-[hsl(var(--destructive))]"
-                >
+                <Button variant="destructive" onClick={stopGeneration}>
                   {t("stopGeneration")}
-                </button>
+                </Button>
               ) : (
-                <button
-                  onClick={sendMessage}
-                  disabled={!input.trim()}
-                  className="rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm text-[hsl(var(--primary-foreground))] disabled:opacity-50"
-                >
+                <Button onClick={sendMessage} disabled={!input.trim()}>
                   {t("sendMessage")}
-                </button>
+                </Button>
               )}
             </div>
           </div>

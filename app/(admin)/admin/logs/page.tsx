@@ -3,6 +3,14 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback } from "react";
 import { ClipboardList } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { useToast } from "@/components/ui/toast";
 
 interface LogEntry {
   id: string;
@@ -26,7 +34,7 @@ interface Server {
 
 export default function LogsPage() {
   const t = useTranslations("admin.logs");
-  const tc = useTranslations("common");
+  const { toast } = useToast();
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -67,6 +75,7 @@ export default function LogsPage() {
     const params = new URLSearchParams({ format });
     if (filterServer) params.set("serverId", filterServer);
     window.open(`/api/logs/export?${params}`, "_blank");
+    toast("Export downloaded", "success");
   };
 
   return (
@@ -74,105 +83,92 @@ export default function LogsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">{t("title")}</h1>
         <div className="flex gap-2">
-          <button
-            onClick={() => handleExport("csv")}
-            className="rounded-md border px-3 py-1.5 text-xs hover:bg-[hsl(var(--accent))]"
-          >
+          <Button variant="secondary" size="sm" onClick={() => handleExport("csv")}>
             {t("exportCsv")}
-          </button>
-          <button
-            onClick={() => handleExport("json")}
-            className="rounded-md border px-3 py-1.5 text-xs hover:bg-[hsl(var(--accent))]"
-          >
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => handleExport("json")}>
             {t("exportJson")}
-          </button>
+          </Button>
         </div>
       </div>
 
       <div className="mt-4 flex flex-wrap gap-3">
-        <select
+        <Select
           value={filterServer}
           onChange={(e) => { setFilterServer(e.target.value); setPage(1); }}
-          className="rounded-md border bg-transparent px-3 py-2 text-sm"
+          className="w-auto"
         >
           <option value="">{t("filterByServer")}</option>
           {servers.map((s) => (
             <option key={s.id} value={s.id}>{s.name}</option>
           ))}
-        </select>
-        <input
-          type="text"
+        </Select>
+        <Input
           value={filterModel}
           onChange={(e) => { setFilterModel(e.target.value); setPage(1); }}
           placeholder={t("filterByModel")}
-          className="rounded-md border bg-transparent px-3 py-2 text-sm"
+          className="w-auto"
         />
-        <select
+        <Select
           value={filterStatus}
           onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
-          className="rounded-md border bg-transparent px-3 py-2 text-sm"
+          className="w-auto"
         >
           <option value="">{t("filterByStatus")}</option>
           <option value="success">Success (2xx)</option>
           <option value="error">Error (4xx/5xx)</option>
-        </select>
+        </Select>
       </div>
 
       {loading ? (
         <div className="mt-6 space-y-3">
           {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-10 animate-pulse rounded bg-[hsl(var(--muted))]" />
+            <Skeleton key={i} variant="row" />
           ))}
         </div>
       ) : logs.length === 0 ? (
-        <div className="mt-12 flex flex-col items-center text-center">
-          <ClipboardList className="mx-auto h-12 w-12 text-[hsl(var(--muted-foreground))]" />
-          <h2 className="mt-4 text-xl font-semibold">{t("emptyTitle")}</h2>
-          <p className="mt-2 text-[hsl(var(--muted-foreground))]">{t("emptyDescription")}</p>
-        </div>
+        <EmptyState
+          icon={ClipboardList}
+          title={t("emptyTitle")}
+          description={t("emptyDescription")}
+        />
       ) : (
         <>
-          <div className="mt-6 overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="border-b text-[hsl(var(--muted-foreground))]">
-                  <th className="pb-2 font-medium">{t("timestamp")}</th>
-                  <th className="pb-2 font-medium">{t("server")}</th>
-                  <th className="pb-2 font-medium">{t("model")}</th>
-                  <th className="pb-2 font-medium">{t("endpoint")}</th>
-                  <th className="pb-2 font-medium">{t("promptTokens")}</th>
-                  <th className="pb-2 font-medium">{t("completionTokens")}</th>
-                  <th className="pb-2 font-medium">{t("latency")}</th>
-                  <th className="pb-2 font-medium">{t("status")}</th>
+          <div className="mt-6">
+            <Table>
+              <TableHeader>
+                <tr>
+                  <TableHead>{t("timestamp")}</TableHead>
+                  <TableHead>{t("server")}</TableHead>
+                  <TableHead>{t("model")}</TableHead>
+                  <TableHead>{t("endpoint")}</TableHead>
+                  <TableHead>{t("promptTokens")}</TableHead>
+                  <TableHead>{t("completionTokens")}</TableHead>
+                  <TableHead>{t("latency")}</TableHead>
+                  <TableHead>{t("status")}</TableHead>
                 </tr>
-              </thead>
-              <tbody>
+              </TableHeader>
+              <TableBody>
                 {logs.map((log) => (
-                  <tr key={log.id} className="border-b">
-                    <td className="py-2 text-xs">
+                  <TableRow key={log.id}>
+                    <TableCell className="text-xs">
                       {new Date(log.createdAt).toLocaleString()}
-                    </td>
-                    <td className="py-2">{log.server.name}</td>
-                    <td className="py-2">{log.model}</td>
-                    <td className="py-2 font-mono text-xs">{log.endpoint}</td>
-                    <td className="py-2">{log.promptTokens ?? "—"}</td>
-                    <td className="py-2">{log.completionTokens ?? "—"}</td>
-                    <td className="py-2">{log.latencyMs}ms</td>
-                    <td className="py-2">
-                      <span
-                        className={`rounded px-1.5 py-0.5 text-xs ${
-                          log.statusCode < 400
-                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-                            : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
-                        }`}
-                      >
+                    </TableCell>
+                    <TableCell>{log.server.name}</TableCell>
+                    <TableCell>{log.model}</TableCell>
+                    <TableCell className="font-mono text-xs">{log.endpoint}</TableCell>
+                    <TableCell>{log.promptTokens ?? "—"}</TableCell>
+                    <TableCell>{log.completionTokens ?? "—"}</TableCell>
+                    <TableCell>{log.latencyMs}ms</TableCell>
+                    <TableCell>
+                      <Badge variant={log.statusCode < 400 ? "success" : "destructive"}>
                         {log.statusCode}
-                      </span>
-                    </td>
-                  </tr>
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
 
           <div className="mt-4 flex items-center justify-between text-sm">
@@ -180,21 +176,23 @@ export default function LogsPage() {
               {total} total entries
             </span>
             <div className="flex gap-2">
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="rounded-md border px-3 py-1 disabled:opacity-50"
               >
                 Previous
-              </button>
-              <span className="px-2 py-1">Page {page}</span>
-              <button
+              </Button>
+              <span className="flex items-center px-2">Page {page}</span>
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={() => setPage((p) => p + 1)}
                 disabled={logs.length < 50}
-                className="rounded-md border px-3 py-1 disabled:opacity-50"
               >
                 Next
-              </button>
+              </Button>
             </div>
           </div>
         </>
