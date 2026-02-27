@@ -23,6 +23,7 @@
   "sidebar": {
     "dashboard": "Dashboard",
     "chat": "Chat",
+    "compare": "Compare",
     "discover": "Discover",
     "models": "Models",
     "servers": "Servers",
@@ -92,6 +93,21 @@
       "deletePreset": "Delete preset {name}",
       "namePlaceholder": "Preset name..."
     }
+  },
+  "compare": {
+    "title": "Compare Models",
+    "modelA": "Model A",
+    "modelB": "Model B",
+    "selectServerA": "Select server for model A",
+    "selectServerB": "Select server for model B",
+    "selectModelA": "Select model A",
+    "selectModelB": "Select model B",
+    "promptPlaceholder": "Enter a prompt to compare both models...",
+    "compare": "Compare",
+    "stop": "Stop",
+    "tokens": "tokens",
+    "emptyTitle": "Compare models side by side",
+    "emptyDescription": "Select two models and enter a prompt to see their responses side by side."
   },
   "discover": {
     "title": "Discover Models",

@@ -8,6 +8,7 @@ import { useEffect, useState, useCallback } from "react";
 import {
   LayoutDashboard,
   MessageSquare,
+  GitCompareArrows,
   Search,
   Package,
   Server,
@@ -42,6 +43,7 @@ const navGroups: NavGroup[] = [
     items: [
       { href: "/", label: "dashboard", icon: LayoutDashboard },
       { href: "/chat", label: "chat", icon: MessageSquare },
+      { href: "/compare", label: "compare", icon: GitCompareArrows },
       { href: "/discover", label: "discover", icon: Search },
     ],
   },
