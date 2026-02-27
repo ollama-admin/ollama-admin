@@ -19,14 +19,15 @@ model Server {
 }
 
 model Chat {
-  id        String    @id @default(cuid())
-  title     String
-  model     String
-  serverId  String
-  server    Server    @relation(fields: [serverId], references: [id])
-  messages  Message[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id         String    @id @default(cuid())
+  title      String
+  model      String
+  serverId   String
+  server     Server    @relation(fields: [serverId], references: [id])
+  messages   Message[]
+  parameters String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 }
 
 model Message {

@@ -10,6 +10,10 @@ import { Select } from "@/components/ui/select";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TypingIndicator } from "@/components/ui/typing-indicator";
 import { useToast } from "@/components/ui/toast";
+import {
+  ChatParametersPanel,
+  type ChatParameters,
+} from "@/components/chat/chat-parameters";
 
 interface ChatSummary {
   id: string;
@@ -52,6 +56,7 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
+  const [chatParameters, setChatParameters] = useState<ChatParameters>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
@@ -107,6 +112,7 @@ export default function ChatPage() {
     setMessages(data.messages || []);
     setSelectedModel(data.model);
     setSelectedServer(data.serverId);
+    setChatParameters(data.parameters ? JSON.parse(data.parameters) : {});
   };
 
   const createNewChat = async () => {
@@ -124,9 +130,21 @@ export default function ChatPage() {
       const chat = await res.json();
       setCurrentChatId(chat.id);
       setMessages([]);
+      setChatParameters({});
       fetchChats();
     } catch {
       toast("Error creating conversation", "error");
+    }
+  };
+
+  const updateParameters = async (params: ChatParameters) => {
+    setChatParameters(params);
+    if (currentChatId) {
+      await fetch(`/api/chats/${currentChatId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ parameters: params }),
+      });
     }
   };
 
@@ -310,6 +328,13 @@ export default function ChatPage() {
             ))}
           </Select>
         </div>
+
+        {currentChatId && (
+          <ChatParametersPanel
+            parameters={chatParameters}
+            onChange={updateParameters}
+          />
+        )}
 
         {/* Messages */}
         <div className="flex-1 overflow-auto p-4" aria-live="polite" aria-relevant="additions">

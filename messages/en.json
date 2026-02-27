@@ -58,7 +58,23 @@
     "emptyDescription": "Start your first conversation with an AI model.",
     "emptyAction": "New Conversation",
     "tokens": "tokens",
-    "latency": "latency"
+    "latency": "latency",
+    "parameters": {
+      "title": "Parameters",
+      "temperature": "Temperature",
+      "topK": "Top K",
+      "topP": "Top P",
+      "repeatPenalty": "Repeat Penalty",
+      "seed": "Seed",
+      "numCtx": "Context Length",
+      "numPredict": "Max Tokens",
+      "stop": "Stop Sequences",
+      "stopPlaceholder": "Comma-separated",
+      "keepAlive": "Keep Alive",
+      "systemPrompt": "System Prompt",
+      "systemPromptPlaceholder": "Custom instructions for the model...",
+      "reset": "Reset"
+    }
   },
   "discover": {
     "title": "Discover Models",
