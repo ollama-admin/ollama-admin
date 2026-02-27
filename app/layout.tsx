@@ -10,6 +10,10 @@ export const metadata: Metadata = {
   title: "Ollama Admin",
   description:
     "Administration panel, chat client, and observability gateway for Ollama",
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default async function RootLayout({
