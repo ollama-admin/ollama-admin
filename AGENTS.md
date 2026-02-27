@@ -121,23 +121,25 @@ Create the branch from the latest `main` before starting work.
 
 ### Commits
 
-- **Commit early, commit often.** Make small, incremental commits as you complete each piece of work — a new component, a utility function, a route handler, a test file. Do not accumulate large changes into a single commit.
+Each development phase is broken into numbered subfases (e.g., 1.1, 1.2, ... 1.12). **Make one commit per subfase as you complete it.** Do not accumulate multiple subfases into a single commit, and do not wait until the end of the phase to commit everything at once.
+
+- Prefix commit messages with the subfase number: `1.3 Server management: CRUD API, health check, UI`
 - **Do not add Co-Authored-By or Signed-off-by trailers** to commit messages.
 - Write clear, concise commit messages in English
-- One logical change per commit
+- One subfase per commit — each commit should be a logically complete piece of work
 - Do not commit `.env`, credentials, or secrets
 - **Never commit `PRD.md`, `PRP.md`, or any product/planning documents.** These are internal reference files and must stay out of version control. Always check staged files before committing.
 
 ### Pull Requests
 
-When the feature or fix is complete (code + tests passing):
+**Create one Pull Request per phase**, after all subfases are committed and tests pass:
 
 1. Push the branch to the remote
 2. Create a Pull Request against `main`
-3. PR title: short and descriptive (under 70 characters)
+3. PR title: short and descriptive (under 70 characters), e.g., `Phase 1 MVP: Full scaffold with all core features`
 4. PR body must include:
    - **Summary**: what was added/changed and why
-   - **What's new**: bullet list of concrete additions (new pages, API routes, components, etc.)
+   - **What's new**: bullet list of concrete additions per subfase (new pages, API routes, components, etc.)
    - **Test plan**: how to verify the changes work
 5. Do not merge your own PR without review — leave it open for approval
 
