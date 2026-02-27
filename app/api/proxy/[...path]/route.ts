@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withRateLimit } from "@/lib/with-rate-limit";
 
 async function proxyToOllama(req: NextRequest) {
   const path = req.nextUrl.pathname.replace("/api/proxy", "");
@@ -85,7 +86,7 @@ async function proxyToOllama(req: NextRequest) {
   }
 }
 
-export const GET = proxyToOllama;
-export const POST = proxyToOllama;
-export const PUT = proxyToOllama;
-export const DELETE = proxyToOllama;
+export const GET = withRateLimit(proxyToOllama);
+export const POST = withRateLimit(proxyToOllama);
+export const PUT = withRateLimit(proxyToOllama);
+export const DELETE = withRateLimit(proxyToOllama);

@@ -1,7 +1,24 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { getRateLimitKey } from "@/lib/with-rate-limit";
 
 export async function POST(req: NextRequest) {
+  const rlKey = getRateLimitKey(req);
+  const rl = checkRateLimit(rlKey);
+  if (!rl.allowed) {
+    return new Response(
+      JSON.stringify({ error: "Too many requests. Please try again later." }),
+      {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          "Retry-After": String(Math.ceil(rl.resetMs / 1000)),
+        },
+      }
+    );
+  }
+
   const { prompt, serverIdA, modelA, serverIdB, modelB, parameters } =
     await req.json();
 

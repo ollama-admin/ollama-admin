@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
-import { Sun, Moon, Monitor, Database, Shield, Trash2 } from "lucide-react";
+import { Sun, Moon, Monitor, Database, Shield, Trash2, Gauge } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,8 @@ export default function SettingsPage() {
 
   const [logRetentionDays, setLogRetentionDays] = useState("90");
   const [logStorePrompts, setLogStorePrompts] = useState("true");
+  const [rateLimitMax, setRateLimitMax] = useState("60");
+  const [rateLimitWindow, setRateLimitWindow] = useState("60");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -29,6 +31,8 @@ export default function SettingsPage() {
       .then((data) => {
         if (data.logRetentionDays) setLogRetentionDays(data.logRetentionDays);
         if (data.logStorePrompts) setLogStorePrompts(data.logStorePrompts);
+        if (data.rateLimitMax) setRateLimitMax(data.rateLimitMax);
+        if (data.rateLimitWindow) setRateLimitWindow(data.rateLimitWindow);
       });
   }, []);
 
@@ -36,7 +40,7 @@ export default function SettingsPage() {
     await fetch("/api/settings", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ logRetentionDays, logStorePrompts }),
+      body: JSON.stringify({ logRetentionDays, logStorePrompts, rateLimitMax, rateLimitWindow }),
     });
     toast(t("saved"), "success");
   };
@@ -148,6 +152,34 @@ export default function SettingsPage() {
               {t("purgeLogs")}
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Gauge className="h-5 w-5" />
+            {t("rateLimit")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Input
+            label={t("rateLimitMax")}
+            type="number"
+            min={1}
+            value={rateLimitMax}
+            onChange={(e) => setRateLimitMax(e.target.value)}
+          />
+          <Input
+            label={t("rateLimitWindow")}
+            type="number"
+            min={1}
+            value={rateLimitWindow}
+            onChange={(e) => setRateLimitWindow(e.target.value)}
+          />
+          <p className="text-xs text-[hsl(var(--muted-foreground))]">
+            {t("rateLimitDescription")}
+          </p>
         </CardContent>
       </Card>
 
