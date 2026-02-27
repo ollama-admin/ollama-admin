@@ -74,6 +74,16 @@
       "systemPrompt": "System Prompt",
       "systemPromptPlaceholder": "Custom instructions for the model...",
       "reset": "Reset"
+    },
+    "presets": {
+      "save": "Save preset",
+      "saved": "Preset saved",
+      "saveError": "Error saving preset",
+      "loaded": "Preset \"{name}\" applied",
+      "deleted": "Preset deleted",
+      "deleteError": "Error deleting preset",
+      "deletePreset": "Delete preset {name}",
+      "namePlaceholder": "Preset name..."
     }
   },
   "discover": {
