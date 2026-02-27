@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback } from "react";
+import { Server as ServerIcon } from "lucide-react";
 
 interface Server {
   id: string;
@@ -136,7 +137,7 @@ export default function ServersPage() {
   if (servers.length === 0 && !showForm) {
     return (
       <div className="flex flex-col items-center justify-center p-12 text-center">
-        <div className="text-5xl">🖥</div>
+        <ServerIcon className="mx-auto h-12 w-12 text-[hsl(var(--muted-foreground))]" />
         <h2 className="mt-4 text-xl font-semibold">{t("emptyTitle")}</h2>
         <p className="mt-2 text-[hsl(var(--muted-foreground))]">
           {t("emptyDescription")}

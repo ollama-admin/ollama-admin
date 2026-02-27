@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { Search } from "lucide-react";
 
 interface CatalogModel {
   id: string;
@@ -147,7 +148,7 @@ export default function DiscoverPage() {
         </div>
       ) : models.length === 0 ? (
         <div className="mt-12 flex flex-col items-center text-center">
-          <div className="text-5xl">🔍</div>
+          <Search className="mx-auto h-12 w-12 text-[hsl(var(--muted-foreground))]" />
           <h2 className="mt-4 text-xl font-semibold">{t("emptyTitle")}</h2>
           <p className="mt-2 text-[hsl(var(--muted-foreground))]">{t("emptyDescription")}</p>
         </div>

@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback } from "react";
 import type { OllamaModel, OllamaRunningModel, OllamaShowResponse } from "@/lib/ollama";
+import { Package } from "lucide-react";
 
 interface Server {
   id: string;
@@ -173,7 +174,7 @@ export default function ModelsPage() {
           </select>
         )}
         <div className="mt-12 flex flex-col items-center text-center">
-          <div className="text-5xl">📦</div>
+          <Package className="mx-auto h-12 w-12 text-[hsl(var(--muted-foreground))]" />
           <h2 className="mt-4 text-xl font-semibold">{t("emptyTitle")}</h2>
           <p className="mt-2 text-[hsl(var(--muted-foreground))]">{t("emptyDescription")}</p>
           <a

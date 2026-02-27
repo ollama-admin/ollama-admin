@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback } from "react";
+import { ClipboardList } from "lucide-react";
 
 interface LogEntry {
   id: string;
@@ -125,7 +126,7 @@ export default function LogsPage() {
         </div>
       ) : logs.length === 0 ? (
         <div className="mt-12 flex flex-col items-center text-center">
-          <div className="text-5xl">📋</div>
+          <ClipboardList className="mx-auto h-12 w-12 text-[hsl(var(--muted-foreground))]" />
           <h2 className="mt-4 text-xl font-semibold">{t("emptyTitle")}</h2>
           <p className="mt-2 text-[hsl(var(--muted-foreground))]">{t("emptyDescription")}</p>
         </div>

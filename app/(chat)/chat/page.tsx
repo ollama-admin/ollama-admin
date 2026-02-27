@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { MessageSquare, X } from "lucide-react";
 
 interface ChatSummary {
   id: string;
@@ -246,7 +247,7 @@ export default function ChatPage() {
                 }}
                 className="ml-2 hidden text-xs text-[hsl(var(--destructive))] group-hover:block"
               >
-                ✕
+<X className="h-3.5 w-3.5" />
               </button>
             </div>
           ))}
@@ -289,7 +290,7 @@ export default function ChatPage() {
           {!currentChatId ? (
             <div className="flex h-full items-center justify-center text-center">
               <div>
-                <div className="text-5xl">💬</div>
+                <MessageSquare className="mx-auto h-12 w-12 text-[hsl(var(--muted-foreground))]" />
                 <h2 className="mt-4 text-xl font-semibold">{t("emptyTitle")}</h2>
                 <p className="mt-2 text-[hsl(var(--muted-foreground))]">
                   {t("emptyDescription")}
