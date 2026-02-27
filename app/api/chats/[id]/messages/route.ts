@@ -1,53 +1,19 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { id: string } }
+function buildOllamaRequest(
+  chat: {
+    model: string;
+    parameters: string | null;
+    server: { url: string };
+  },
+  ollamaMessages: Array<{ role: string; content: string; images?: string[] }>
 ) {
-  const { content, images } = await req.json();
-
-  const chat = await prisma.chat.findUnique({
-    where: { id: params.id },
-    include: {
-      messages: { orderBy: { createdAt: "asc" } },
-      server: true,
-    },
-  });
-
-  if (!chat) {
-    return new Response(JSON.stringify({ error: "Chat not found" }), {
-      status: 404,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
-  await prisma.message.create({
-    data: {
-      chatId: chat.id,
-      role: "user",
-      content,
-      images: images ? JSON.stringify(images) : null,
-    },
-  });
-
   const chatParams = chat.parameters ? JSON.parse(chat.parameters) : {};
 
-  const ollamaMessages = [
-    ...(chatParams.systemPrompt
-      ? [{ role: "system" as const, content: chatParams.systemPrompt }]
-      : []),
-    ...chat.messages.map((m) => ({
-      role: m.role as "user" | "assistant" | "system",
-      content: m.content,
-      ...(m.images ? { images: JSON.parse(m.images) } : {}),
-    })),
-    {
-      role: "user" as const,
-      content,
-      ...(images ? { images } : {}),
-    },
-  ];
+  const messages = chatParams.systemPrompt
+    ? [{ role: "system", content: chatParams.systemPrompt }, ...ollamaMessages]
+    : ollamaMessages;
 
   const options: Record<string, unknown> = {};
   if (chatParams.temperature !== undefined)
@@ -63,35 +29,32 @@ export async function POST(
   if (chatParams.stop)
     options.stop = chatParams.stop.split(",").map((s: string) => s.trim());
 
-  const startTime = Date.now();
-
-  const ollamaRes = await fetch(`${chat.server.url}/api/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  return {
+    url: `${chat.server.url}/api/chat`,
+    body: {
       model: chat.model,
-      messages: ollamaMessages,
+      messages,
       stream: true,
       ...(Object.keys(options).length > 0 ? { options } : {}),
       ...(chatParams.keepAlive ? { keep_alive: chatParams.keepAlive } : {}),
-    }),
-  });
+    },
+  };
+}
 
-  if (!ollamaRes.ok || !ollamaRes.body) {
-    return new Response(
-      JSON.stringify({ error: `Ollama error: ${ollamaRes.statusText}` }),
-      { status: 502, headers: { "Content-Type": "application/json" } }
-    );
-  }
-
-  const reader = ollamaRes.body.getReader();
+function createSSEStream(
+  ollamaRes: Response,
+  chat: { id: string; title: string; server: { id: string }; model: string },
+  startTime: number,
+  content: string
+) {
+  const reader = ollamaRes.body!.getReader();
   const decoder = new TextDecoder();
 
   let fullContent = "";
   let promptTokens = 0;
   let completionTokens = 0;
 
-  const stream = new ReadableStream({
+  return new ReadableStream({
     async start(controller) {
       let buffer = "";
 
@@ -105,7 +68,6 @@ export async function POST(
 
         for (const line of lines) {
           if (!line.trim()) continue;
-
           try {
             const json = JSON.parse(line);
             if (json.message?.content) {
@@ -115,7 +77,6 @@ export async function POST(
               promptTokens = json.prompt_eval_count || 0;
               completionTokens = json.eval_count || 0;
             }
-
             controller.enqueue(
               new TextEncoder().encode(`data: ${line}\n\n`)
             );
@@ -150,8 +111,7 @@ export async function POST(
         },
       });
 
-      const titleNeedsUpdate = chat.title === "New Conversation" && content;
-      if (titleNeedsUpdate) {
+      if (chat.title === "New Conversation" && content) {
         await prisma.chat.update({
           where: { id: chat.id },
           data: { title: content.slice(0, 50) },
@@ -166,6 +126,105 @@ export async function POST(
       controller.close();
     },
   });
+}
+
+export async function POST(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const { content, images, regenerate, editMessageId } = await req.json();
+
+  const chat = await prisma.chat.findUnique({
+    where: { id: params.id },
+    include: {
+      messages: { orderBy: { createdAt: "asc" } },
+      server: true,
+    },
+  });
+
+  if (!chat) {
+    return new Response(JSON.stringify({ error: "Chat not found" }), {
+      status: 404,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  let finalMessages = chat.messages;
+  let userContent = content;
+
+  if (regenerate) {
+    const lastAssistant = [...chat.messages]
+      .reverse()
+      .find((m) => m.role === "assistant");
+    if (lastAssistant) {
+      await prisma.message.delete({ where: { id: lastAssistant.id } });
+      finalMessages = chat.messages.filter((m) => m.id !== lastAssistant.id);
+    }
+    const lastUser = [...finalMessages].reverse().find((m) => m.role === "user");
+    userContent = lastUser?.content || "";
+  } else if (editMessageId) {
+    const editIndex = chat.messages.findIndex((m) => m.id === editMessageId);
+    if (editIndex >= 0) {
+      const idsToDelete = chat.messages.slice(editIndex).map((m) => m.id);
+      await prisma.message.deleteMany({
+        where: { id: { in: idsToDelete } },
+      });
+      finalMessages = chat.messages.slice(0, editIndex);
+    }
+
+    await prisma.message.create({
+      data: {
+        chatId: chat.id,
+        role: "user",
+        content,
+        images: images ? JSON.stringify(images) : null,
+      },
+    });
+  } else {
+    await prisma.message.create({
+      data: {
+        chatId: chat.id,
+        role: "user",
+        content,
+        images: images ? JSON.stringify(images) : null,
+      },
+    });
+  }
+
+  const ollamaMessages = [
+    ...finalMessages.map((m) => ({
+      role: m.role as "user" | "assistant" | "system",
+      content: m.content,
+      ...(m.images ? { images: JSON.parse(m.images) } : {}),
+    })),
+    ...(regenerate
+      ? []
+      : [
+          {
+            role: "user" as const,
+            content: userContent,
+            ...(images ? { images } : {}),
+          },
+        ]),
+  ];
+
+  const startTime = Date.now();
+  const { url, body } = buildOllamaRequest(chat, ollamaMessages);
+
+  const ollamaRes = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!ollamaRes.ok || !ollamaRes.body) {
+    return new Response(
+      JSON.stringify({ error: `Ollama error: ${ollamaRes.statusText}` }),
+      { status: 502, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  const stream = createSSEStream(ollamaRes, chat, startTime, userContent);
 
   return new Response(stream, {
     headers: {
