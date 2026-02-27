@@ -81,6 +81,14 @@ model CatalogModel {
   cachedAt    DateTime  @default(now())
 }
 
+model Alert {
+  id        String   @id @default(cuid())
+  type      String
+  threshold Float
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
 model ApiKey {
   id        String    @id @default(cuid())
   name      String
