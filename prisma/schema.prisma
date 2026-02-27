@@ -81,6 +81,15 @@ model CatalogModel {
   cachedAt    DateTime  @default(now())
 }
 
+model ApiKey {
+  id        String    @id @default(cuid())
+  name      String
+  key       String    @unique
+  lastUsed  DateTime?
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+}
+
 model Settings {
   key   String @id
   value String
