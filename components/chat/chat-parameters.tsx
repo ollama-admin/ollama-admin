@@ -179,7 +179,7 @@ export function ChatParametersPanel({
                   className="h-6 w-28 rounded border bg-transparent px-2 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]"
                   autoFocus
                 />
-                <Button variant="ghost" size="sm" onClick={savePreset} className="h-6 px-2">
+                <Button variant="ghost" size="sm" onClick={savePreset} className="h-6 px-2" aria-label="Save preset">
                   <Save className="h-3 w-3" />
                 </Button>
                 <Button
@@ -187,6 +187,7 @@ export function ChatParametersPanel({
                   size="sm"
                   onClick={() => setShowSavePreset(false)}
                   className="h-6 px-2"
+                  aria-label="Cancel"
                 >
                   ✕
                 </Button>

@@ -198,7 +198,9 @@ export default function GpuPage() {
                               <Thermometer className="h-3.5 w-3.5 text-[hsl(var(--muted-foreground))]" />
                               <span
                                 className={`text-sm ${gpu.temperature > 80 ? "text-[hsl(var(--destructive))]" : ""}`}
+                                aria-label={`Temperature: ${gpu.temperature}°C${gpu.temperature > 80 ? " (high)" : ""}`}
                               >
+                                {gpu.temperature > 80 && "⚠ "}
                                 {gpu.temperature}°C
                               </span>
                             </div>

@@ -73,7 +73,7 @@ export default function SignInPage() {
             </>
           )}
 
-          <form onSubmit={handleCredentials} className="space-y-3">
+          <form onSubmit={handleCredentials} className="space-y-3" aria-label="Sign in">
             <Input
               label="Username"
               value={username}
