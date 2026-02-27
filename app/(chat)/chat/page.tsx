@@ -20,6 +20,7 @@ import {
   ChatParametersPanel,
   type ChatParameters,
 } from "@/components/chat/chat-parameters";
+import { MessageContent } from "@/components/chat/message-content";
 
 interface ChatSummary {
   id: string;
@@ -505,6 +506,8 @@ export default function ChatPage() {
                           </Button>
                         </div>
                       </div>
+                    ) : msg.role === "assistant" ? (
+                      <MessageContent content={msg.content} />
                     ) : (
                       <div className="whitespace-pre-wrap text-sm">
                         {msg.content}
@@ -556,9 +559,7 @@ export default function ChatPage() {
               {streamingContent && (
                 <div className="flex justify-start">
                   <div className="max-w-[80%] rounded-lg bg-[hsl(var(--muted))] px-4 py-2.5">
-                    <div className="whitespace-pre-wrap text-sm">
-                      {streamingContent}
-                    </div>
+                    <MessageContent content={streamingContent} />
                   </div>
                 </div>
               )}
