@@ -179,6 +179,21 @@
       "mostUsedModels": "Most Used Models",
       "emptyTitle": "No metrics yet",
       "emptyDescription": "Metrics will appear as requests flow through the gateway."
+    },
+    "gpu": {
+      "title": "GPU Monitoring",
+      "refresh": "Refresh",
+      "offline": "Offline",
+      "runningModels": "Running Models",
+      "noModelsLoaded": "No models loaded",
+      "noModelsLoadedDescription": "Models will appear here when loaded into memory by Ollama.",
+      "totalSize": "Total",
+      "expiresAt": "Expires",
+      "gpuHardware": "GPU Hardware",
+      "vramUsage": "VRAM Usage",
+      "utilization": "GPU Utilization",
+      "emptyTitle": "No servers configured",
+      "emptyDescription": "Add an Ollama server to monitor GPU usage."
     }
   },
   "setup": {
