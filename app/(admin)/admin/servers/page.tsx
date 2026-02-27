@@ -3,6 +3,14 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback } from "react";
 import { Server as ServerIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useToast } from "@/components/ui/toast";
 
 interface Server {
   id: string;
@@ -22,11 +30,13 @@ interface HealthStatus {
 export default function ServersPage() {
   const t = useTranslations("admin.servers");
   const tc = useTranslations("common");
+  const { toast } = useToast();
   const [servers, setServers] = useState<Server[]>([]);
   const [health, setHealth] = useState<Record<string, HealthStatus>>({});
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "",
     url: "",
@@ -45,21 +55,18 @@ export default function ServersPage() {
     }
   }, []);
 
-  const checkHealth = useCallback(
-    async (server: Server) => {
-      try {
-        const res = await fetch(`/api/servers/${server.id}/health`);
-        const data: HealthStatus = await res.json();
-        setHealth((prev) => ({ ...prev, [server.id]: data }));
-      } catch {
-        setHealth((prev) => ({
-          ...prev,
-          [server.id]: { id: server.id, status: "offline" },
-        }));
-      }
-    },
-    []
-  );
+  const checkHealth = useCallback(async (server: Server) => {
+    try {
+      const res = await fetch(`/api/servers/${server.id}/health`);
+      const data: HealthStatus = await res.json();
+      setHealth((prev) => ({ ...prev, [server.id]: data }));
+    } catch {
+      setHealth((prev) => ({
+        ...prev,
+        [server.id]: { id: server.id, status: "offline" },
+      }));
+    }
+  }, []);
 
   useEffect(() => {
     fetchServers();
@@ -82,14 +89,18 @@ export default function ServersPage() {
     const method = editingId ? "PUT" : "POST";
     const url = editingId ? `/api/servers/${editingId}` : "/api/servers";
 
-    await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
-
-    resetForm();
-    fetchServers();
+    try {
+      await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      toast(editingId ? "Server updated" : `Server '${form.name}' created`, "success");
+      resetForm();
+      fetchServers();
+    } catch {
+      toast(editingId ? "Error updating server" : "Error creating server", "error");
+    }
   };
 
   const handleEdit = (server: Server) => {
@@ -103,19 +114,34 @@ export default function ServersPage() {
     setShowForm(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm(t("deleteConfirm"))) return;
-    await fetch(`/api/servers/${id}`, { method: "DELETE" });
-    fetchServers();
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await fetch(`/api/servers/${deleteTarget}`, { method: "DELETE" });
+      toast("Server deleted", "success");
+      fetchServers();
+    } catch {
+      toast("Error deleting server", "error");
+    }
+    setDeleteTarget(null);
   };
 
   const handleTest = async (id: string) => {
-    const res = await fetch(`/api/servers/${id}/test`, { method: "POST" });
-    const data = await res.json();
-    setHealth((prev) => ({
-      ...prev,
-      [id]: { id, status: data.status, version: data.version },
-    }));
+    try {
+      const res = await fetch(`/api/servers/${id}/test`, { method: "POST" });
+      const data = await res.json();
+      setHealth((prev) => ({
+        ...prev,
+        [id]: { id, status: data.status, version: data.version },
+      }));
+      if (data.status === "online") {
+        toast(`Connection successful (v${data.version || "?"})`, "success");
+      } else {
+        toast("Connection failed", "error");
+      }
+    } catch {
+      toast("Connection failed", "error");
+    }
   };
 
   if (loading) {
@@ -124,10 +150,7 @@ export default function ServersPage() {
         <h1 className="text-2xl font-bold">{t("title")}</h1>
         <div className="mt-6 space-y-3">
           {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="h-16 animate-pulse rounded-lg bg-[hsl(var(--muted))]"
-            />
+            <Skeleton key={i} variant="row" className="h-16" />
           ))}
         </div>
       </div>
@@ -136,19 +159,16 @@ export default function ServersPage() {
 
   if (servers.length === 0 && !showForm) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 text-center">
-        <ServerIcon className="mx-auto h-12 w-12 text-[hsl(var(--muted-foreground))]" />
-        <h2 className="mt-4 text-xl font-semibold">{t("emptyTitle")}</h2>
-        <p className="mt-2 text-[hsl(var(--muted-foreground))]">
-          {t("emptyDescription")}
-        </p>
-        <button
-          onClick={() => setShowForm(true)}
-          className="mt-4 rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm text-[hsl(var(--primary-foreground))]"
-        >
-          {t("emptyAction")}
-        </button>
-      </div>
+      <EmptyState
+        icon={ServerIcon}
+        title={t("emptyTitle")}
+        description={t("emptyDescription")}
+        action={
+          <Button onClick={() => setShowForm(true)}>
+            {t("emptyAction")}
+          </Button>
+        }
+      />
     );
   }
 
@@ -156,62 +176,41 @@ export default function ServersPage() {
     <div className="p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <button
+        <Button
+          variant={showForm ? "secondary" : "primary"}
           onClick={() => {
             resetForm();
             setShowForm(!showForm);
           }}
-          className="rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm text-[hsl(var(--primary-foreground))]"
         >
           {showForm ? tc("cancel") : t("addServer")}
-        </button>
+        </Button>
       </div>
 
       {showForm && (
-        <form
-          onSubmit={handleSubmit}
-          className="mt-4 space-y-3 rounded-lg border p-4"
-        >
-          <div>
-            <label className="mb-1 block text-sm font-medium">
-              {t("serverName")}
-            </label>
-            <input
-              type="text"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              required
-              className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
-              placeholder="My Ollama Server"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">
-              {t("serverUrl")}
-            </label>
-            <input
-              type="url"
-              value={form.url}
-              onChange={(e) => setForm({ ...form, url: e.target.value })}
-              required
-              className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
-              placeholder="http://localhost:11434"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">
-              {t("gpuAgentUrl")}
-            </label>
-            <input
-              type="url"
-              value={form.gpuAgentUrl}
-              onChange={(e) =>
-                setForm({ ...form, gpuAgentUrl: e.target.value })
-              }
-              className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
-              placeholder="http://localhost:9999"
-            />
-          </div>
+        <form onSubmit={handleSubmit} className="mt-4 space-y-3 rounded-lg border p-4">
+          <Input
+            label={t("serverName")}
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            required
+            placeholder="My Ollama Server"
+          />
+          <Input
+            label={t("serverUrl")}
+            type="url"
+            value={form.url}
+            onChange={(e) => setForm({ ...form, url: e.target.value })}
+            required
+            placeholder="http://localhost:11434"
+          />
+          <Input
+            label={t("gpuAgentUrl")}
+            type="url"
+            value={form.gpuAgentUrl}
+            onChange={(e) => setForm({ ...form, gpuAgentUrl: e.target.value })}
+            placeholder="http://localhost:9999"
+          />
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
@@ -223,12 +222,9 @@ export default function ServersPage() {
               {t("active")}
             </label>
           </div>
-          <button
-            type="submit"
-            className="rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm text-[hsl(var(--primary-foreground))]"
-          >
+          <Button type="submit">
             {editingId ? tc("save") : tc("create")}
-          </button>
+          </Button>
         </form>
       )}
 
@@ -236,53 +232,43 @@ export default function ServersPage() {
         {servers.map((server) => {
           const h = health[server.id];
           return (
-            <div
-              key={server.id}
-              className="flex items-center justify-between rounded-lg border p-4"
-            >
+            <Card key={server.id} className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <span
-                  className={`inline-block h-2.5 w-2.5 rounded-full ${
-                    h?.status === "online"
-                      ? "bg-[hsl(var(--success))]"
-                      : "bg-[hsl(var(--destructive))]"
-                  }`}
-                  aria-label={h?.status === "online" ? t("online") : t("offline")}
-                />
+                <Badge variant={h?.status === "online" ? "success" : "destructive"}>
+                  {h?.status === "online" ? "Online" : "Offline"}
+                </Badge>
                 <div>
                   <div className="font-medium">{server.name}</div>
                   <div className="text-sm text-[hsl(var(--muted-foreground))]">
                     {server.url}
-                    {h?.version && (
-                      <span className="ml-2">v{h.version}</span>
-                    )}
+                    {h?.version && <span className="ml-2">v{h.version}</span>}
                   </div>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleTest(server.id)}
-                  className="rounded-md border px-3 py-1.5 text-xs hover:bg-[hsl(var(--accent))]"
-                >
+                <Button variant="secondary" size="sm" onClick={() => handleTest(server.id)}>
                   {t("testConnection")}
-                </button>
-                <button
-                  onClick={() => handleEdit(server)}
-                  className="rounded-md border px-3 py-1.5 text-xs hover:bg-[hsl(var(--accent))]"
-                >
+                </Button>
+                <Button variant="secondary" size="sm" onClick={() => handleEdit(server)}>
                   {tc("edit")}
-                </button>
-                <button
-                  onClick={() => handleDelete(server.id)}
-                  className="rounded-md border px-3 py-1.5 text-xs text-[hsl(var(--destructive))] hover:bg-[hsl(var(--destructive))] hover:text-[hsl(var(--destructive-foreground))]"
-                >
+                </Button>
+                <Button variant="destructive" size="sm" onClick={() => setDeleteTarget(server.id)}>
                   {tc("delete")}
-                </button>
+                </Button>
               </div>
-            </div>
+            </Card>
           );
         })}
       </div>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete server"
+        description={t("deleteConfirm")}
+        confirmLabel={tc("delete")}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

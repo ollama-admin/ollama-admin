@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { ThemeProvider } from "@/components/providers/theme-provider";
+import { ToastProvider } from "@/components/ui/toast";
 import { Sidebar } from "@/components/layout/sidebar";
 import "./globals.css";
 
@@ -24,10 +25,12 @@ export default async function RootLayout({
       <body className="min-h-screen antialiased">
         <NextIntlClientProvider messages={messages}>
           <ThemeProvider>
-            <div className="flex h-screen">
-              <Sidebar />
-              <main className="flex-1 overflow-auto">{children}</main>
-            </div>
+            <ToastProvider>
+              <div className="flex h-screen">
+                <Sidebar />
+                <main className="flex-1 overflow-auto">{children}</main>
+              </div>
+            </ToastProvider>
           </ThemeProvider>
         </NextIntlClientProvider>
       </body>

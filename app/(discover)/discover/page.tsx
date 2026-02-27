@@ -3,6 +3,14 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
+import { useToast } from "@/components/ui/toast";
 
 interface CatalogModel {
   id: string;
@@ -26,6 +34,7 @@ const familyOptions = [
 
 export default function DiscoverPage() {
   const t = useTranslations("discover");
+  const { toast } = useToast();
   const [models, setModels] = useState<CatalogModel[]>([]);
   const [search, setSearch] = useState("");
   const [family, setFamily] = useState("");
@@ -94,14 +103,12 @@ export default function DiscoverPage() {
           }
         }
       }
-      setPullProgress("Done!");
+      toast(`Model '${modelName}' downloaded`, "success");
     } catch {
-      setPullProgress("Failed");
+      toast(`Failed to download '${modelName}'`, "error");
     } finally {
-      setTimeout(() => {
-        setPullingModel(null);
-        setPullProgress("");
-      }, 2000);
+      setPullingModel(null);
+      setPullProgress("");
     }
   };
 
@@ -110,68 +117,68 @@ export default function DiscoverPage() {
       <h1 className="text-2xl font-bold">{t("title")}</h1>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <input
-          type="text"
+        <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder={t("searchModels")}
-          className="flex-1 rounded-md border bg-transparent px-3 py-2 text-sm"
+          className="flex-1"
         />
-        <select
+        <Select
           value={family}
           onChange={(e) => setFamily(e.target.value)}
-          className="rounded-md border bg-transparent px-3 py-2 text-sm"
+          className="w-auto"
         >
           <option value="">{t("allFamilies")}</option>
           {familyOptions.map((f) => (
             <option key={f} value={f}>{f}</option>
           ))}
-        </select>
+        </Select>
         {servers.length > 1 && (
-          <select
+          <Select
             value={selectedServer}
             onChange={(e) => setSelectedServer(e.target.value)}
-            className="rounded-md border bg-transparent px-3 py-2 text-sm"
+            className="w-auto"
           >
             {servers.map((s) => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
-          </select>
+          </Select>
         )}
       </div>
 
       {loading ? (
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="h-32 animate-pulse rounded-lg bg-[hsl(var(--muted))]" />
+            <Skeleton key={i} variant="card" />
           ))}
         </div>
       ) : models.length === 0 ? (
-        <div className="mt-12 flex flex-col items-center text-center">
-          <Search className="mx-auto h-12 w-12 text-[hsl(var(--muted-foreground))]" />
-          <h2 className="mt-4 text-xl font-semibold">{t("emptyTitle")}</h2>
-          <p className="mt-2 text-[hsl(var(--muted-foreground))]">{t("emptyDescription")}</p>
-        </div>
+        <EmptyState
+          icon={Search}
+          title={t("emptyTitle")}
+          description={t("emptyDescription")}
+        />
       ) : (
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {models.map((model) => (
-            <div key={model.id} className="rounded-lg border p-4">
+            <Card key={model.id}>
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="font-medium">{model.name}</h3>
                   {model.family && (
-                    <span className="mt-1 inline-block rounded bg-[hsl(var(--muted))] px-1.5 py-0.5 text-xs">
+                    <Badge variant="muted" className="mt-1">
                       {model.family}
-                    </span>
+                    </Badge>
                   )}
                 </div>
-                <button
+                <Button
+                  size="sm"
                   onClick={() => handlePull(model.name)}
                   disabled={pullingModel === model.name || !selectedServer}
-                  className="rounded-md bg-[hsl(var(--primary))] px-3 py-1 text-xs text-[hsl(var(--primary-foreground))] disabled:opacity-50"
+                  loading={pullingModel === model.name}
                 >
                   {pullingModel === model.name ? pullProgress : t("pullModel")}
-                </button>
+                </Button>
               </div>
               {model.description && (
                 <p className="mt-2 line-clamp-2 text-xs text-[hsl(var(--muted-foreground))]">
@@ -180,12 +187,9 @@ export default function DiscoverPage() {
               )}
               <div className="mt-2 flex flex-wrap gap-1">
                 {model.tags.split(",").map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded bg-[hsl(var(--accent))] px-1.5 py-0.5 text-xs"
-                  >
+                  <Badge key={tag} variant="muted" className="text-[10px]">
                     {tag.trim()}
-                  </span>
+                  </Badge>
                 ))}
               </div>
               {model.pullCount && (
@@ -193,7 +197,7 @@ export default function DiscoverPage() {
                   {model.pullCount.toLocaleString()} {t("downloads")}
                 </p>
               )}
-            </div>
+            </Card>
           ))}
         </div>
       )}

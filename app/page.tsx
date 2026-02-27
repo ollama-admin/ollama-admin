@@ -3,7 +3,12 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { LayoutDashboard, Server as ServerIcon, Package, MessageSquare, Search } from "lucide-react";
+import { LayoutDashboard } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 
 interface Server {
   id: string;
@@ -33,12 +38,14 @@ export default function DashboardPage() {
   const [health, setHealth] = useState<Record<string, HealthStatus>>({});
   const [recentLogs, setRecentLogs] = useState<LogEntry[]>([]);
   const [modelCount, setModelCount] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("/api/servers")
       .then((r) => r.json())
       .then(async (data: Server[]) => {
         setServers(data);
+        setLoading(false);
         for (const s of data) {
           try {
             const res = await fetch(`/api/servers/${s.id}/health`);
@@ -57,26 +64,39 @@ export default function DashboardPage() {
             // server may be offline
           }
         }
-      });
+      })
+      .catch(() => setLoading(false));
 
     fetch("/api/logs?limit=10")
       .then((r) => r.json())
       .then((data) => setRecentLogs(data.logs || []));
   }, []);
 
+  if (loading) {
+    return (
+      <div className="p-6">
+        <Skeleton className="h-8 w-48" />
+        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Skeleton variant="card" />
+          <Skeleton variant="card" />
+          <Skeleton variant="card" />
+        </div>
+      </div>
+    );
+  }
+
   if (servers.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 text-center">
-        <LayoutDashboard className="mx-auto h-12 w-12 text-[hsl(var(--muted-foreground))]" />
-        <h2 className="mt-4 text-xl font-semibold">{t("emptyTitle")}</h2>
-        <p className="mt-2 text-[hsl(var(--muted-foreground))]">{t("emptyDescription")}</p>
-        <Link
-          href="/admin/servers"
-          className="mt-4 rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm text-[hsl(var(--primary-foreground))]"
-        >
-          {t("emptyAction")}
-        </Link>
-      </div>
+      <EmptyState
+        icon={LayoutDashboard}
+        title={t("emptyTitle")}
+        description={t("emptyDescription")}
+        action={
+          <Link href="/admin/servers">
+            <Button>{t("emptyAction")}</Button>
+          </Link>
+        }
+      />
     );
   }
 
@@ -85,54 +105,52 @@ export default function DashboardPage() {
       <h1 className="text-2xl font-bold">{t("title")}</h1>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {/* Servers card */}
-        <Link href="/admin/servers" className="rounded-lg border p-4 hover:bg-[hsl(var(--accent))]">
-          <h3 className="text-sm font-medium text-[hsl(var(--muted-foreground))]">{t("servers")}</h3>
-          <p className="mt-1 text-2xl font-bold">
-            {Object.values(health).filter((h) => h.status === "online").length}/{servers.length}
-          </p>
-          <div className="mt-2 flex gap-1">
-            {servers.map((s) => (
-              <span
-                key={s.id}
-                className={`h-2 w-2 rounded-full ${
-                  health[s.id]?.status === "online"
-                    ? "bg-[hsl(var(--success))]"
-                    : "bg-[hsl(var(--destructive))]"
-                }`}
-                title={s.name}
-              />
-            ))}
-          </div>
+        <Link href="/admin/servers">
+          <Card interactive>
+            <h3 className="text-sm font-medium text-[hsl(var(--muted-foreground))]">{t("servers")}</h3>
+            <p className="mt-1 text-2xl font-bold">
+              {Object.values(health).filter((h) => h.status === "online").length}/{servers.length}
+            </p>
+            <div className="mt-2 flex gap-1">
+              {servers.map((s) => (
+                <span
+                  key={s.id}
+                  className={`h-2 w-2 rounded-full ${
+                    health[s.id]?.status === "online"
+                      ? "bg-[hsl(var(--success))]"
+                      : "bg-[hsl(var(--destructive))]"
+                  }`}
+                  title={s.name}
+                />
+              ))}
+            </div>
+          </Card>
         </Link>
 
-        {/* Models card */}
-        <Link href="/admin/models" className="rounded-lg border p-4 hover:bg-[hsl(var(--accent))]">
-          <h3 className="text-sm font-medium text-[hsl(var(--muted-foreground))]">{t("models")}</h3>
-          <p className="mt-1 text-2xl font-bold">{modelCount}</p>
+        <Link href="/admin/models">
+          <Card interactive>
+            <h3 className="text-sm font-medium text-[hsl(var(--muted-foreground))]">{t("models")}</h3>
+            <p className="mt-1 text-2xl font-bold">{modelCount}</p>
+          </Card>
         </Link>
 
-        {/* Quick actions */}
-        <div className="rounded-lg border p-4">
+        <Card>
           <h3 className="text-sm font-medium text-[hsl(var(--muted-foreground))]">{t("quickActions")}</h3>
           <div className="mt-2 space-y-2">
-            <Link
-              href="/chat"
-              className="block rounded-md border px-3 py-2 text-sm hover:bg-[hsl(var(--accent))]"
-            >
-              {t("newChat")}
+            <Link href="/chat">
+              <Button variant="secondary" className="w-full justify-start">
+                {t("newChat")}
+              </Button>
             </Link>
-            <Link
-              href="/discover"
-              className="block rounded-md border px-3 py-2 text-sm hover:bg-[hsl(var(--accent))]"
-            >
-              {t("pullModel")}
+            <Link href="/discover">
+              <Button variant="secondary" className="w-full justify-start">
+                {t("pullModel")}
+              </Button>
             </Link>
           </div>
-        </div>
+        </Card>
       </div>
 
-      {/* Recent activity */}
       <div className="mt-6">
         <h2 className="text-lg font-semibold">{t("recentActivity")}</h2>
         {recentLogs.length === 0 ? (
@@ -144,13 +162,9 @@ export default function DashboardPage() {
             {recentLogs.map((log) => (
               <div key={log.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
                 <div className="flex items-center gap-3">
-                  <span
-                    className={`h-2 w-2 rounded-full ${
-                      log.statusCode < 400
-                        ? "bg-[hsl(var(--success))]"
-                        : "bg-[hsl(var(--destructive))]"
-                    }`}
-                  />
+                  <Badge variant={log.statusCode < 400 ? "success" : "destructive"}>
+                    {log.statusCode}
+                  </Badge>
                   <span className="font-medium">{log.model}</span>
                   <span className="text-[hsl(var(--muted-foreground))]">{log.endpoint}</span>
                 </div>
