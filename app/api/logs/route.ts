@@ -36,3 +36,19 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({ logs, total, page, limit });
 }
+
+export async function DELETE(req: NextRequest) {
+  const before = req.nextUrl.searchParams.get("before");
+  if (!before) {
+    return NextResponse.json(
+      { error: "before parameter is required" },
+      { status: 400 }
+    );
+  }
+
+  const result = await prisma.log.deleteMany({
+    where: { createdAt: { lt: new Date(before) } },
+  });
+
+  return NextResponse.json({ deleted: result.count });
+}

@@ -58,7 +58,40 @@
     "emptyDescription": "Start your first conversation with an AI model.",
     "emptyAction": "New Conversation",
     "tokens": "tokens",
-    "latency": "latency"
+    "latency": "latency",
+    "editMessage": "Edit message",
+    "editSend": "Save & resend",
+    "editCancel": "Cancel",
+    "regenerate": "Regenerate response",
+    "exportMarkdown": "Export as Markdown",
+    "exportJson": "Export as JSON",
+    "attachImage": "Attach image",
+    "parameters": {
+      "title": "Parameters",
+      "temperature": "Temperature",
+      "topK": "Top K",
+      "topP": "Top P",
+      "repeatPenalty": "Repeat Penalty",
+      "seed": "Seed",
+      "numCtx": "Context Length",
+      "numPredict": "Max Tokens",
+      "stop": "Stop Sequences",
+      "stopPlaceholder": "Comma-separated",
+      "keepAlive": "Keep Alive",
+      "systemPrompt": "System Prompt",
+      "systemPromptPlaceholder": "Custom instructions for the model...",
+      "reset": "Reset"
+    },
+    "presets": {
+      "save": "Save preset",
+      "saved": "Preset saved",
+      "saveError": "Error saving preset",
+      "loaded": "Preset \"{name}\" applied",
+      "deleted": "Preset deleted",
+      "deleteError": "Error deleting preset",
+      "deletePreset": "Delete preset {name}",
+      "namePlaceholder": "Preset name..."
+    }
   },
   "discover": {
     "title": "Discover Models",
@@ -129,6 +162,38 @@
       "totalTokens": "Total tokens",
       "latency": "Latency",
       "status": "Status"
+    },
+    "metrics": {
+      "title": "Metrics",
+      "dateRange": "Time range",
+      "last7days": "Last 7 days",
+      "last30days": "Last 30 days",
+      "last90days": "Last 90 days",
+      "totalRequests": "Total Requests",
+      "topModel": "Top Model",
+      "avgLatency": "Avg Latency",
+      "errorRate": "Error Rate",
+      "requestsOverTime": "Requests Over Time",
+      "tokensByModel": "Tokens by Model",
+      "avgLatencyByModel": "Avg Latency by Model",
+      "mostUsedModels": "Most Used Models",
+      "emptyTitle": "No metrics yet",
+      "emptyDescription": "Metrics will appear as requests flow through the gateway."
+    },
+    "gpu": {
+      "title": "GPU Monitoring",
+      "refresh": "Refresh",
+      "offline": "Offline",
+      "runningModels": "Running Models",
+      "noModelsLoaded": "No models loaded",
+      "noModelsLoadedDescription": "Models will appear here when loaded into memory by Ollama.",
+      "totalSize": "Total",
+      "expiresAt": "Expires",
+      "gpuHardware": "GPU Hardware",
+      "vramUsage": "VRAM Usage",
+      "utilization": "GPU Utilization",
+      "emptyTitle": "No servers configured",
+      "emptyDescription": "Add an Ollama server to monitor GPU usage."
     }
   },
   "setup": {
@@ -158,11 +223,27 @@
   },
   "settings": {
     "title": "Settings",
+    "appearance": "Appearance",
     "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeAuto": "Auto",
     "density": "UI Density",
     "compact": "Compact",
     "normal": "Normal",
     "spacious": "Spacious",
-    "language": "Language"
+    "language": "Language",
+    "loggingPrivacy": "Logging & Privacy",
+    "logRetentionDays": "Log retention (days)",
+    "storePrompts": "Store prompt content",
+    "storePromptsYes": "Yes — store full prompts and responses",
+    "storePromptsNo": "No — store only metadata (tokens, latency)",
+    "saveChanges": "Save Changes",
+    "saved": "Settings saved",
+    "purgeLogs": "Purge Old Logs",
+    "logsPurged": "Old logs deleted",
+    "database": "Database",
+    "connected": "Connected",
+    "databaseType": "SQLite (default)"
   }
 }

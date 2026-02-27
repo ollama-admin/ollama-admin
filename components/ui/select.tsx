@@ -26,12 +26,13 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
             className
           )}
           aria-invalid={!!error}
+          aria-describedby={error && selectId ? `${selectId}-error` : undefined}
           {...props}
         >
           {children}
         </select>
         {error && (
-          <p className="mt-1 text-xs text-[hsl(var(--destructive))]">{error}</p>
+          <p id={selectId ? `${selectId}-error` : undefined} className="mt-1 text-xs text-[hsl(var(--destructive))]">{error}</p>
         )}
       </div>
     );

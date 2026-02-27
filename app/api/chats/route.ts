@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const { title, model, serverId } = await req.json();
+  const { title, model, serverId, parameters } = await req.json();
 
   if (!model || !serverId) {
     return NextResponse.json(
@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
       title: title || "New Conversation",
       model,
       serverId,
+      parameters: parameters ? JSON.stringify(parameters) : null,
     },
   });
 
