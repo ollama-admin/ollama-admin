@@ -23,12 +23,14 @@
   "sidebar": {
     "dashboard": "Dashboard",
     "chat": "Chat",
+    "compare": "Compare",
     "discover": "Discover",
     "models": "Models",
     "servers": "Servers",
     "logs": "Logs",
     "metrics": "Metrics",
     "gpu": "GPU",
+    "alerts": "Alerts",
     "settings": "Settings"
   },
   "dashboard": {
@@ -92,6 +94,21 @@
       "deletePreset": "Delete preset {name}",
       "namePlaceholder": "Preset name..."
     }
+  },
+  "compare": {
+    "title": "Compare Models",
+    "modelA": "Model A",
+    "modelB": "Model B",
+    "selectServerA": "Select server for model A",
+    "selectServerB": "Select server for model B",
+    "selectModelA": "Select model A",
+    "selectModelB": "Select model B",
+    "promptPlaceholder": "Enter a prompt to compare both models...",
+    "compare": "Compare",
+    "stop": "Stop",
+    "tokens": "tokens",
+    "emptyTitle": "Compare models side by side",
+    "emptyDescription": "Select two models and enter a prompt to see their responses side by side."
   },
   "discover": {
     "title": "Discover Models",
@@ -194,6 +211,30 @@
       "utilization": "GPU Utilization",
       "emptyTitle": "No servers configured",
       "emptyDescription": "Add an Ollama server to monitor GPU usage."
+    },
+    "alerts": {
+      "title": "Alerts",
+      "activeAlerts": "Active Alerts",
+      "allClear": "All alerts clear — no thresholds exceeded.",
+      "createAlert": "Create Alert",
+      "configuredAlerts": "Configured Alerts",
+      "alertType": "Alert type",
+      "thresholdPlaceholder": "Threshold",
+      "threshold": "Threshold",
+      "add": "Add",
+      "created": "Alert created",
+      "deleted": "Alert deleted",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "enable": "Enable",
+      "disable": "Disable",
+      "deleteAlert": "Delete alert",
+      "gpu_temperature": "GPU Temperature",
+      "gpu_vram": "GPU VRAM Usage",
+      "error_rate": "Error Rate",
+      "latency": "Avg Latency",
+      "emptyTitle": "No alerts configured",
+      "emptyDescription": "Create alerts to monitor GPU temperature, VRAM usage, error rates, and latency."
     }
   },
   "setup": {
@@ -242,6 +283,24 @@
     "saved": "Settings saved",
     "purgeLogs": "Purge Old Logs",
     "logsPurged": "Old logs deleted",
+    "apiKeys": "API Keys",
+    "apiKeyCreate": "Create Key",
+    "apiKeyNamePlaceholder": "Key name (e.g. CI/CD, my-app)...",
+    "apiKeyCreated": "API key created",
+    "apiKeyDeleted": "API key deleted",
+    "apiKeyCopied": "Copied to clipboard",
+    "apiKeyCopy": "Copy API key",
+    "apiKeyNewWarning": "Copy this key now — it will not be shown again.",
+    "apiKeyActive": "Active",
+    "apiKeyRevoked": "Revoked",
+    "apiKeyRevoke": "Revoke",
+    "apiKeyActivate": "Activate",
+    "apiKeyDelete": "Delete API key",
+    "apiKeyLastUsed": "Last used",
+    "rateLimit": "Rate Limiting",
+    "rateLimitMax": "Max requests per window",
+    "rateLimitWindow": "Window size (seconds)",
+    "rateLimitDescription": "Limits apply per IP address to proxy, chat, and compare endpoints.",
     "database": "Database",
     "connected": "Connected",
     "databaseType": "SQLite (default)"

@@ -1,7 +1,20 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withRateLimit } from "@/lib/with-rate-limit";
+import { validateApiKey } from "@/lib/validate-api-key";
 
 async function proxyToOllama(req: NextRequest) {
+  const hasApiKey = req.headers.get("authorization")?.startsWith("Bearer oa-");
+  if (hasApiKey) {
+    const { valid } = await validateApiKey(req);
+    if (!valid) {
+      return new Response(JSON.stringify({ error: "Invalid or revoked API key" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+  }
+
   const path = req.nextUrl.pathname.replace("/api/proxy", "");
   const serverId = req.nextUrl.searchParams.get("serverId");
 
@@ -85,7 +98,7 @@ async function proxyToOllama(req: NextRequest) {
   }
 }
 
-export const GET = proxyToOllama;
-export const POST = proxyToOllama;
-export const PUT = proxyToOllama;
-export const DELETE = proxyToOllama;
+export const GET = withRateLimit(proxyToOllama);
+export const POST = withRateLimit(proxyToOllama);
+export const PUT = withRateLimit(proxyToOllama);
+export const DELETE = withRateLimit(proxyToOllama);
