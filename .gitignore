@@ -23,6 +23,7 @@ dist/
 # Product/planning documents
 PRD.md
 PRP.md
+plan/
 
 # Debug
 npm-debug.log*
@@ -55,3 +56,5 @@ ollama-admin-data/
 # Misc
 *.tsbuildinfo
 next-env.d.ts
+
+.claude

@@ -122,6 +122,7 @@ Create the branch from the latest `main` before starting work.
 ### Commits
 
 - **Commit early, commit often.** Make small, incremental commits as you complete each piece of work — a new component, a utility function, a route handler, a test file. Do not accumulate large changes into a single commit.
+- **Do not add Co-Authored-By or Signed-off-by trailers** to commit messages.
 - Write clear, concise commit messages in English
 - One logical change per commit
 - Do not commit `.env`, credentials, or secrets
