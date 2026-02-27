@@ -67,7 +67,7 @@ export default function SettingsPage() {
             <label className="mb-2 block text-sm font-medium">
               {t("theme")}
             </label>
-            <div className="flex gap-2">
+            <div className="flex gap-2" role="radiogroup" aria-label={t("theme")}>
               {[
                 { value: "light", icon: Sun, label: t("themeLight") },
                 { value: "dark", icon: Moon, label: t("themeDark") },
@@ -75,6 +75,8 @@ export default function SettingsPage() {
               ].map(({ value, icon: Icon, label }) => (
                 <button
                   key={value}
+                  role="radio"
+                  aria-checked={theme === value}
                   onClick={() => setTheme(value)}
                   className={`flex items-center gap-2 rounded-md border px-4 py-2 text-sm transition-colors ${
                     theme === value
@@ -93,10 +95,12 @@ export default function SettingsPage() {
             <label className="mb-2 block text-sm font-medium">
               {t("density")}
             </label>
-            <div className="flex gap-2">
+            <div className="flex gap-2" role="radiogroup" aria-label={t("density")}>
               {(["compact", "normal", "spacious"] as const).map((d) => (
                 <button
                   key={d}
+                  role="radio"
+                  aria-checked={density === d}
                   onClick={() => setDensity(d)}
                   className={`rounded-md border px-4 py-2 text-sm transition-colors ${
                     density === d
