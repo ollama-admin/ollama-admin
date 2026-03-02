@@ -345,5 +345,25 @@
     "database": "Base de datos",
     "connected": "Conectado",
     "databaseType": "SQLite (por defecto)"
+  },
+  "shortcuts": {
+    "title": "Atajos de teclado",
+    "navigation": "Navegación",
+    "goToDashboard": "Ir al panel",
+    "goToChat": "Ir al chat",
+    "goToModels": "Ir a modelos",
+    "goToServers": "Ir a servidores",
+    "goToLogs": "Ir a registros",
+    "focusSearch": "Enfocar búsqueda",
+    "chat": "Chat",
+    "sendMessage": "Enviar mensaje",
+    "stopGeneration": "Detener generación",
+    "newConversation": "Nueva conversación",
+    "exportChat": "Exportar chat",
+    "general": "General",
+    "showShortcuts": "Mostrar atajos",
+    "commandPalette": "Paleta de comandos",
+    "openSettings": "Abrir ajustes",
+    "pressToClose": "Pulsa Escape para cerrar"
   }
 }

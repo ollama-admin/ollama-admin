@@ -345,5 +345,25 @@
     "database": "Base de dades",
     "connected": "Connectat",
     "databaseType": "SQLite (per defecte)"
+  },
+  "shortcuts": {
+    "title": "Dreceres de teclat",
+    "navigation": "Navegació",
+    "goToDashboard": "Anar al tauler",
+    "goToChat": "Anar al xat",
+    "goToModels": "Anar a models",
+    "goToServers": "Anar a servidors",
+    "goToLogs": "Anar a registres",
+    "focusSearch": "Enfocar cerca",
+    "chat": "Xat",
+    "sendMessage": "Enviar missatge",
+    "stopGeneration": "Aturar generació",
+    "newConversation": "Nova conversa",
+    "exportChat": "Exportar xat",
+    "general": "General",
+    "showShortcuts": "Mostrar dreceres",
+    "commandPalette": "Paleta de comandes",
+    "openSettings": "Obrir configuració",
+    "pressToClose": "Prem Escape per tancar"
   }
 }
