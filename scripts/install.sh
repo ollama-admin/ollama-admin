@@ -63,7 +63,6 @@ services:
       DEFAULT_OLLAMA_URL: \${DEFAULT_OLLAMA_URL:-${OLLAMA_URL}}
       NEXTAUTH_SECRET: \${NEXTAUTH_SECRET:-$(openssl rand -hex 32)}
       NEXTAUTH_URL: \${NEXTAUTH_URL:-http://localhost:${PORT}}
-      AUTH_ENABLED: \${AUTH_ENABLED:-false}
       LOG_RETENTION_DAYS: \${LOG_RETENTION_DAYS:-90}
       GPU_AGENT_ENABLED: \${GPU_AGENT_ENABLED:-false}
     volumes:
