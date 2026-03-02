@@ -7,8 +7,8 @@ export async function middleware(req: NextRequest) {
   const { method } = req;
   const path = req.nextUrl.pathname;
 
-  // Always allow static assets, auth endpoints, setup
-  const publicPaths = ["/api/auth", "/api/setup", "/_next", "/favicon.ico"];
+  // Always allow static assets, auth endpoints, setup, health check
+  const publicPaths = ["/api/auth", "/api/setup", "/api/health", "/_next", "/favicon.ico"];
   if (publicPaths.some((p) => path.startsWith(p))) {
     const res = NextResponse.next();
     logRequest(method, path, res.status, Date.now() - start);
