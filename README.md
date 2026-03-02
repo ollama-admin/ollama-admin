@@ -39,43 +39,49 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) — the setup wizard will guide you through connecting to Ollama.
 
-## Docker
+## Install
 
-### From GitHub Container Registry (recommended)
+### One-line install (recommended)
 
 ```bash
-# Latest version
-docker pull ghcr.io/ollama-admin/ollama-admin:latest
-
-# Specific version (recommended for production)
-docker pull ghcr.io/ollama-admin/ollama-admin:0.1.0
-
-docker compose up -d
+curl -fsSL https://raw.githubusercontent.com/ollama-admin/ollama-admin/main/scripts/install.sh | bash
 ```
 
-### Build locally
+This pulls the Docker image, generates a `docker-compose.yml` with a random secret, and starts the app at [http://localhost:3000](http://localhost:3000).
+
+Customize with environment variables:
+
+```bash
+# Custom port and Ollama URL
+OLLAMA_ADMIN_PORT=8080 DEFAULT_OLLAMA_URL=http://192.168.1.50:11434 \
+  curl -fsSL https://raw.githubusercontent.com/ollama-admin/ollama-admin/main/scripts/install.sh | bash
+
+# Specific version
+OLLAMA_ADMIN_VERSION=0.1.0 \
+  curl -fsSL https://raw.githubusercontent.com/ollama-admin/ollama-admin/main/scripts/install.sh | bash
+```
+
+### GPU Agent (separate server)
+
+Install the GPU monitoring sidecar on any server with an NVIDIA GPU:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ollama-admin/ollama-admin/main/scripts/install-gpu-agent.sh | bash
+```
+
+Then in Ollama Admin, set the GPU Agent URL to `http://<gpu-server-ip>:11435`.
+
+### Docker Compose (manual)
 
 ```bash
 docker compose up -d --build
 ```
-
-Open [http://localhost:3000](http://localhost:3000).
 
 ### With PostgreSQL
 
 ```bash
 DATABASE_URL="postgresql://admin:password@postgres:5432/ollamaadmin" docker compose up -d
 ```
-
-### With GPU Agent
-
-Uncomment the `gpu-agent` service in `docker-compose.yml`. Requires NVIDIA Container Toolkit.
-
-```bash
-docker compose up -d
-```
-
-Then set the GPU Agent URL to `http://gpu-agent:11435` in your server configuration.
 
 ## Environment Variables
 
