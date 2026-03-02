@@ -2,6 +2,7 @@ version: "3.9"
 
 services:
   ollama-admin:
+    image: ${HARBOR_URL:-registry.harbor.io}/ollama-admin/app:${VERSION:-latest}
     build: .
     ports:
       - "3000:3000"
@@ -36,6 +37,7 @@ services:
   # Uncomment to enable GPU monitoring. Requires NVIDIA Container Toolkit.
   # Then set GPU Agent URL to http://gpu-agent:11435 in your server config.
   # gpu-agent:
+  #   image: ${HARBOR_URL:-registry.harbor.io}/ollama-admin/gpu-agent:${VERSION:-latest}
   #   build: ./gpu-agent
   #   runtime: nvidia
   #   environment:
