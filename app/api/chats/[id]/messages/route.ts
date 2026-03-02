@@ -1,5 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, getRateLimitConfig } from "@/lib/rate-limit";
+import { getRateLimitKey } from "@/lib/with-rate-limit";
 
 function buildOllamaRequest(
   chat: {
@@ -132,6 +134,21 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  const rlKey = getRateLimitKey(req);
+  const rl = checkRateLimit(rlKey);
+  if (!rl.allowed) {
+    return new Response(
+      JSON.stringify({ error: "Too many requests. Please try again later." }),
+      {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          "Retry-After": String(Math.ceil(rl.resetMs / 1000)),
+        },
+      }
+    );
+  }
+
   const { content, images, regenerate, editMessageId } = await req.json();
 
   const chat = await prisma.chat.findUnique({
