@@ -2,7 +2,7 @@
 
 from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
-from main import app, detect_backend, query_nvidia, query_amd, MIB_TO_BYTES
+from main import app, detect_backend, query_nvidia, query_amd, query_apple, MIB_TO_BYTES, GIB_TO_BYTES
 
 client = TestClient(app)
 
@@ -64,6 +64,16 @@ class TestDetectBackend:
     @patch("main.shutil.which", return_value=None)
     def test_auto_no_backend(self, _mock):
         assert detect_backend() is None
+
+    @patch("main.GPU_BACKEND", "apple")
+    def test_forced_apple(self):
+        assert detect_backend() == "apple"
+
+    @patch("main.GPU_BACKEND", "auto")
+    @patch("main.platform.system", return_value="Darwin")
+    @patch("main.shutil.which", side_effect=lambda cmd: "/usr/sbin/system_profiler" if cmd == "system_profiler" else None)
+    def test_auto_detects_apple(self, _mock_which, _mock_platform):
+        assert detect_backend() == "apple"
 
 
 class TestQueryNvidia:
@@ -135,6 +145,47 @@ class TestQueryAmd:
             assert "rocm-smi failed" in str(e)
 
 
+class TestQueryApple:
+    """Tests for Apple Silicon GPU queries."""
+
+    SYSTEM_PROFILER_PLIST = b"""<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<array>
+    <dict>
+        <key>_items</key>
+        <array>
+            <dict>
+                <key>sppci_model</key>
+                <string>Apple M2 Pro</string>
+                <key>spdisplays_vram</key>
+                <string>16 GB</string>
+            </dict>
+        </array>
+    </dict>
+</array>
+</plist>"""
+
+    @patch("main.subprocess.run")
+    def test_parses_apple_gpu(self, mock_run):
+        # Mock system_profiler
+        mock_run.return_value = MagicMock(returncode=0, stdout=self.SYSTEM_PROFILER_PLIST, stderr=b"")
+        gpus = query_apple()
+
+        assert len(gpus) == 1
+        assert gpus[0]["name"] == "Apple M2 Pro"
+        assert gpus[0]["memoryTotal"] == 16 * GIB_TO_BYTES
+
+    @patch("main.subprocess.run")
+    def test_handles_system_profiler_failure(self, mock_run):
+        mock_run.return_value = MagicMock(returncode=1, stdout=b"", stderr=b"Failed")
+        try:
+            query_apple()
+            assert False, "Should have raised"
+        except RuntimeError as e:
+            assert "system_profiler failed" in str(e)
+
+
 class TestGpuEndpoint:
     """Tests for GET /gpu endpoint."""
 
@@ -175,6 +226,26 @@ class TestGpuEndpoint:
         data = res.json()
         assert len(data) == 1
         assert data[0]["name"] == "RX 7900 XTX"
+
+    @patch("main.detect_backend", return_value="apple")
+    @patch("main.query_apple")
+    def test_returns_apple_data(self, mock_query, _mock_backend):
+        mock_query.return_value = [
+            {
+                "name": "Apple M2 Pro",
+                "memoryTotal": 16 * GIB_TO_BYTES,
+                "memoryUsed": 8 * GIB_TO_BYTES,
+                "memoryFree": 8 * GIB_TO_BYTES,
+                "temperature": -1,
+                "utilization": 50,
+            }
+        ]
+        res = client.get("/gpu")
+        assert res.status_code == 200
+        data = res.json()
+        assert len(data) == 1
+        assert data[0]["name"] == "Apple M2 Pro"
+        assert data[0]["temperature"] == -1
 
     @patch("main.detect_backend", return_value=None)
     def test_returns_503_no_backend(self, _mock):

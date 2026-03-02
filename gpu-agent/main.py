@@ -1,30 +1,35 @@
 """
 Ollama Admin GPU Agent — Lightweight sidecar that exposes GPU metrics via HTTP.
 
-Supports NVIDIA GPUs (nvidia-smi) and AMD GPUs (rocm-smi).
+Supports NVIDIA GPUs (nvidia-smi), AMD GPUs (rocm-smi), and Apple Silicon (Metal).
 Deploy alongside each Ollama server to enable GPU monitoring in Ollama Admin.
 """
 
 import os
+import platform
+import plistlib
 import shutil
 import subprocess
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
-app = FastAPI(title="Ollama Admin GPU Agent", version="1.0.0")
+app = FastAPI(title="Ollama Admin GPU Agent", version="1.1.0")
 
 MIB_TO_BYTES = 1024 * 1024
+GIB_TO_BYTES = 1024 * 1024 * 1024
 GPU_BACKEND = os.getenv("GPU_BACKEND", "auto")
 
 
 def detect_backend() -> str | None:
-    """Detect available GPU backend: nvidia, amd, or None."""
-    if GPU_BACKEND in ("nvidia", "amd"):
+    """Detect available GPU backend: nvidia, amd, apple, or None."""
+    if GPU_BACKEND in ("nvidia", "amd", "apple"):
         return GPU_BACKEND
     if shutil.which("nvidia-smi"):
         return "nvidia"
     if shutil.which("rocm-smi"):
         return "amd"
+    if platform.system() == "Darwin" and shutil.which("system_profiler"):
+        return "apple"
     return None
 
 
@@ -119,6 +124,100 @@ def query_amd() -> list[dict]:
     return gpus
 
 
+def query_apple() -> list[dict]:
+    """Query Apple Silicon GPU using system_profiler."""
+    result = subprocess.run(
+        ["system_profiler", "SPDisplaysDataType", "-xml"],
+        capture_output=True,
+        timeout=10,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"system_profiler failed: {result.stderr.decode().strip()}")
+
+    gpus = []
+    try:
+        plist = plistlib.loads(result.stdout)
+        displays = plist[0].get("_items", [])
+
+        for display in displays:
+            name = display.get("sppci_model", "Apple GPU")
+
+            # Get VRAM - Apple reports in various formats
+            vram_str = display.get("spdisplays_vram", display.get("sppci_vram", "0"))
+            if isinstance(vram_str, str):
+                # Parse strings like "16 GB" or "8192 MB"
+                vram_str = vram_str.upper().replace(" ", "")
+                if "GB" in vram_str:
+                    vram_total = int(float(vram_str.replace("GB", ""))) * GIB_TO_BYTES
+                elif "MB" in vram_str:
+                    vram_total = int(float(vram_str.replace("MB", ""))) * MIB_TO_BYTES
+                else:
+                    vram_total = int(float(vram_str)) if vram_str.isdigit() else 0
+            else:
+                vram_total = int(vram_str) if vram_str else 0
+
+            # For unified memory Macs, use total system memory as GPU memory
+            # since Metal can use all unified memory
+            if vram_total == 0:
+                mem_result = subprocess.run(
+                    ["sysctl", "-n", "hw.memsize"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+                if mem_result.returncode == 0:
+                    vram_total = int(mem_result.stdout.strip())
+
+            # Apple Silicon doesn't expose per-GPU utilization easily
+            # We use vm_stat to estimate memory pressure
+            vram_used = 0
+            utilization = 0
+            try:
+                vm_result = subprocess.run(
+                    ["vm_stat"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                )
+                if vm_result.returncode == 0:
+                    lines = vm_result.stdout.splitlines()
+                    page_size = 16384  # Apple Silicon uses 16KB pages
+                    active = 0
+                    wired = 0
+                    for line in lines:
+                        if "page size" in line.lower():
+                            parts = line.split()
+                            for p in parts:
+                                if p.isdigit():
+                                    page_size = int(p)
+                                    break
+                        if "Pages active:" in line:
+                            active = int(line.split(":")[1].strip().rstrip("."))
+                        if "Pages wired down:" in line:
+                            wired = int(line.split(":")[1].strip().rstrip("."))
+                    vram_used = (active + wired) * page_size
+                    if vram_total > 0:
+                        utilization = min(100, int((vram_used / vram_total) * 100))
+            except Exception:
+                pass
+
+            gpus.append(
+                {
+                    "name": name,
+                    "memoryTotal": vram_total,
+                    "memoryUsed": vram_used,
+                    "memoryFree": max(0, vram_total - vram_used),
+                    "temperature": -1,  # macOS doesn't expose GPU temp without SMC
+                    "utilization": utilization,
+                }
+            )
+
+    except Exception as e:
+        raise RuntimeError(f"Failed to parse system_profiler output: {e}")
+
+    return gpus
+
+
 @app.get("/gpu")
 def get_gpu_info():
     """Return GPU metrics as a JSON array."""
@@ -127,14 +226,16 @@ def get_gpu_info():
     if backend is None:
         return JSONResponse(
             status_code=503,
-            content={"error": "No GPU backend available. Install nvidia-smi or rocm-smi."},
+            content={"error": "No GPU backend available. Install nvidia-smi, rocm-smi, or run on macOS."},
         )
 
     try:
         if backend == "nvidia":
             gpus = query_nvidia()
-        else:
+        elif backend == "amd":
             gpus = query_amd()
+        else:
+            gpus = query_apple()
         return JSONResponse(content=gpus)
     except Exception as e:
         return JSONResponse(
