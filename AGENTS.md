@@ -130,6 +130,16 @@ Each development phase is broken into numbered subfases (e.g., 1.1, 1.2, ... 1.1
 - Do not commit `.env`, credentials, or secrets
 - **Never commit `PRD.md`, `PRP.md`, or any product/planning documents.** These are internal reference files and must stay out of version control. Always check staged files before committing.
 
+### Versioning
+
+**Before creating the final commit of a branch**, bump the version in `package.json`:
+
+- **patch** (0.1.0 → 0.1.1): bug fixes, small tweaks, dependency updates
+- **minor** (0.1.0 → 0.2.0): new features, new pages, new API endpoints
+- **major** (0.1.0 → 1.0.0): breaking changes, major rewrites
+
+Run `npm version <patch|minor|major> --no-git-tag-version` to bump, then include the updated `package.json` and `package-lock.json` in the commit. The release workflow reads the version from `package.json` to tag Docker images and create GitHub releases automatically.
+
 ### Pull Requests
 
 **Create one Pull Request per phase**, after all subfases are committed and tests pass:
@@ -163,7 +173,7 @@ Reference `.env.example` for the full list. Key ones:
 |---|---|
 | `DATABASE_URL` | SQLite (default) or PostgreSQL connection string |
 | `DEFAULT_OLLAMA_URL` | Default Ollama server URL |
-| `AUTH_ENABLED` | Enable/disable NextAuth.js |
+| `AUTH_DISABLED` | Set to `true` to bypass login (dev only) |
 | `LOG_STORE_PROMPTS` | Store prompt content in logs (privacy) |
 | `CATALOG_REFRESH_ENABLED` | Allow catalog refresh from ollama.com |
 | `GPU_AGENT_ENABLED` | Enable GPU monitoring sidecar |

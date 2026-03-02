@@ -11,8 +11,6 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    # Skip version-bump commits to avoid infinite loop
-    if: "!contains(github.event.head_commit.message, '[skip ci]')"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -30,40 +28,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      # Determine bump type from PR labels (default: patch)
-      - name: Get PR labels
-        id: pr
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Find the PR number from the merge commit
-          PR_NUMBER=$(gh pr list --state merged --json number,mergeCommit \
-            --jq ".[] | select(.mergeCommit.oid == \"${{ github.sha }}\") | .number")
-
-          BUMP="patch"
-          if [ -n "$PR_NUMBER" ]; then
-            LABELS=$(gh pr view "$PR_NUMBER" --json labels --jq '.labels[].name')
-            if echo "$LABELS" | grep -q "^major$"; then
-              BUMP="major"
-            elif echo "$LABELS" | grep -q "^minor$"; then
-              BUMP="minor"
-            fi
-          fi
-          echo "bump=$BUMP" >> "$GITHUB_OUTPUT"
-          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
-          echo "Version bump: $BUMP (PR #$PR_NUMBER)"
-
-      # Bump version in package.json
-      - name: Bump version
+      - name: Read version from package.json
         id: version
         run: |
-          npm version ${{ steps.pr.outputs.bump }} --no-git-tag-version
           VERSION=$(jq -r .version package.json)
           MAJOR=$(echo "$VERSION" | cut -d. -f1)
           MINOR=$(echo "$VERSION" | cut -d. -f1-2)
@@ -72,16 +40,13 @@ jobs:
           echo "major=$MAJOR" >> "$GITHUB_OUTPUT"
           echo "minor=$MINOR" >> "$GITHUB_OUTPUT"
           echo "short_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
-          echo "New version: $VERSION"
 
-      # Commit version bump back to main
-      - name: Commit version bump
+      - name: Check tag does not already exist
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add package.json package-lock.json
-          git commit -m "chore: bump version to ${{ steps.version.outputs.version }} [skip ci]"
-          git push origin main
+          if git rev-parse "v${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
+            echo "::error::Tag v${{ steps.version.outputs.version }} already exists. Bump version in package.json."
+            exit 1
+          fi
 
       - uses: docker/setup-buildx-action@v3
 
@@ -128,6 +93,8 @@ jobs:
       # --- Git tag + GitHub Release ---
       - name: Create git tag
         run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
           git tag -a "v${{ steps.version.outputs.version }}" -m "Release ${{ steps.version.outputs.version }}"
           git push origin "v${{ steps.version.outputs.version }}"
 
