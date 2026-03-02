@@ -37,10 +37,69 @@ export default function SetupPage() {
   const [serverName, setServerName] = useState("My Ollama Server");
   const [theme, setTheme] = useState("system");
 
+  // Admin account state
+  const [adminUsername, setAdminUsername] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminConfirm, setAdminConfirm] = useState("");
+  const [adminError, setAdminError] = useState("");
+  const [adminLoading, setAdminLoading] = useState(false);
+
   useEffect(() => {
-    testConnection(url);
+    fetch("/api/setup/status")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.completed) {
+          router.push("/");
+          return;
+        }
+        if (data.hasAdmin) {
+          setStep(2);
+        }
+      })
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const handleCreateAdmin = async () => {
+    setAdminError("");
+
+    if (adminUsername.length < 3) {
+      setAdminError(t("usernameTooShort"));
+      return;
+    }
+    if (adminPassword.length < 8) {
+      setAdminError(t("passwordTooShort"));
+      return;
+    }
+    if (adminPassword !== adminConfirm) {
+      setAdminError(t("passwordMismatch"));
+      return;
+    }
+
+    setAdminLoading(true);
+    try {
+      const res = await fetch("/api/setup/admin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: adminUsername,
+          password: adminPassword,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        setAdminError(data.error || "Failed to create admin");
+        return;
+      }
+
+      setStep(2);
+    } catch {
+      setAdminError("Network error");
+    } finally {
+      setAdminLoading(false);
+    }
+  };
 
   const testConnection = async (testUrl: string) => {
     setConnectionStatus("testing");
@@ -65,13 +124,13 @@ export default function SetupPage() {
     }
   };
 
-  const handleStep1Next = async () => {
+  const handleStep2Next = async () => {
     await fetch("/api/servers", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: serverName, url }),
     });
-    setStep(2);
+    setStep(3);
   };
 
   const handlePull = async () => {
@@ -133,14 +192,14 @@ export default function SetupPage() {
 
   const handleFinish = async () => {
     await fetch("/api/setup/complete", { method: "POST" });
-    router.push("/");
+    router.push("/auth/signin");
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center p-6">
       <div className="w-full max-w-lg">
         <div className="mb-6 flex items-center gap-2">
-          {[1, 2, 3].map((s) => (
+          {[1, 2, 3, 4].map((s) => (
             <div
               key={s}
               className={`h-2 flex-1 rounded-full transition-colors ${
@@ -150,7 +209,72 @@ export default function SetupPage() {
           ))}
         </div>
 
+        {/* Step 1: Create Admin Account */}
         {step === 1 && (
+          <div>
+            <h1 className="text-2xl font-bold">{t("adminTitle")}</h1>
+            <p className="mt-2 text-[hsl(var(--muted-foreground))]">
+              {t("adminDescription")}
+            </p>
+
+            <div className="mt-6 space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium">
+                  {t("adminUsername")}
+                </label>
+                <input
+                  type="text"
+                  value={adminUsername}
+                  onChange={(e) => setAdminUsername(e.target.value)}
+                  autoComplete="username"
+                  className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
+                  placeholder="admin"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">
+                  {t("adminPassword")}
+                </label>
+                <input
+                  type="password"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  autoComplete="new-password"
+                  className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">
+                  {t("adminConfirmPassword")}
+                </label>
+                <input
+                  type="password"
+                  value={adminConfirm}
+                  onChange={(e) => setAdminConfirm(e.target.value)}
+                  autoComplete="new-password"
+                  className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
+                />
+              </div>
+
+              {adminError && (
+                <p className="text-sm text-[hsl(var(--destructive))]">
+                  {adminError}
+                </p>
+              )}
+
+              <button
+                onClick={handleCreateAdmin}
+                disabled={adminLoading}
+                className="w-full rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm text-[hsl(var(--primary-foreground))] disabled:opacity-50"
+              >
+                {adminLoading ? t("creating") : t("createAdmin")}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 2: Connect to Ollama */}
+        {step === 2 && (
           <div>
             <h1 className="text-2xl font-bold">{t("step1Title")}</h1>
             <p className="mt-2 text-[hsl(var(--muted-foreground))]">
@@ -188,6 +312,11 @@ export default function SetupPage() {
               </div>
 
               <div className="rounded-md border p-3">
+                {connectionStatus === "idle" && (
+                  <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                    {t("testConnection")}
+                  </p>
+                )}
                 {connectionStatus === "testing" && (
                   <p className="text-sm">{t("detecting")}</p>
                 )}
@@ -209,7 +338,7 @@ export default function SetupPage() {
               </div>
 
               <button
-                onClick={handleStep1Next}
+                onClick={handleStep2Next}
                 disabled={connectionStatus !== "online"}
                 className="w-full rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm text-[hsl(var(--primary-foreground))] disabled:opacity-50"
               >
@@ -219,7 +348,8 @@ export default function SetupPage() {
           </div>
         )}
 
-        {step === 2 && (
+        {/* Step 3: Download a Model */}
+        {step === 3 && (
           <div>
             <h1 className="text-2xl font-bold">{t("step2Title")}</h1>
             <p className="mt-2 text-[hsl(var(--muted-foreground))]">
@@ -266,7 +396,7 @@ export default function SetupPage() {
                 {pulling ? t("downloading") : "Download"}
               </button>
               <button
-                onClick={() => setStep(3)}
+                onClick={() => setStep(4)}
                 className="rounded-md border px-4 py-2 text-sm hover:bg-[hsl(var(--accent))]"
               >
                 {t("step2Skip")}
@@ -275,7 +405,8 @@ export default function SetupPage() {
           </div>
         )}
 
-        {step === 3 && (
+        {/* Step 4: Theme */}
+        {step === 4 && (
           <div>
             <h1 className="text-2xl font-bold">{t("step3Title")}</h1>
             <p className="mt-2 text-[hsl(var(--muted-foreground))]">
@@ -306,7 +437,7 @@ export default function SetupPage() {
 
               <div className="flex gap-2">
                 <button
-                  onClick={() => setStep(2)}
+                  onClick={() => setStep(3)}
                   className="rounded-md border px-4 py-2 text-sm hover:bg-[hsl(var(--accent))]"
                 >
                   Back

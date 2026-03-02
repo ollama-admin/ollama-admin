@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 
 interface RunningModel {
   name: string;
@@ -50,6 +51,7 @@ export async function GET() {
         }
       } catch {
         result.error = "Could not connect to Ollama server";
+        logger.warn("Cannot reach Ollama", { server: server.name, url: server.url });
       }
 
       if (server.gpuAgentUrl) {

@@ -1,30 +1,28 @@
 "use client";
 
-import { useState } from "react";
-import { signIn, getProviders } from "next-auth/react";
-import { useEffect } from "react";
-import { LogIn, Github } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
+import { LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
-interface Provider {
-  id: string;
-  name: string;
-  type: string;
-}
-
 export default function SignInPage() {
-  const [providers, setProviders] = useState<Record<string, Provider>>({});
+  const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
-    getProviders().then((p) => {
-      if (p) setProviders(p);
-    });
-  }, []);
+    // Redirect to setup if no admin exists yet
+    fetch("/api/setup/status")
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.hasAdmin) router.push("/setup");
+      })
+      .catch(() => {});
+  }, [router]);
 
   const handleCredentials = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,29 +48,7 @@ export default function SignInPage() {
             Sign in to Ollama Admin
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {providers.github && (
-            <>
-              <Button
-                className="w-full"
-                onClick={() => signIn("github", { callbackUrl: "/" })}
-              >
-                <Github className="mr-2 h-4 w-4" />
-                Sign in with GitHub
-              </Button>
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs">
-                  <span className="bg-[hsl(var(--card))] px-2 text-[hsl(var(--muted-foreground))]">
-                    or
-                  </span>
-                </div>
-              </div>
-            </>
-          )}
-
+        <CardContent>
           <form onSubmit={handleCredentials} className="space-y-3" aria-label="Sign in">
             <Input
               label="Username"

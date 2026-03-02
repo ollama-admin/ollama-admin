@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
   const { serverId, name } = await req.json();
@@ -19,6 +20,8 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  logger.info("Pulling model", { model: name, server: server.name });
+
   const ollamaRes = await fetch(`${server.url}/api/pull`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -26,6 +29,7 @@ export async function POST(req: NextRequest) {
   });
 
   if (!ollamaRes.ok || !ollamaRes.body) {
+    logger.error("Pull failed", { model: name, status: ollamaRes.status });
     return new Response(
       JSON.stringify({ error: `Pull failed: ${ollamaRes.statusText}` }),
       { status: 502, headers: { "Content-Type": "application/json" } }

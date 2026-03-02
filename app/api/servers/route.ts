@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 
 export async function GET() {
   const servers = await prisma.server.findMany({
@@ -29,5 +30,6 @@ export async function POST(req: NextRequest) {
     },
   });
 
+  logger.info("Server added", { name, url });
   return NextResponse.json(server, { status: 201 });
 }

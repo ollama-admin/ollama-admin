@@ -1,43 +1,37 @@
 import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import GitHubProvider from "next-auth/providers/github";
-import { AUTH_ENABLED } from "@/lib/constants";
-
-const providers: NextAuthOptions["providers"] = [];
-
-if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
-  providers.push(
-    GitHubProvider({
-      clientId: process.env.GITHUB_CLIENT_ID,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET,
-    })
-  );
-}
-
-providers.push(
-  CredentialsProvider({
-    name: "Credentials",
-    credentials: {
-      username: { label: "Username", type: "text" },
-      password: { label: "Password", type: "password" },
-    },
-    async authorize(credentials) {
-      const adminUser = process.env.ADMIN_USERNAME || "admin";
-      const adminPass = process.env.ADMIN_PASSWORD || "admin";
-
-      if (
-        credentials?.username === adminUser &&
-        credentials?.password === adminPass
-      ) {
-        return { id: "1", name: adminUser, email: `${adminUser}@local` };
-      }
-      return null;
-    },
-  })
-);
+import { prisma } from "@/lib/prisma";
+import { verifyPassword } from "@/lib/password";
 
 export const authOptions: NextAuthOptions = {
-  providers,
+  providers: [
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        username: { label: "Username", type: "text" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.username || !credentials?.password) return null;
+
+        const user = await prisma.user.findUnique({
+          where: { username: credentials.username },
+        });
+
+        if (!user || !user.active) return null;
+
+        const valid = await verifyPassword(credentials.password, user.password);
+        if (!valid) return null;
+
+        return {
+          id: user.id,
+          name: user.username,
+          email: `${user.username}@local`,
+          role: user.role,
+        };
+      },
+    }),
+  ],
   session: { strategy: "jwt" },
   pages: {
     signIn: "/auth/signin",
@@ -46,16 +40,16 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.role = user.role || "user";
       }
       return token;
     },
     async session({ session, token }) {
-      if (session.user && token.id) {
-        (session.user as Record<string, unknown>).id = token.id;
+      if (session.user) {
+        session.user.id = token.id as string;
+        session.user.role = token.role;
       }
       return session;
     },
   },
 };
-
-export { AUTH_ENABLED };

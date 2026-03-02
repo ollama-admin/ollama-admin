@@ -1,6 +1,8 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
   const search = req.nextUrl.searchParams.get("q") || "";
@@ -36,11 +38,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const session = await getServerSession(authOptions);
+  const userId = session?.user?.id || null;
+
   const chat = await prisma.chat.create({
     data: {
       title: title || "New Conversation",
       model,
       serverId,
+      userId,
       parameters: parameters ? JSON.stringify(parameters) : null,
     },
   });

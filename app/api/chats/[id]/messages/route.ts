@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, getRateLimitConfig } from "@/lib/rate-limit";
 import { getRateLimitKey } from "@/lib/with-rate-limit";
+import { logger } from "@/lib/logger";
 
 function buildOllamaRequest(
   chat: {
@@ -112,6 +113,8 @@ function createSSEStream(
           statusCode: 200,
         },
       });
+
+      logger.info("Chat completed", { chatId: chat.id, model: chat.model, promptTokens, completionTokens, latencyMs });
 
       if (chat.title === "New Conversation" && content) {
         await prisma.chat.update({
@@ -228,6 +231,8 @@ export async function POST(
   const startTime = Date.now();
   const { url, body } = buildOllamaRequest(chat, ollamaMessages);
 
+  logger.info("Chat request", { chatId: chat.id, model: chat.model, server: chat.server.name });
+
   const ollamaRes = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -235,6 +240,7 @@ export async function POST(
   });
 
   if (!ollamaRes.ok || !ollamaRes.body) {
+    logger.error("Ollama chat error", { chatId: chat.id, status: ollamaRes.status });
     return new Response(
       JSON.stringify({ error: `Ollama error: ${ollamaRes.statusText}` }),
       { status: 502, headers: { "Content-Type": "application/json" } }
