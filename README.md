@@ -41,14 +41,14 @@ Open [http://localhost:3000](http://localhost:3000) — the setup wizard will gu
 
 ## Docker
 
-### From Harbor (recommended)
+### From GitHub Container Registry (recommended)
 
 ```bash
 # Latest version
-docker pull registry.harbor.io/ollama-admin/app:latest
+docker pull ghcr.io/ollama-admin/ollama-admin:latest
 
 # Specific version (recommended for production)
-docker pull registry.harbor.io/ollama-admin/app:1.0.0
+docker pull ghcr.io/ollama-admin/ollama-admin:0.1.0
 
 docker compose up -d
 ```
@@ -155,7 +155,7 @@ npx tsc --noEmit
 | Workflow | Trigger | What it does |
 |---|---|---|
 | **CI** (`.github/workflows/ci.yml`) | Pull requests to `main` | Lint, test, type-check, Docker build (no push) |
-| **Release** (`.github/workflows/release.yml`) | Merge to `main` | Test, build multi-arch images, push to Harbor, git tag, GitHub Release |
+| **Release** (`.github/workflows/release.yml`) | Merge to `main` | Test, build multi-arch images, push to ghcr.io, git tag, GitHub Release |
 
 See [PRD-CICD.md](PRD-CICD.md) for full CI/CD documentation.
 
@@ -169,7 +169,7 @@ See [PRD-CICD.md](PRD-CICD.md) for full CI/CD documentation.
 | Auth | NextAuth.js (optional) |
 | Syntax highlighting | Shiki |
 | Tests | Vitest (unit) + Playwright (e2e) |
-| CI/CD | GitHub Actions + Harbor Registry |
+| CI/CD | GitHub Actions + GitHub Container Registry |
 | Containers | Docker + Docker Compose |
 
 ## Contributing

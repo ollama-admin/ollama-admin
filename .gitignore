@@ -21,9 +21,9 @@ dist/
 .env.production.local
 
 # Product/planning documents
-PRD.md
-PRP.md
-plan/
+*PRD.md
+*PRP.md
+*plan/
 
 # Debug
 npm-debug.log*
