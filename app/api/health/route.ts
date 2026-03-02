@@ -16,18 +16,14 @@ interface HealthStatus {
 const startTime = Date.now();
 
 export async function GET() {
-  const checks = {
-    database: "ok" as const,
-    uptime: Math.floor((Date.now() - startTime) / 1000),
-  };
-
+  let databaseStatus: "ok" | "error" = "ok";
   let status: "ok" | "degraded" | "error" = "ok";
 
   // Check database connectivity
   try {
     await prisma.$queryRaw`SELECT 1`;
   } catch {
-    checks.database = "error";
+    databaseStatus = "error";
     status = "error";
   }
 
@@ -35,10 +31,13 @@ export async function GET() {
     status,
     version: process.env.npm_package_version || "unknown",
     timestamp: new Date().toISOString(),
-    checks,
+    checks: {
+      database: databaseStatus,
+      uptime: Math.floor((Date.now() - startTime) / 1000),
+    },
   };
 
-  const httpStatus = status === "ok" ? 200 : status === "degraded" ? 200 : 503;
+  const httpStatus = status === "error" ? 503 : 200;
 
   return NextResponse.json(health, { status: httpStatus });
 }
