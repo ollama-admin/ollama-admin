@@ -140,6 +140,16 @@ Each development phase is broken into numbered subfases (e.g., 1.1, 1.2, ... 1.1
 
 Run `npm version <patch|minor|major> --no-git-tag-version` to bump, then include the updated `package.json` and `package-lock.json` in the commit. The release workflow reads the version from `package.json` to tag Docker images and create GitHub releases automatically.
 
+### Pre-push Checklist
+
+**Before pushing a branch**, always run and verify these pass:
+
+1. `npm test` — all unit tests must pass
+2. `npx next lint` — no lint errors (warnings are acceptable)
+3. `npm run build` — production build must succeed with no type errors
+
+Do not push code that fails any of these checks.
+
 ### Pull Requests
 
 **Create one Pull Request per phase**, after all subfases are committed and tests pass:
