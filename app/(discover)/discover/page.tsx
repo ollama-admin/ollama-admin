@@ -86,10 +86,16 @@ export default function DiscoverPage() {
           }),
         });
 
+        if (!res.ok) {
+          toast(t("pullError", { name: pullTag }), "error");
+          return;
+        }
+
         if (!res.body) return;
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
+        let errorMsg = "";
 
         while (true) {
           const { done, value } = await reader.read();
@@ -101,13 +107,21 @@ export default function DiscoverPage() {
           for (const line of lines) {
             if (!line.trim()) continue;
             try {
-              JSON.parse(line);
+              const json = JSON.parse(line);
+              if (json.error) {
+                errorMsg = json.error;
+              }
             } catch {
               // skip
             }
           }
         }
-        toast(t("pullComplete", { name: pullTag }), "success");
+
+        if (errorMsg) {
+          toast(`${pullTag}: ${errorMsg}`, "error");
+        } else {
+          toast(t("pullComplete", { name: pullTag }), "success");
+        }
       } catch {
         toast(t("pullError", { name: pullTag }), "error");
       } finally {
