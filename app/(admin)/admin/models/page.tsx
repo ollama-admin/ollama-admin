@@ -2,13 +2,17 @@
 
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback } from "react";
-import type { OllamaModel, OllamaRunningModel, OllamaShowResponse } from "@/lib/ollama";
-import { Package } from "lucide-react";
+import type {
+  OllamaModel,
+  OllamaRunningModel,
+  OllamaShowResponse,
+} from "@/lib/ollama";
+import { Package, Trash2, Search, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { Card } from "@/components/ui/card";
 import { Modal } from "@/components/ui/modal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -37,11 +41,14 @@ export default function ModelsPage() {
   const [models, setModels] = useState<OllamaModel[]>([]);
   const [running, setRunning] = useState<OllamaRunningModel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
   const [pullName, setPullName] = useState("");
   const [pullProgress, setPullProgress] = useState<number | null>(null);
   const [pullStatus, setPullStatus] = useState<string | null>(null);
   const [pulling, setPulling] = useState(false);
-  const [inspecting, setInspecting] = useState<OllamaShowResponse | null>(null);
+  const [inspecting, setInspecting] = useState<OllamaShowResponse | null>(
+    null
+  );
   const [inspectName, setInspectName] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
@@ -91,6 +98,11 @@ export default function ModelsPage() {
         body: JSON.stringify({ serverId: selectedServer, name: pullName }),
       });
 
+      if (!res.ok) {
+        toast("Pull failed", "error");
+        return;
+      }
+
       if (!res.body) return;
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -108,6 +120,10 @@ export default function ModelsPage() {
           if (!line.trim()) continue;
           try {
             const json = JSON.parse(line);
+            if (json.error) {
+              toast(json.error, "error");
+              return;
+            }
             if (json.total && json.completed) {
               const pct = Math.round((json.completed / json.total) * 100);
               setPullProgress(pct);
@@ -168,52 +184,21 @@ export default function ModelsPage() {
     return r ? formatBytes(r.size_vram) : null;
   };
 
-  if (loading && models.length === 0) {
-    return (
-      <div className="p-6">
-        <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <div className="mt-6 space-y-3">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} variant="row" className="h-14" />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (models.length === 0 && !loading) {
-    return (
-      <div className="p-6">
-        <h1 className="text-2xl font-bold">{t("title")}</h1>
-        {servers.length > 1 && (
-          <Select
-            value={selectedServer}
-            onChange={(e) => setSelectedServer(e.target.value)}
-            className="mt-4 w-auto"
-          >
-            {servers.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </Select>
-        )}
-        <EmptyState
-          icon={Package}
-          title={t("emptyTitle")}
-          description={t("emptyDescription")}
-          action={
-            <a href="/discover">
-              <Button>{t("emptyAction")}</Button>
-            </a>
-          }
-        />
-      </div>
-    );
-  }
+  const filteredModels = search
+    ? models.filter((m) => m.name.toLowerCase().includes(search.toLowerCase()))
+    : models;
 
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{t("title")}</h1>
+      <h1 className="text-2xl font-bold">{t("title")}</h1>
+
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={t("searchPlaceholder")}
+          className="flex-1"
+        />
         {servers.length > 1 && (
           <Select
             value={selectedServer}
@@ -221,20 +206,33 @@ export default function ModelsPage() {
             className="w-auto"
           >
             {servers.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
+              <option
+                key={s.id}
+                value={s.id}
+                className="bg-[hsl(var(--background))] text-[hsl(var(--foreground))]"
+              >
+                {s.name}
+              </option>
             ))}
           </Select>
         )}
       </div>
 
-      <div className="mt-4 flex gap-2">
+      {/* Pull model input */}
+      <div className="mt-3 flex gap-2">
         <Input
           value={pullName}
           onChange={(e) => setPullName(e.target.value)}
           placeholder={t("pullPlaceholder")}
           onKeyDown={(e) => e.key === "Enter" && handlePull()}
+          className="flex-1"
         />
-        <Button onClick={handlePull} disabled={!pullName.trim() || pulling} loading={pulling}>
+        <Button
+          onClick={handlePull}
+          disabled={!pullName.trim() || pulling}
+          loading={pulling}
+        >
+          <Download className="mr-1 h-4 w-4" />
           {t("pullModel")}
         </Button>
       </div>
@@ -246,54 +244,89 @@ export default function ModelsPage() {
         </div>
       )}
 
-      <div className="mt-6">
-        <Table caption="Installed models">
-          <TableHeader>
-            <tr>
-              <TableHead>{t("name")}</TableHead>
-              <TableHead>{t("size")}</TableHead>
-              <TableHead>{t("family")}</TableHead>
-              <TableHead>{t("quantization")}</TableHead>
-              <TableHead>{t("modified")}</TableHead>
-              <TableHead />
-            </tr>
-          </TableHeader>
-          <TableBody>
-            {models.map((model) => (
-              <TableRow key={model.name}>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{model.name}</span>
+      {loading ? (
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Skeleton key={i} variant="card" />
+          ))}
+        </div>
+      ) : filteredModels.length === 0 ? (
+        <EmptyState
+          icon={search ? Search : Package}
+          title={search ? t("noResults") : t("emptyTitle")}
+          description={search ? t("noResultsDescription") : t("emptyDescription")}
+          action={
+            !search ? (
+              <a href="/discover">
+                <Button>{t("emptyAction")}</Button>
+              </a>
+            ) : undefined
+          }
+        />
+      ) : (
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {filteredModels.map((model) => (
+            <Card key={model.name}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <h3 className="truncate font-medium">{model.name}</h3>
+                  <div className="mt-1 flex flex-wrap gap-1">
                     {isRunning(model.name) && (
                       <Badge variant="success">
-                        loaded {getVram(model.name) && `· ${getVram(model.name)}`}
+                        loaded
+                        {getVram(model.name) && ` · ${getVram(model.name)}`}
+                      </Badge>
+                    )}
+                    {model.details?.family && (
+                      <Badge variant="muted" className="text-[10px]">
+                        {model.details.family}
+                      </Badge>
+                    )}
+                    {model.details?.quantization_level && (
+                      <Badge variant="muted" className="text-[10px]">
+                        {model.details.quantization_level}
                       </Badge>
                     )}
                   </div>
-                </TableCell>
-                <TableCell>{formatBytes(model.size)}</TableCell>
-                <TableCell>{model.details?.family || "—"}</TableCell>
-                <TableCell>{model.details?.quantization_level || "—"}</TableCell>
-                <TableCell>
-                  {new Date(model.modified_at).toLocaleDateString()}
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
-                    <Button variant="secondary" size="sm" onClick={() => handleInspect(model.name)}>
-                      {t("inspect")}
-                    </Button>
-                    <Button variant="destructive" size="sm" onClick={() => setDeleteTarget(model.name)}>
-                      {tc("delete")}
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+                </div>
+              </div>
 
-      <Modal open={!!inspecting} onClose={() => setInspecting(null)} title={inspectName}>
+              <div className="mt-2 flex items-center gap-3 text-[10px] text-[hsl(var(--muted-foreground))]">
+                <span>{formatBytes(model.size)}</span>
+                <span>
+                  {new Date(model.modified_at).toLocaleDateString()}
+                </span>
+              </div>
+
+              <div className="mt-3 flex gap-1.5">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => handleInspect(model.name)}
+                  className="text-xs"
+                >
+                  {t("inspect")}
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => setDeleteTarget(model.name)}
+                  className="text-xs"
+                >
+                  <Trash2 className="mr-1 h-3 w-3" />
+                  {tc("delete")}
+                </Button>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <Modal
+        open={!!inspecting}
+        onClose={() => setInspecting(null)}
+        title={inspectName}
+      >
         {inspecting && (
           <div className="space-y-3 text-sm">
             <div>
