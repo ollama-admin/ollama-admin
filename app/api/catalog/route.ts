@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import * as cheerio from "cheerio";
 
 interface ScrapedModel {
+  id: string;
   name: string;
   description: string;
   capabilities: string[];
@@ -23,9 +24,10 @@ function parseModelsFromHtml(html: string): ScrapedModel[] {
   $('a[href^="/library/"]').each((_, el) => {
     const $el = $(el);
     const href = $el.attr("href") || "";
-    const name = href.replace("/library/", "");
-    if (!name || name.includes("/")) return;
+    const id = href.replace("/library/", "");
+    if (!id || id.includes("/")) return;
 
+    const heading = $el.find("h2").first().text().trim();
     const description = $el.find("p").first().text().trim();
 
     const capabilities: string[] = [];
@@ -46,7 +48,7 @@ function parseModelsFromHtml(html: string): ScrapedModel[] {
       }
     });
 
-    models.push({ name, description, capabilities, sizes, pulls, updated });
+    models.push({ id, name: heading || id, description, capabilities, sizes, pulls, updated });
   });
 
   return models;
@@ -84,8 +86,8 @@ async function scrapeAllModels(): Promise<ScrapedModel[]> {
     try {
       const html = await fetchPage(url);
       for (const model of parseModelsFromHtml(html)) {
-        if (!modelMap.has(model.name)) {
-          modelMap.set(model.name, model);
+        if (!modelMap.has(model.id)) {
+          modelMap.set(model.id, model);
         }
       }
     } catch {
@@ -104,8 +106,8 @@ async function scrapeAllModels(): Promise<ScrapedModel[]> {
     for (const html of results) {
       if (!html) continue;
       for (const model of parseModelsFromHtml(html)) {
-        if (!modelMap.has(model.name)) {
-          modelMap.set(model.name, model);
+        if (!modelMap.has(model.id)) {
+          modelMap.set(model.id, model);
         }
       }
     }

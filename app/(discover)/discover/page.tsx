@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 
 interface CatalogModel {
+  id: string;
   name: string;
   description: string;
   capabilities: string[];
@@ -197,7 +198,7 @@ export default function DiscoverPage() {
       ) : (
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {models.map((model) => (
-            <Card key={model.name}>
+            <Card key={model.id}>
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <h3 className="font-medium">{model.name}</h3>
@@ -223,11 +224,11 @@ export default function DiscoverPage() {
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {model.sizes.length > 0 ? (
                   model.sizes.map((size) => {
-                    const pullKey = `${model.name}:${size}`;
+                    const pullKey = `${model.id}:${size}`;
                     return (
                       <button
                         key={size}
-                        onClick={() => handlePull(model.name, size)}
+                        onClick={() => handlePull(model.id, size)}
                         disabled={
                           pullingModels.has(pullKey) || !selectedServer
                         }
@@ -240,9 +241,9 @@ export default function DiscoverPage() {
                   })
                 ) : (
                   <button
-                    onClick={() => handlePull(model.name)}
+                    onClick={() => handlePull(model.id)}
                     disabled={
-                      pullingModels.has(model.name) || !selectedServer
+                      pullingModels.has(model.id) || !selectedServer
                     }
                     className="flex items-center gap-1 rounded-md border px-2 py-1 text-xs transition-colors hover:bg-[hsl(var(--accent))] disabled:opacity-50"
                   >
