@@ -72,6 +72,7 @@ export default function ChatPage() {
   const [editContent, setEditContent] = useState("");
   const [paramsOpen, setParamsOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -106,9 +107,13 @@ export default function ChatPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedServer]);
 
+  const shouldAutoScroll = useRef(false);
+
   useEffect(() => {
+    if (!shouldAutoScroll.current) return;
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, streamingContent]);
+    shouldAutoScroll.current = false;
+  }, [messages]);
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -124,7 +129,10 @@ export default function ChatPage() {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = Math.min(el.scrollHeight, 200) + "px";
+    const maxHeight = 120;
+    const newHeight = Math.min(el.scrollHeight, maxHeight);
+    el.style.height = newHeight + "px";
+    el.style.overflowY = el.scrollHeight > maxHeight ? "auto" : "hidden";
   };
 
   const handleServerChange = async (serverId: string) => {
@@ -153,6 +161,7 @@ export default function ChatPage() {
     const res = await fetch(`/api/chats/${id}`);
     const data = await res.json();
     setCurrentChatId(id);
+    shouldAutoScroll.current = true;
     setMessages(data.messages || []);
     setSelectedModel(data.model);
     setSelectedServer(data.serverId);
@@ -197,6 +206,7 @@ export default function ChatPage() {
     setStreaming(true);
     setStreamingContent("");
     abortRef.current = new AbortController();
+    let didInitialScroll = false;
 
     try {
       const res = await fetch(`/api/chats/${chatId}/messages`, {
@@ -228,6 +238,10 @@ export default function ChatPage() {
             if (json.message?.content) {
               fullContent += json.message.content;
               setStreamingContent(fullContent);
+              if (!didInitialScroll) {
+                didInitialScroll = true;
+                messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+              }
             }
             if (json.done && json.promptTokens !== undefined) {
               meta = {
@@ -295,6 +309,7 @@ export default function ChatPage() {
           role: "user",
           content: input,
         };
+        shouldAutoScroll.current = true;
         setMessages([userMessage]);
         const msgContent = input;
         setInput("");
@@ -313,6 +328,7 @@ export default function ChatPage() {
       role: "user",
       content: input,
     };
+    shouldAutoScroll.current = true;
     setMessages((prev) => [...prev, userMessage]);
     const msgContent = input;
     setInput("");
@@ -508,6 +524,7 @@ export default function ChatPage() {
 
         {/* Messages */}
         <div
+          ref={messagesContainerRef}
           className="flex-1 overflow-auto p-4"
           aria-live="polite"
           aria-relevant="additions"
@@ -539,7 +556,7 @@ export default function ChatPage() {
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
                         )}
-                        <div className="max-w-[80%] rounded-2xl bg-[hsl(var(--primary))] px-4 py-2.5 text-[hsl(var(--primary-foreground))]">
+                        <div className="max-w-[85%] rounded-2xl bg-[hsl(var(--primary))] px-5 py-3.5 text-[hsl(var(--primary-foreground))]">
                           {editingMessageId === msg.id ? (
                             <div className="space-y-2">
                               <textarea
@@ -647,7 +664,7 @@ export default function ChatPage() {
                 placeholder={t("typeMessage")}
                 rows={1}
                 disabled={streaming}
-                className="w-full resize-none overflow-hidden rounded-xl border bg-[hsl(var(--card))] py-3 pl-12 pr-12 text-sm shadow-sm transition-colors placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] disabled:opacity-50"
+                className="w-full resize-none overflow-y-hidden rounded-xl border bg-[hsl(var(--card))] py-3 pl-12 pr-12 text-sm shadow-sm transition-colors placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] disabled:opacity-50"
               />
               {streaming ? (
                 <button
