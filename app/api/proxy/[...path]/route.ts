@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 import { withRateLimit } from "@/lib/with-rate-limit";
 import { validateApiKey } from "@/lib/validate-api-key";
 
@@ -8,6 +9,7 @@ async function proxyToOllama(req: NextRequest) {
   if (hasApiKey) {
     const { valid } = await validateApiKey(req);
     if (!valid) {
+      logger.warn("Proxy auth failed", { ip: req.headers.get("x-forwarded-for") });
       return new Response(JSON.stringify({ error: "Invalid or revoked API key" }), {
         status: 401,
         headers: { "Content-Type": "application/json" },
@@ -18,7 +20,10 @@ async function proxyToOllama(req: NextRequest) {
   const path = req.nextUrl.pathname.replace("/api/proxy", "");
   const serverId = req.nextUrl.searchParams.get("serverId");
 
+  logger.debug("Proxy request", { method: req.method, path, serverId });
+
   if (!serverId) {
+    logger.warn("Proxy missing serverId", { path });
     return new Response(JSON.stringify({ error: "serverId is required" }), {
       status: 400,
       headers: { "Content-Type": "application/json" },
@@ -27,6 +32,7 @@ async function proxyToOllama(req: NextRequest) {
 
   const server = await prisma.server.findUnique({ where: { id: serverId } });
   if (!server) {
+    logger.warn("Proxy server not found", { serverId });
     return new Response(JSON.stringify({ error: "Server not found" }), {
       status: 404,
       headers: { "Content-Type": "application/json" },
@@ -48,8 +54,10 @@ async function proxyToOllama(req: NextRequest) {
     }
   }
 
+  const ollamaUrl = `${server.url}${path}`;
+  logger.info("Proxy forwarding", { method: req.method, ollamaUrl, model, server: server.name });
+
   try {
-    const ollamaUrl = `${server.url}${path}`;
     const ollamaRes = await fetch(ollamaUrl, {
       method: req.method,
       headers: { "Content-Type": "application/json" },
@@ -58,6 +66,12 @@ async function proxyToOllama(req: NextRequest) {
 
     const latencyMs = Date.now() - startTime;
     const statusCode = ollamaRes.status;
+
+    if (statusCode >= 400) {
+      logger.warn("Proxy upstream error", { ollamaUrl, statusCode, latencyMs, model });
+    } else {
+      logger.debug("Proxy response", { ollamaUrl, statusCode, latencyMs });
+    }
 
     await prisma.log.create({
       data: {
@@ -80,6 +94,8 @@ async function proxyToOllama(req: NextRequest) {
   } catch (err) {
     const latencyMs = Date.now() - startTime;
     const message = err instanceof Error ? err.message : "Proxy error";
+
+    logger.error("Proxy connection failed", { ollamaUrl, error: message, latencyMs, model });
 
     await prisma.log.create({
       data: {

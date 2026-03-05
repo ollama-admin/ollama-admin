@@ -165,7 +165,7 @@ Uncomment the `postgres` service in `docker-compose.yml` for a self-contained se
 
 ## GPU Agent
 
-The GPU Agent is a lightweight sidecar that exposes GPU metrics over HTTP. Install it on any server with an NVIDIA or AMD GPU — it doesn't need to be on the same machine as Ollama Admin.
+The GPU Agent is a lightweight sidecar that exposes GPU metrics over HTTP. Install it on any server with an NVIDIA, AMD, Intel, or Apple Silicon GPU — it doesn't need to be on the same machine as Ollama Admin.
 
 ### Install
 
@@ -180,12 +180,14 @@ Then in Ollama Admin, go to server settings and set the GPU Agent URL to `http:/
 | Method | Endpoint | Description |
 |---|---|---|
 | GET | `/gpu` | Array of GPU objects (name, memory, temperature, utilization) |
-| GET | `/health` | Health check with detected backend (`nvidia` or `amd`) |
+| GET | `/health` | Health check with detected backend (`nvidia`, `amd`, `intel`, or `apple`) |
 
 ### Supported backends
 
 - **NVIDIA** — via `nvidia-smi` (requires NVIDIA Container Toolkit for Docker)
 - **AMD** — via `rocm-smi`
+- **Intel** — via `xpu-smi`
+- **Apple Silicon** — via `system_profiler` (macOS)
 
 See [gpu-agent/README.md](gpu-agent/README.md) for full documentation.
 
@@ -425,7 +427,7 @@ This project follows [Semantic Versioning](https://semver.org/). Every merge to 
 | Unit tests | Vitest + jsdom |
 | E2E tests | Playwright |
 | CI/CD | GitHub Actions → GitHub Container Registry |
-| GPU Agent | Python, FastAPI, nvidia-smi / rocm-smi |
+| GPU Agent | Python, FastAPI, nvidia-smi / rocm-smi / xpu-smi / system_profiler |
 | Containers | Docker (multi-stage, multi-arch) |
 
 ---
