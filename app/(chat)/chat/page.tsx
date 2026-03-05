@@ -127,6 +127,28 @@ export default function ChatPage() {
     el.style.height = Math.min(el.scrollHeight, 200) + "px";
   };
 
+  const handleServerChange = async (serverId: string) => {
+    setSelectedServer(serverId);
+    if (currentChatId) {
+      await fetch(`/api/chats/${currentChatId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ serverId }),
+      });
+    }
+  };
+
+  const handleModelChange = async (model: string) => {
+    setSelectedModel(model);
+    if (currentChatId) {
+      await fetch(`/api/chats/${currentChatId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model }),
+      });
+    }
+  };
+
   const loadChat = async (id: string) => {
     const res = await fetch(`/api/chats/${id}`);
     const data = await res.json();
@@ -426,7 +448,7 @@ export default function ChatPage() {
           <div className="relative">
             <select
               value={selectedServer}
-              onChange={(e) => setSelectedServer(e.target.value)}
+              onChange={(e) => handleServerChange(e.target.value)}
               aria-label={t("selectServer")}
               className="h-8 appearance-none rounded-md border bg-transparent pl-3 pr-8 text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]"
             >
@@ -441,7 +463,7 @@ export default function ChatPage() {
           <div className="relative">
             <select
               value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value)}
+              onChange={(e) => handleModelChange(e.target.value)}
               aria-label={t("selectModel")}
               className="h-8 appearance-none rounded-md border bg-transparent pl-3 pr-8 text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]"
             >

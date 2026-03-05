@@ -25,12 +25,14 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { title, parameters } = await req.json();
+  const { title, parameters, model, serverId } = await req.json();
 
   const data: Record<string, unknown> = {};
   if (title !== undefined) data.title = title;
   if (parameters !== undefined)
     data.parameters = parameters ? JSON.stringify(parameters) : null;
+  if (model !== undefined) data.model = model;
+  if (serverId !== undefined) data.serverId = serverId;
 
   try {
     const chat = await prisma.chat.update({
