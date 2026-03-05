@@ -71,6 +71,8 @@ const navGroups: NavGroup[] = [
 
 const COLLAPSED_KEY = "sidebar-collapsed";
 
+const HIDDEN_ROUTES = ["/setup", "/auth/signin"];
+
 export function Sidebar() {
   const pathname = usePathname();
   const t = useTranslations("sidebar");
@@ -101,6 +103,10 @@ export function Sidebar() {
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
   }, [mobileOpen]);
+
+  if (HIDDEN_ROUTES.some((route) => pathname.startsWith(route))) {
+    return null;
+  }
 
   const renderNavLink = (item: NavItem) => {
     const { href, label, icon: Icon } = item;

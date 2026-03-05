@@ -14,13 +14,16 @@ interface CuratedModel {
 }
 
 const curatedModels: CuratedModel[] = [
-  { name: "tinyllama", params: "1.1B", vram: "~1 GB", description: "Tiny and fast, great for testing" },
-  { name: "llama3.2:1b", params: "1B", vram: "~1 GB", description: "Meta's smallest Llama model" },
-  { name: "llama3.2:3b", params: "3B", vram: "~2 GB", description: "Good balance of speed and quality" },
-  { name: "phi3:mini", params: "3.8B", vram: "~2.5 GB", description: "Microsoft's compact model" },
-  { name: "gemma2:2b", params: "2B", vram: "~2 GB", description: "Google's efficient small model" },
-  { name: "mistral", params: "7B", vram: "~4 GB", description: "Strong general-purpose model" },
-  { name: "llama3.1:8b", params: "8B", vram: "~5 GB", description: "Meta's flagship small model" },
+  { name: "gemma3:1b", params: "1B", vram: "~1 GB", description: "Google's ultra-light model, great for testing" },
+  { name: "ministral-3:3b", params: "3B", vram: "~3 GB", description: "Mistral's edge model, 256K context" },
+  { name: "gemma3:4b", params: "4B", vram: "~3 GB", description: "Google's multimodal model with vision" },
+  { name: "qwen3.5:4b", params: "4B", vram: "~3 GB", description: "Alibaba's efficient model, 256K context" },
+  { name: "ministral-3:8b", params: "8B", vram: "~6 GB", description: "Mistral's balanced edge model" },
+  { name: "qwen3.5:9b", params: "9B", vram: "~7 GB", description: "Alibaba's strong all-rounder with vision" },
+  { name: "gemma3:12b", params: "12B", vram: "~8 GB", description: "Google's 128K multimodal, great quality" },
+  { name: "lfm2:24b", params: "24B MoE", vram: "~14 GB", description: "Liquid AI — only 2B active params, very fast" },
+  { name: "gpt-oss:20b", params: "20B", vram: "~14 GB", description: "OpenAI's open model, 128K context" },
+  { name: "ministral-3:14b", params: "14B", vram: "~9 GB", description: "Mistral's largest edge model, 256K context" },
 ];
 
 export default function SetupPage() {
@@ -31,10 +34,12 @@ export default function SetupPage() {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("idle");
   const [version, setVersion] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
-  const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const [selectedModels, setSelectedModels] = useState<string[]>([]);
   const [pullProgress, setPullProgress] = useState<string | null>(null);
   const [pulling, setPulling] = useState(false);
+  const [downloaded, setDownloaded] = useState(false);
   const [serverName, setServerName] = useState("My Ollama Server");
+  const [serverId, setServerId] = useState<string | null>(null);
   const [theme, setTheme] = useState("system");
 
   // Admin account state
@@ -125,32 +130,38 @@ export default function SetupPage() {
   };
 
   const handleStep2Next = async () => {
-    await fetch("/api/servers", {
+    const res = await fetch("/api/setup/server", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: serverName, url }),
     });
+    if (res.ok) {
+      const server = await res.json();
+      setServerId(server.id);
+    }
     setStep(3);
   };
 
-  const handlePull = async () => {
-    if (!selectedModel) return;
-    setPulling(true);
-    setPullProgress("Starting download...");
+  const toggleModel = (name: string) => {
+    setSelectedModels((prev) =>
+      prev.includes(name) ? prev.filter((m) => m !== name) : [...prev, name]
+    );
+  };
 
+  const pullModel = async (serverId: string, modelName: string): Promise<boolean> => {
+    setPullProgress(`${modelName}: Starting download...`);
     try {
-      const serversRes = await fetch("/api/servers");
-      const servers = await serversRes.json();
-      const server = servers[0];
-      if (!server) return;
-
-      const res = await fetch(`${server.url}/api/pull`, {
+      const res = await fetch("/api/setup/pull", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: selectedModel, stream: true }),
+        body: JSON.stringify({ serverId, name: modelName }),
       });
 
-      if (!res.body) return;
+      if (!res.ok || !res.body) {
+        setPullProgress(`${modelName}: Download failed`);
+        return false;
+      }
+
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
@@ -169,25 +180,51 @@ export default function SetupPage() {
             const json = JSON.parse(line);
             if (json.total && json.completed) {
               const pct = Math.round((json.completed / json.total) * 100);
-              setPullProgress(`${json.status} — ${pct}%`);
+              setPullProgress(`${modelName}: ${json.status} — ${pct}%`);
             } else {
-              setPullProgress(json.status || "Downloading...");
+              setPullProgress(`${modelName}: ${json.status || "Downloading..."}`);
             }
           } catch {
             // skip malformed JSON lines from stream
           }
         }
       }
-
-      setPullProgress(t("downloadComplete"));
-      if ("Notification" in window && Notification.permission === "granted") {
-        new Notification("Ollama Admin", { body: `${selectedModel} downloaded!` });
-      }
+      return true;
     } catch {
-      setPullProgress("Download failed. You can try again later from the admin panel.");
-    } finally {
-      setPulling(false);
+      setPullProgress(`${modelName}: Download failed`);
+      return false;
     }
+  };
+
+  const handlePull = async () => {
+    if (selectedModels.length === 0) return;
+    setPulling(true);
+
+    let currentServerId = serverId;
+    if (!currentServerId) {
+      const res = await fetch("/api/setup/server");
+      if (res.ok) {
+        const server = await res.json();
+        currentServerId = server.id;
+        setServerId(server.id);
+      }
+    }
+    if (!currentServerId) {
+      setPullProgress("Error: no server configured. Go back and connect to Ollama.");
+      setPulling(false);
+      return;
+    }
+
+    for (const modelName of selectedModels) {
+      await pullModel(currentServerId, modelName);
+    }
+
+    setPullProgress(t("downloadComplete"));
+    setDownloaded(true);
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification("Ollama Admin", { body: `${selectedModels.length} model(s) downloaded!` });
+    }
+    setPulling(false);
   };
 
   const handleFinish = async () => {
@@ -350,20 +387,20 @@ export default function SetupPage() {
 
         {/* Step 3: Download a Model */}
         {step === 3 && (
-          <div>
+          <div className="flex max-h-[80vh] flex-col">
             <h1 className="text-2xl font-bold">{t("step2Title")}</h1>
             <p className="mt-2 text-[hsl(var(--muted-foreground))]">
               {t("step2Description")}
             </p>
 
-            <div className="mt-6 space-y-2">
+            <div className="mt-6 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
               {curatedModels.map((m) => (
                 <button
                   key={m.name}
-                  onClick={() => setSelectedModel(m.name)}
+                  onClick={() => toggleModel(m.name)}
                   disabled={pulling}
                   className={`w-full rounded-md border p-3 text-left transition-colors ${
-                    selectedModel === m.name
+                    selectedModels.includes(m.name)
                       ? "border-[hsl(var(--primary))] bg-[hsl(var(--accent))]"
                       : "hover:bg-[hsl(var(--accent))]"
                   }`}
@@ -381,26 +418,39 @@ export default function SetupPage() {
               ))}
             </div>
 
-            {pullProgress && (
-              <div className="mt-4 rounded-md border p-3 text-sm">
-                {pullProgress}
-              </div>
-            )}
+            <div className="shrink-0 pt-4">
+              {(pulling || pullProgress) && (
+                <div className="mb-3 rounded-md border border-[hsl(var(--primary))] bg-[hsl(var(--accent))] p-3 text-sm font-medium">
+                  {pullProgress || "Preparing download..."}
+                </div>
+              )}
 
-            <div className="mt-4 flex gap-2">
-              <button
-                onClick={handlePull}
-                disabled={!selectedModel || pulling}
-                className="flex-1 rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm text-[hsl(var(--primary-foreground))] disabled:opacity-50"
-              >
-                {pulling ? t("downloading") : "Download"}
-              </button>
-              <button
-                onClick={() => setStep(4)}
-                className="rounded-md border px-4 py-2 text-sm hover:bg-[hsl(var(--accent))]"
-              >
-                {t("step2Skip")}
-              </button>
+              <div className="flex gap-2">
+                {downloaded ? (
+                  <button
+                    onClick={() => setStep(4)}
+                    className="flex-1 rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm text-[hsl(var(--primary-foreground))]"
+                  >
+                    {t("next") || "Next"}
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={handlePull}
+                      disabled={selectedModels.length === 0 || pulling}
+                      className="flex-1 rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm text-[hsl(var(--primary-foreground))] disabled:opacity-50"
+                    >
+                      {pulling ? t("downloading") : `Download${selectedModels.length > 1 ? ` (${selectedModels.length})` : ""}`}
+                    </button>
+                    <button
+                      onClick={() => setStep(4)}
+                      className="rounded-md border px-4 py-2 text-sm hover:bg-[hsl(var(--accent))]"
+                    >
+                      {t("step2Skip")}
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         )}
