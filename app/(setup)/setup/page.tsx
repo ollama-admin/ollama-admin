@@ -34,7 +34,7 @@ export default function SetupPage() {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("idle");
   const [version, setVersion] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
-  const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const [selectedModels, setSelectedModels] = useState<string[]>([]);
   const [pullProgress, setPullProgress] = useState<string | null>(null);
   const [pulling, setPulling] = useState(false);
   const [serverName, setServerName] = useState("My Ollama Server");
@@ -136,24 +136,22 @@ export default function SetupPage() {
     setStep(3);
   };
 
-  const handlePull = async () => {
-    if (!selectedModel) return;
-    setPulling(true);
-    setPullProgress("Starting download...");
+  const toggleModel = (name: string) => {
+    setSelectedModels((prev) =>
+      prev.includes(name) ? prev.filter((m) => m !== name) : [...prev, name]
+    );
+  };
 
+  const pullModel = async (serverUrl: string, modelName: string): Promise<boolean> => {
+    setPullProgress(`${modelName}: Starting download...`);
     try {
-      const serversRes = await fetch("/api/servers");
-      const servers = await serversRes.json();
-      const server = servers[0];
-      if (!server) return;
-
-      const res = await fetch(`${server.url}/api/pull`, {
+      const res = await fetch(`${serverUrl}/api/pull`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: selectedModel, stream: true }),
+        body: JSON.stringify({ name: modelName, stream: true }),
       });
 
-      if (!res.body) return;
+      if (!res.body) return false;
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
@@ -172,25 +170,40 @@ export default function SetupPage() {
             const json = JSON.parse(line);
             if (json.total && json.completed) {
               const pct = Math.round((json.completed / json.total) * 100);
-              setPullProgress(`${json.status} — ${pct}%`);
+              setPullProgress(`${modelName}: ${json.status} — ${pct}%`);
             } else {
-              setPullProgress(json.status || "Downloading...");
+              setPullProgress(`${modelName}: ${json.status || "Downloading..."}`);
             }
           } catch {
             // skip malformed JSON lines from stream
           }
         }
       }
-
-      setPullProgress(t("downloadComplete"));
-      if ("Notification" in window && Notification.permission === "granted") {
-        new Notification("Ollama Admin", { body: `${selectedModel} downloaded!` });
-      }
+      return true;
     } catch {
-      setPullProgress("Download failed. You can try again later from the admin panel.");
-    } finally {
-      setPulling(false);
+      setPullProgress(`${modelName}: Download failed`);
+      return false;
     }
+  };
+
+  const handlePull = async () => {
+    if (selectedModels.length === 0) return;
+    setPulling(true);
+
+    const serversRes = await fetch("/api/servers");
+    const servers = await serversRes.json();
+    const server = servers[0];
+    if (!server) { setPulling(false); return; }
+
+    for (const modelName of selectedModels) {
+      await pullModel(server.url, modelName);
+    }
+
+    setPullProgress(t("downloadComplete"));
+    if ("Notification" in window && Notification.permission === "granted") {
+      new Notification("Ollama Admin", { body: `${selectedModels.length} model(s) downloaded!` });
+    }
+    setPulling(false);
   };
 
   const handleFinish = async () => {
@@ -363,10 +376,10 @@ export default function SetupPage() {
               {curatedModels.map((m) => (
                 <button
                   key={m.name}
-                  onClick={() => setSelectedModel(m.name)}
+                  onClick={() => toggleModel(m.name)}
                   disabled={pulling}
                   className={`w-full rounded-md border p-3 text-left transition-colors ${
-                    selectedModel === m.name
+                    selectedModels.includes(m.name)
                       ? "border-[hsl(var(--primary))] bg-[hsl(var(--accent))]"
                       : "hover:bg-[hsl(var(--accent))]"
                   }`}
@@ -393,10 +406,10 @@ export default function SetupPage() {
             <div className="mt-4 flex gap-2">
               <button
                 onClick={handlePull}
-                disabled={!selectedModel || pulling}
+                disabled={selectedModels.length === 0 || pulling}
                 className="flex-1 rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm text-[hsl(var(--primary-foreground))] disabled:opacity-50"
               >
-                {pulling ? t("downloading") : "Download"}
+                {pulling ? t("downloading") : `Download${selectedModels.length > 1 ? ` (${selectedModels.length})` : ""}`}
               </button>
               <button
                 onClick={() => setStep(4)}
