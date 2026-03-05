@@ -71,11 +71,17 @@ const navGroups: NavGroup[] = [
 
 const COLLAPSED_KEY = "sidebar-collapsed";
 
+const HIDDEN_ROUTES = ["/setup", "/auth/signin"];
+
 export function Sidebar() {
   const pathname = usePathname();
   const t = useTranslations("sidebar");
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  if (HIDDEN_ROUTES.some((route) => pathname.startsWith(route))) {
+    return null;
+  }
 
   useEffect(() => {
     const stored = localStorage.getItem(COLLAPSED_KEY);
