@@ -4,7 +4,7 @@ import { getLocale, getMessages } from "next-intl/server";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { DensityProvider } from "@/components/providers/density-provider";
 import { ToastProvider } from "@/components/ui/toast";
-import { Sidebar } from "@/components/layout/sidebar";
+import { AppShell } from "@/components/layout/app-shell";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -35,10 +35,7 @@ export default async function RootLayout({
           <ThemeProvider>
             <DensityProvider>
             <ToastProvider>
-              <div className="flex h-screen">
-                <Sidebar />
-                <main id="main-content" className="flex-1 overflow-auto pt-14 md:pt-0">{children}</main>
-              </div>
+              <AppShell>{children}</AppShell>
             </ToastProvider>
             </DensityProvider>
           </ThemeProvider>
