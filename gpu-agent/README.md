@@ -6,6 +6,7 @@ Lightweight sidecar that exposes GPU metrics via HTTP for Ollama Admin.
 
 - **NVIDIA** — via `nvidia-smi` (auto-detected)
 - **AMD** — via `rocm-smi` (auto-detected)
+- **Intel** — via `xpu-smi` (auto-detected)
 - **Apple Silicon** — via `system_profiler` (auto-detected on macOS)
 
 ## Quick Start
@@ -33,7 +34,7 @@ The agent starts on port `11435` by default.
 | Variable | Default | Description |
 |---|---|---|
 | `PORT` | `11435` | HTTP server port |
-| `GPU_BACKEND` | `auto` | Force backend: `nvidia`, `amd`, `apple`, or `auto` |
+| `GPU_BACKEND` | `auto` | Force backend: `nvidia`, `amd`, `intel`, `apple`, or `auto` |
 | `NVIDIA_VISIBLE_DEVICES` | — | Which GPUs to expose (Docker) |
 
 ## API

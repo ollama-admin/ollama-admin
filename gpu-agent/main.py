@@ -1,10 +1,11 @@
 """
 Ollama Admin GPU Agent — Lightweight sidecar that exposes GPU metrics via HTTP.
 
-Supports NVIDIA GPUs (nvidia-smi), AMD GPUs (rocm-smi), and Apple Silicon (Metal).
+Supports NVIDIA GPUs (nvidia-smi), AMD GPUs (rocm-smi), Intel GPUs (xpu-smi), and Apple Silicon (Metal).
 Deploy alongside each Ollama server to enable GPU monitoring in Ollama Admin.
 """
 
+import json
 import os
 import platform
 import plistlib
@@ -13,7 +14,7 @@ import subprocess
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
-app = FastAPI(title="Ollama Admin GPU Agent", version="1.1.0")
+app = FastAPI(title="Ollama Admin GPU Agent", version="1.2.0")
 
 MIB_TO_BYTES = 1024 * 1024
 GIB_TO_BYTES = 1024 * 1024 * 1024
@@ -21,13 +22,15 @@ GPU_BACKEND = os.getenv("GPU_BACKEND", "auto")
 
 
 def detect_backend() -> str | None:
-    """Detect available GPU backend: nvidia, amd, apple, or None."""
-    if GPU_BACKEND in ("nvidia", "amd", "apple"):
+    """Detect available GPU backend: nvidia, amd, intel, apple, or None."""
+    if GPU_BACKEND in ("nvidia", "amd", "intel", "apple"):
         return GPU_BACKEND
     if shutil.which("nvidia-smi"):
         return "nvidia"
     if shutil.which("rocm-smi"):
         return "amd"
+    if shutil.which("xpu-smi"):
+        return "intel"
     if platform.system() == "Darwin" and shutil.which("system_profiler"):
         return "apple"
     return None
@@ -124,6 +127,71 @@ def query_amd() -> list[dict]:
     return gpus
 
 
+def query_intel() -> list[dict]:
+    """Query Intel GPUs using xpu-smi."""
+    disc_result = subprocess.run(
+        ["xpu-smi", "discovery", "--json"],
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    if disc_result.returncode != 0:
+        raise RuntimeError(f"xpu-smi failed: {disc_result.stderr.strip()}")
+
+    discovery = json.loads(disc_result.stdout)
+    device_list = (
+        discovery if isinstance(discovery, list) else discovery.get("device_list", [])
+    )
+
+    gpus = []
+    for dev in device_list:
+        device_id = dev.get("device_id", 0)
+        name = dev.get("device_name", "Intel GPU")
+        mem_total = int(dev.get("memory_physical_size_byte", 0))
+
+        mem_used = 0
+        temperature = 0
+        utilization = 0
+
+        try:
+            stats_result = subprocess.run(
+                ["xpu-smi", "stats", "-d", str(device_id), "--json"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if stats_result.returncode == 0:
+                data = json.loads(stats_result.stdout)
+                if "device_level" in data:
+                    for m in data["device_level"]:
+                        mtype = m.get("metrics_type", "")
+                        value = float(m.get("value", m.get("avg", 0)))
+                        if mtype == "GPU_UTILIZATION":
+                            utilization = int(value)
+                        elif "TEMPERATURE" in mtype and temperature == 0:
+                            temperature = int(value)
+                        elif mtype == "MEMORY_USED":
+                            mem_used = int(value)
+                else:
+                    utilization = int(float(data.get("gpu_utilization", 0)))
+                    temperature = int(float(data.get("gpu_temperature", 0)))
+                    mem_used = int(float(data.get("memory_used", 0)))
+        except (subprocess.TimeoutExpired, json.JSONDecodeError):
+            pass
+
+        gpus.append(
+            {
+                "name": name,
+                "memoryTotal": mem_total,
+                "memoryUsed": mem_used,
+                "memoryFree": mem_total - mem_used,
+                "temperature": temperature,
+                "utilization": utilization,
+            }
+        )
+    return gpus
+
+
 def query_apple() -> list[dict]:
     """Query Apple Silicon GPU using system_profiler."""
     result = subprocess.run(
@@ -142,10 +210,8 @@ def query_apple() -> list[dict]:
         for display in displays:
             name = display.get("sppci_model", "Apple GPU")
 
-            # Get VRAM - Apple reports in various formats
             vram_str = display.get("spdisplays_vram", display.get("sppci_vram", "0"))
             if isinstance(vram_str, str):
-                # Parse strings like "16 GB" or "8192 MB"
                 vram_str = vram_str.upper().replace(" ", "")
                 if "GB" in vram_str:
                     vram_total = int(float(vram_str.replace("GB", ""))) * GIB_TO_BYTES
@@ -156,8 +222,6 @@ def query_apple() -> list[dict]:
             else:
                 vram_total = int(vram_str) if vram_str else 0
 
-            # For unified memory Macs, use total system memory as GPU memory
-            # since Metal can use all unified memory
             if vram_total == 0:
                 mem_result = subprocess.run(
                     ["sysctl", "-n", "hw.memsize"],
@@ -168,8 +232,6 @@ def query_apple() -> list[dict]:
                 if mem_result.returncode == 0:
                     vram_total = int(mem_result.stdout.strip())
 
-            # Apple Silicon doesn't expose per-GPU utilization easily
-            # We use vm_stat to estimate memory pressure
             vram_used = 0
             utilization = 0
             try:
@@ -181,7 +243,7 @@ def query_apple() -> list[dict]:
                 )
                 if vm_result.returncode == 0:
                     lines = vm_result.stdout.splitlines()
-                    page_size = 16384  # Apple Silicon uses 16KB pages
+                    page_size = 16384
                     active = 0
                     wired = 0
                     for line in lines:
@@ -207,7 +269,7 @@ def query_apple() -> list[dict]:
                     "memoryTotal": vram_total,
                     "memoryUsed": vram_used,
                     "memoryFree": max(0, vram_total - vram_used),
-                    "temperature": -1,  # macOS doesn't expose GPU temp without SMC
+                    "temperature": -1,
                     "utilization": utilization,
                 }
             )
@@ -226,7 +288,7 @@ def get_gpu_info():
     if backend is None:
         return JSONResponse(
             status_code=503,
-            content={"error": "No GPU backend available. Install nvidia-smi, rocm-smi, or run on macOS."},
+            content={"error": "No GPU backend available. Install nvidia-smi, rocm-smi, xpu-smi, or run on macOS."},
         )
 
     try:
@@ -234,6 +296,8 @@ def get_gpu_info():
             gpus = query_nvidia()
         elif backend == "amd":
             gpus = query_amd()
+        elif backend == "intel":
+            gpus = query_intel()
         else:
             gpus = query_apple()
         return JSONResponse(content=gpus)
