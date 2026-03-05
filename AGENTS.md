@@ -140,18 +140,31 @@ Each development phase is broken into numbered subfases (e.g., 1.1, 1.2, ... 1.1
 
 Run `npm version <patch|minor|major> --no-git-tag-version` to bump, then include the updated `package.json` and `package-lock.json` in the commit. The release workflow reads the version from `package.json` to tag Docker images and create GitHub releases automatically.
 
+### Pre-push Checklist
+
+**Before pushing a branch**, always run and verify these pass:
+
+1. `npm test` — all unit tests must pass
+2. `npx next lint` — no lint errors (warnings are acceptable)
+3. `npm run build` — production build must succeed with no type errors
+4. `docker build .` — Docker image must build successfully (catches missing files in multi-stage build, postinstall issues, etc.)
+
+Do not push code that fails any of these checks.
+
 ### Pull Requests
 
 **Create one Pull Request per phase**, after all subfases are committed and tests pass:
 
-1. Push the branch to the remote
-2. Create a Pull Request against `main`
-3. PR title: short and descriptive (under 70 characters), e.g., `Phase 1 MVP: Full scaffold with all core features`
-4. PR body must include:
+1. **Bump the version** before the final push using `npm version <patch|minor|major> --no-git-tag-version`, commit the updated `package.json` and `package-lock.json`. See [Versioning](#versioning) for which level to use.
+2. Run the pre-push checklist (test, lint, build)
+3. Push the branch to the remote
+4. Create a Pull Request against `main`
+5. PR title: short and descriptive (under 70 characters), e.g., `Phase 1 MVP: Full scaffold with all core features`
+6. PR body must include:
    - **Summary**: what was added/changed and why
    - **What's new**: bullet list of concrete additions per subfase (new pages, API routes, components, etc.)
    - **Test plan**: how to verify the changes work
-5. Do not merge your own PR without review — leave it open for approval
+7. Do not merge your own PR without review — leave it open for approval
 
 ---
 
