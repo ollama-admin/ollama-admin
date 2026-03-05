@@ -13,13 +13,14 @@ import {
   Square,
   Search,
   ChevronDown,
+  Settings2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TypingIndicator } from "@/components/ui/typing-indicator";
 import { useToast } from "@/components/ui/toast";
 import {
-  ChatParametersPanel,
+  ChatParametersModal,
   type ChatParameters,
 } from "@/components/chat/chat-parameters";
 import { MessageContent } from "@/components/chat/message-content";
@@ -69,6 +70,7 @@ export default function ChatPage() {
   const [chatParameters, setChatParameters] = useState<ChatParameters>({});
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
+  const [paramsOpen, setParamsOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -248,11 +250,23 @@ export default function ChatPage() {
         const res = await fetch("/api/chats", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ model: selectedModel, serverId: selectedServer }),
+          body: JSON.stringify({
+            model: selectedModel,
+            serverId: selectedServer,
+            parameters: Object.keys(chatParameters).length > 0 ? chatParameters : undefined,
+          }),
         });
         const chat = await res.json();
         setCurrentChatId(chat.id);
         fetchChats();
+
+        if (Object.keys(chatParameters).length > 0) {
+          await fetch(`/api/chats/${chat.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ parameters: chatParameters }),
+          });
+        }
 
         const userMessage: Message = {
           id: `temp-${Date.now()}`,
@@ -323,6 +337,7 @@ export default function ChatPage() {
   };
 
   const deleteChat = async (id: string) => {
+    if (!window.confirm(t("confirmDelete"))) return;
     try {
       await fetch(`/api/chats/${id}`, { method: "DELETE" });
       if (currentChatId === id) {
@@ -416,7 +431,7 @@ export default function ChatPage() {
               className="h-8 appearance-none rounded-md border bg-transparent pl-3 pr-8 text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]"
             >
               {servers.map((s) => (
-                <option key={s.id} value={s.id}>
+                <option key={s.id} value={s.id} className="bg-[hsl(var(--background))] text-[hsl(var(--foreground))]">
                   {s.name}
                 </option>
               ))}
@@ -431,7 +446,7 @@ export default function ChatPage() {
               className="h-8 appearance-none rounded-md border bg-transparent pl-3 pr-8 text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]"
             >
               {models.map((m) => (
-                <option key={m.name} value={m.name}>
+                <option key={m.name} value={m.name} className="bg-[hsl(var(--background))] text-[hsl(var(--foreground))]">
                   {m.name}
                 </option>
               ))}
@@ -462,12 +477,12 @@ export default function ChatPage() {
           )}
         </div>
 
-        {currentChatId && (
-          <ChatParametersPanel
-            parameters={chatParameters}
-            onChange={updateParameters}
-          />
-        )}
+        <ChatParametersModal
+          open={paramsOpen}
+          onClose={() => setParamsOpen(false)}
+          parameters={chatParameters}
+          onChange={currentChatId ? updateParameters : setChatParameters}
+        />
 
         {/* Messages */}
         <div
@@ -583,9 +598,17 @@ export default function ChatPage() {
         </div>
 
         {/* Input area — always visible at bottom */}
-        <div className="border-t bg-[hsl(var(--background))] px-4 py-3">
+        <div className="bg-[hsl(var(--background))] px-4 py-3">
           <div className="mx-auto flex max-w-3xl items-end gap-2">
             <div className="relative flex-1">
+              <button
+                onClick={() => setParamsOpen(true)}
+                className="absolute left-0 top-0 ml-[7px] mt-[7px] rounded-lg p-1.5 text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))]"
+                aria-label={t("parametersButton")}
+                title={t("parametersButton")}
+              >
+                <Settings2 className="h-4 w-4" />
+              </button>
               <textarea
                 ref={textareaRef}
                 value={input}
@@ -602,12 +625,12 @@ export default function ChatPage() {
                 placeholder={t("typeMessage")}
                 rows={1}
                 disabled={streaming}
-                className="w-full resize-none rounded-xl border bg-[hsl(var(--card))] px-4 py-3 pr-12 text-sm shadow-sm transition-colors placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] disabled:opacity-50"
+                className="w-full resize-none overflow-hidden rounded-xl border bg-[hsl(var(--card))] py-3 pl-12 pr-12 text-sm shadow-sm transition-colors placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] disabled:opacity-50"
               />
               {streaming ? (
                 <button
                   onClick={stopGeneration}
-                  className="absolute bottom-2.5 right-2.5 rounded-lg bg-[hsl(var(--destructive))] p-1.5 text-[hsl(var(--destructive-foreground))] transition-colors hover:opacity-90"
+                  className="absolute right-0 top-0 mr-[7px] mt-[7px] rounded-lg bg-[hsl(var(--destructive))] p-1.5 text-[hsl(var(--destructive-foreground))] transition-colors hover:opacity-90"
                   aria-label={t("stopGeneration")}
                 >
                   <Square className="h-4 w-4" />
@@ -616,7 +639,7 @@ export default function ChatPage() {
                 <button
                   onClick={sendMessage}
                   disabled={!canSend}
-                  className="absolute bottom-2.5 right-2.5 rounded-lg bg-[hsl(var(--primary))] p-1.5 text-[hsl(var(--primary-foreground))] transition-colors hover:opacity-90 disabled:opacity-30"
+                  className="absolute right-0 top-0 mr-[7px] mt-[7px] rounded-lg bg-[hsl(var(--primary))] p-1.5 text-[hsl(var(--primary-foreground))] transition-colors hover:opacity-90 disabled:opacity-30"
                   aria-label={t("sendMessage")}
                 >
                   <Send className="h-4 w-4" />

@@ -68,7 +68,9 @@
     "regenerate": "Regenerar respuesta",
     "exportMarkdown": "Exportar como Markdown",
     "exportJson": "Exportar como JSON",
+    "confirmDelete": "¿Estás seguro de que quieres eliminar esta conversación?",
     "attachImage": "Adjuntar imagen",
+    "parametersButton": "Parámetros",
     "parameters": {
       "title": "Parámetros",
       "temperature": "Temperatura",
