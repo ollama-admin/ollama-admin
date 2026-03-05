@@ -37,7 +37,9 @@ export default function SetupPage() {
   const [selectedModels, setSelectedModels] = useState<string[]>([]);
   const [pullProgress, setPullProgress] = useState<string | null>(null);
   const [pulling, setPulling] = useState(false);
+  const [downloaded, setDownloaded] = useState(false);
   const [serverName, setServerName] = useState("My Ollama Server");
+  const [serverId, setServerId] = useState<string | null>(null);
   const [theme, setTheme] = useState("system");
 
   // Admin account state
@@ -128,11 +130,15 @@ export default function SetupPage() {
   };
 
   const handleStep2Next = async () => {
-    await fetch("/api/servers", {
+    const res = await fetch("/api/setup/server", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: serverName, url }),
     });
+    if (res.ok) {
+      const server = await res.json();
+      setServerId(server.id);
+    }
     setStep(3);
   };
 
@@ -142,16 +148,20 @@ export default function SetupPage() {
     );
   };
 
-  const pullModel = async (serverUrl: string, modelName: string): Promise<boolean> => {
+  const pullModel = async (serverId: string, modelName: string): Promise<boolean> => {
     setPullProgress(`${modelName}: Starting download...`);
     try {
-      const res = await fetch(`${serverUrl}/api/pull`, {
+      const res = await fetch("/api/setup/pull", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: modelName, stream: true }),
+        body: JSON.stringify({ serverId, name: modelName }),
       });
 
-      if (!res.body) return false;
+      if (!res.ok || !res.body) {
+        setPullProgress(`${modelName}: Download failed`);
+        return false;
+      }
+
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
@@ -190,16 +200,27 @@ export default function SetupPage() {
     if (selectedModels.length === 0) return;
     setPulling(true);
 
-    const serversRes = await fetch("/api/servers");
-    const servers = await serversRes.json();
-    const server = servers[0];
-    if (!server) { setPulling(false); return; }
+    let currentServerId = serverId;
+    if (!currentServerId) {
+      const res = await fetch("/api/setup/server");
+      if (res.ok) {
+        const server = await res.json();
+        currentServerId = server.id;
+        setServerId(server.id);
+      }
+    }
+    if (!currentServerId) {
+      setPullProgress("Error: no server configured. Go back and connect to Ollama.");
+      setPulling(false);
+      return;
+    }
 
     for (const modelName of selectedModels) {
-      await pullModel(server.url, modelName);
+      await pullModel(currentServerId, modelName);
     }
 
     setPullProgress(t("downloadComplete"));
+    setDownloaded(true);
     if ("Notification" in window && Notification.permission === "granted") {
       new Notification("Ollama Admin", { body: `${selectedModels.length} model(s) downloaded!` });
     }
@@ -366,13 +387,13 @@ export default function SetupPage() {
 
         {/* Step 3: Download a Model */}
         {step === 3 && (
-          <div>
+          <div className="flex max-h-[80vh] flex-col">
             <h1 className="text-2xl font-bold">{t("step2Title")}</h1>
             <p className="mt-2 text-[hsl(var(--muted-foreground))]">
               {t("step2Description")}
             </p>
 
-            <div className="mt-6 space-y-2">
+            <div className="mt-6 min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
               {curatedModels.map((m) => (
                 <button
                   key={m.name}
@@ -397,26 +418,39 @@ export default function SetupPage() {
               ))}
             </div>
 
-            {pullProgress && (
-              <div className="mt-4 rounded-md border p-3 text-sm">
-                {pullProgress}
-              </div>
-            )}
+            <div className="shrink-0 pt-4">
+              {(pulling || pullProgress) && (
+                <div className="mb-3 rounded-md border border-[hsl(var(--primary))] bg-[hsl(var(--accent))] p-3 text-sm font-medium">
+                  {pullProgress || "Preparing download..."}
+                </div>
+              )}
 
-            <div className="mt-4 flex gap-2">
-              <button
-                onClick={handlePull}
-                disabled={selectedModels.length === 0 || pulling}
-                className="flex-1 rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm text-[hsl(var(--primary-foreground))] disabled:opacity-50"
-              >
-                {pulling ? t("downloading") : `Download${selectedModels.length > 1 ? ` (${selectedModels.length})` : ""}`}
-              </button>
-              <button
-                onClick={() => setStep(4)}
-                className="rounded-md border px-4 py-2 text-sm hover:bg-[hsl(var(--accent))]"
-              >
-                {t("step2Skip")}
-              </button>
+              <div className="flex gap-2">
+                {downloaded ? (
+                  <button
+                    onClick={() => setStep(4)}
+                    className="flex-1 rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm text-[hsl(var(--primary-foreground))]"
+                  >
+                    {t("next") || "Next"}
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={handlePull}
+                      disabled={selectedModels.length === 0 || pulling}
+                      className="flex-1 rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm text-[hsl(var(--primary-foreground))] disabled:opacity-50"
+                    >
+                      {pulling ? t("downloading") : `Download${selectedModels.length > 1 ? ` (${selectedModels.length})` : ""}`}
+                    </button>
+                    <button
+                      onClick={() => setStep(4)}
+                      className="rounded-md border px-4 py-2 text-sm hover:bg-[hsl(var(--accent))]"
+                    >
+                      {t("step2Skip")}
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         )}

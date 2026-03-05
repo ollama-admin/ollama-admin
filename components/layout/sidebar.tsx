@@ -79,10 +79,6 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  if (HIDDEN_ROUTES.some((route) => pathname.startsWith(route))) {
-    return null;
-  }
-
   useEffect(() => {
     const stored = localStorage.getItem(COLLAPSED_KEY);
     if (stored === "true") setCollapsed(true);
@@ -107,6 +103,10 @@ export function Sidebar() {
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
   }, [mobileOpen]);
+
+  if (HIDDEN_ROUTES.some((route) => pathname.startsWith(route))) {
+    return null;
+  }
 
   const renderNavLink = (item: NavItem) => {
     const { href, label, icon: Icon } = item;
