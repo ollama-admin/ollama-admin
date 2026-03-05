@@ -14,13 +14,16 @@ interface CuratedModel {
 }
 
 const curatedModels: CuratedModel[] = [
-  { name: "tinyllama", params: "1.1B", vram: "~1 GB", description: "Tiny and fast, great for testing" },
-  { name: "llama3.2:1b", params: "1B", vram: "~1 GB", description: "Meta's smallest Llama model" },
-  { name: "llama3.2:3b", params: "3B", vram: "~2 GB", description: "Good balance of speed and quality" },
-  { name: "phi3:mini", params: "3.8B", vram: "~2.5 GB", description: "Microsoft's compact model" },
-  { name: "gemma2:2b", params: "2B", vram: "~2 GB", description: "Google's efficient small model" },
-  { name: "mistral", params: "7B", vram: "~4 GB", description: "Strong general-purpose model" },
-  { name: "llama3.1:8b", params: "8B", vram: "~5 GB", description: "Meta's flagship small model" },
+  { name: "gemma3:1b", params: "1B", vram: "~1 GB", description: "Google's ultra-light model, great for testing" },
+  { name: "ministral-3:3b", params: "3B", vram: "~3 GB", description: "Mistral's edge model, 256K context" },
+  { name: "gemma3:4b", params: "4B", vram: "~3 GB", description: "Google's multimodal model with vision" },
+  { name: "qwen3.5:4b", params: "4B", vram: "~3 GB", description: "Alibaba's efficient model, 256K context" },
+  { name: "ministral-3:8b", params: "8B", vram: "~6 GB", description: "Mistral's balanced edge model" },
+  { name: "qwen3.5:9b", params: "9B", vram: "~7 GB", description: "Alibaba's strong all-rounder with vision" },
+  { name: "gemma3:12b", params: "12B", vram: "~8 GB", description: "Google's 128K multimodal, great quality" },
+  { name: "lfm2:24b", params: "24B MoE", vram: "~14 GB", description: "Liquid AI — only 2B active params, very fast" },
+  { name: "gpt-oss:20b", params: "20B", vram: "~14 GB", description: "OpenAI's open model, 128K context" },
+  { name: "ministral-3:14b", params: "14B", vram: "~9 GB", description: "Mistral's largest edge model, 256K context" },
 ];
 
 export default function SetupPage() {
