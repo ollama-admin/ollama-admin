@@ -102,6 +102,10 @@ export function Sidebar() {
     return () => document.removeEventListener("keydown", handleEscape);
   }, [mobileOpen]);
 
+  if (HIDDEN_ROUTES.some((route) => pathname.startsWith(route))) {
+    return null;
+  }
+
   const renderNavLink = (item: NavItem) => {
     const { href, label, icon: Icon } = item;
     const isActive = href === "/" ? pathname === "/" : pathname.startsWith(href);

@@ -15,15 +15,30 @@ export async function middleware(req: NextRequest) {
     return res;
   }
 
-  // Dev bypass — opt-in to disable auth for local development
-  if (process.env.AUTH_DISABLED === "true") {
+  // Allow setup and auth pages without token
+  if (path.startsWith("/setup") || path.startsWith("/auth")) {
     const res = NextResponse.next();
     logRequest(method, path, res.status, Date.now() - start);
     return res;
   }
 
-  // Allow setup and auth pages without token (setup handles its own redirect)
-  if (path.startsWith("/setup") || path.startsWith("/auth")) {
+  // Check if setup is completed — redirect to /setup if not
+  try {
+    const statusUrl = new URL("/api/setup/status", req.url);
+    const statusRes = await fetch(statusUrl);
+    if (statusRes.ok) {
+      const data = await statusRes.json();
+      if (!data.completed) {
+        logRequest(method, path, 302, Date.now() - start, "setup-redirect");
+        return NextResponse.redirect(new URL("/setup", req.url));
+      }
+    }
+  } catch {
+    // If status check fails, continue normally
+  }
+
+  // Dev bypass — opt-in to disable auth for local development
+  if (process.env.AUTH_DISABLED === "true") {
     const res = NextResponse.next();
     logRequest(method, path, res.status, Date.now() - start);
     return res;
