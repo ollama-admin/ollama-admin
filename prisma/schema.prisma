@@ -46,16 +46,19 @@ model Chat {
 }
 
 model Message {
-  id              String   @id @default(cuid())
-  chatId          String
-  chat            Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  role            String
-  content         String
-  images          String?
-  promptTokens    Int?
+  id               String   @id @default(cuid())
+  chatId           String
+  chat             Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  role             String
+  content          String
+  images           String?
+  model            String?
+  serverId         String?
+  compareGroup     String?
+  promptTokens     Int?
   completionTokens Int?
-  latencyMs       Int?
-  createdAt       DateTime @default(now())
+  latencyMs        Int?
+  createdAt        DateTime @default(now())
 }
 
 model Log {

@@ -69,6 +69,10 @@
     "exportMarkdown": "Exportar com a Markdown",
     "exportJson": "Exportar com a JSON",
     "attachImage": "Adjuntar imatge",
+    "compareMode": "Comparar",
+    "comparePlaceholder": "Escriu un prompt per comparar models...",
+    "addModel": "Afegir model",
+    "parametersButton": "Paràmetres",
     "parameters": {
       "title": "Paràmetres",
       "temperature": "Temperatura",
