@@ -277,6 +277,8 @@ Before creating the final commit of a branch, bump the version in `package.json`
 
 Run `npm version <patch|minor|major> --no-git-tag-version` and include the updated files in the commit.
 
+**CI automation**: On merge to `main`, the `release.yml` workflow reads the version from `package.json`, creates a git tag `v<version>`, publishes Docker images to `ghcr.io`, and creates a GitHub Release with auto-generated notes. The workflow **fails if the tag already exists** — so every PR to `main` must include a version bump.
+
 ## Task Management
 
 1. **Plan First**: Write plan to `tasks/todo.md` with checkable items
