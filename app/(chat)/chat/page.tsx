@@ -13,7 +13,6 @@ import {
   Square,
   Search,
   ChevronDown,
-  Settings2,
   GitCompareArrows,
   PlusCircle,
   MinusCircle,
@@ -23,7 +22,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { TypingIndicator } from "@/components/ui/typing-indicator";
 import { useToast } from "@/components/ui/toast";
 import {
-  ChatParametersModal,
+  ChatParametersPanel,
   type ChatParameters,
 } from "@/components/chat/chat-parameters";
 import { MessageContent } from "@/components/chat/message-content";
@@ -89,7 +88,7 @@ export default function ChatPage() {
   const [chatParameters, setChatParameters] = useState<ChatParameters>({});
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
-  const [paramsOpen, setParamsOpen] = useState(false);
+
 
   // Compare mode state
   const [compareMode, setCompareMode] = useState(false);
@@ -925,9 +924,7 @@ export default function ChatPage() {
           </div>
         )}
 
-        <ChatParametersModal
-          open={paramsOpen}
-          onClose={() => setParamsOpen(false)}
+        <ChatParametersPanel
           parameters={chatParameters}
           onChange={currentChatId ? updateParameters : setChatParameters}
         />
@@ -1012,14 +1009,6 @@ export default function ChatPage() {
         <div className="bg-[hsl(var(--background))] px-4 py-3">
           <div className="mx-auto flex max-w-5xl items-end gap-2">
             <div className="relative flex-1">
-              <button
-                onClick={() => setParamsOpen(true)}
-                className="absolute left-0 top-0 ml-[7px] mt-[7px] rounded-lg p-1.5 text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))]"
-                aria-label={t("parametersButton")}
-                title={t("parametersButton")}
-              >
-                <Settings2 className="h-4 w-4" />
-              </button>
               <textarea
                 ref={textareaRef}
                 value={input}

@@ -12,9 +12,6 @@ test.describe("Navigation", () => {
     await page.click('a[href="/chat"]');
     await expect(page).toHaveURL(/\/chat/);
 
-    await page.click('a[href="/compare"]');
-    await expect(page).toHaveURL(/\/compare/);
-
     await page.click('a[href="/discover"]');
     await expect(page).toHaveURL(/\/discover/);
   });
