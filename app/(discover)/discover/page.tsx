@@ -1,9 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
-import { Search } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState, useCallback } from "react";
+import { Search, Download } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
@@ -15,11 +14,11 @@ import { useToast } from "@/components/ui/toast";
 interface CatalogModel {
   id: string;
   name: string;
-  description: string | null;
-  family: string | null;
-  tags: string;
-  pullCount: number | null;
-  lastUpdated: string | null;
+  description: string;
+  capabilities: string[];
+  sizes: string[];
+  pulls: string;
+  updated: string;
 }
 
 interface Server {
@@ -27,22 +26,18 @@ interface Server {
   name: string;
 }
 
-const familyOptions = [
-  "llama", "mistral", "gemma", "phi", "qwen", "codellama",
-  "deepseek", "vicuna", "starcoder", "command-r",
-];
+const CAPABILITY_OPTIONS = ["tools", "vision", "embedding", "thinking", "code"];
 
 export default function DiscoverPage() {
   const t = useTranslations("discover");
   const { toast } = useToast();
   const [models, setModels] = useState<CatalogModel[]>([]);
   const [search, setSearch] = useState("");
-  const [family, setFamily] = useState("");
+  const [selectedCaps, setSelectedCaps] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [servers, setServers] = useState<Server[]>([]);
   const [selectedServer, setSelectedServer] = useState("");
-  const [pullingModel, setPullingModel] = useState<string | null>(null);
-  const [pullProgress, setPullProgress] = useState("");
+  const [pullingModels, setPullingModels] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetch("/api/servers")
@@ -55,62 +50,91 @@ export default function DiscoverPage() {
 
   useEffect(() => {
     const params = new URLSearchParams();
-    if (search) params.set("search", search);
-    if (family) params.set("family", family);
+    if (search) params.set("q", search);
+    if (selectedCaps.length > 0) params.set("c", selectedCaps.join(","));
 
     setLoading(true);
     fetch(`/api/catalog?${params}`)
       .then((r) => r.json())
-      .then(setModels)
+      .then((data) => {
+        if (Array.isArray(data)) setModels(data);
+      })
       .finally(() => setLoading(false));
-  }, [search, family]);
+  }, [search, selectedCaps]);
 
-  const handlePull = async (modelName: string) => {
-    if (!selectedServer) return;
-    setPullingModel(modelName);
-    setPullProgress("Starting...");
+  const toggleCap = (cap: string) => {
+    setSelectedCaps((prev) =>
+      prev.includes(cap) ? prev.filter((c) => c !== cap) : [...prev, cap]
+    );
+  };
 
-    try {
-      const res = await fetch("/api/admin/models/pull", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ serverId: selectedServer, name: modelName }),
-      });
+  const handlePull = useCallback(
+    async (modelName: string, size?: string) => {
+      if (!selectedServer) return;
+      const pullTag = size ? `${modelName}:${size}` : modelName;
+      const pullKey = pullTag;
 
-      if (!res.body) return;
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
+      setPullingModels((prev) => new Set(prev).add(pullKey));
+      toast(t("pullStarted", { name: pullTag }), "info");
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
+      try {
+        const res = await fetch("/api/admin/models/pull", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            serverId: selectedServer,
+            name: pullTag,
+          }),
+        });
 
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            const json = JSON.parse(line);
-            if (json.total && json.completed) {
-              setPullProgress(`${Math.round((json.completed / json.total) * 100)}%`);
-            } else {
-              setPullProgress(json.status || "Downloading...");
+        if (!res.ok) {
+          toast(t("pullError", { name: pullTag }), "error");
+          return;
+        }
+
+        if (!res.body) return;
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let errorMsg = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            try {
+              const json = JSON.parse(line);
+              if (json.error) {
+                errorMsg = json.error;
+              }
+            } catch {
+              // skip
             }
-          } catch {
-            // skip
           }
         }
+
+        if (errorMsg) {
+          toast(`${pullTag}: ${errorMsg}`, "error");
+        } else {
+          toast(t("pullComplete", { name: pullTag }), "success");
+        }
+      } catch {
+        toast(t("pullError", { name: pullTag }), "error");
+      } finally {
+        setPullingModels((prev) => {
+          const next = new Set(prev);
+          next.delete(pullKey);
+          return next;
+        });
       }
-      toast(`Model '${modelName}' downloaded`, "success");
-    } catch {
-      toast(`Failed to download '${modelName}'`, "error");
-    } finally {
-      setPullingModel(null);
-      setPullProgress("");
-    }
-  };
+    },
+    [selectedServer, toast, t]
+  );
 
   return (
     <div className="p-6">
@@ -123,16 +147,6 @@ export default function DiscoverPage() {
           placeholder={t("searchModels")}
           className="flex-1"
         />
-        <Select
-          value={family}
-          onChange={(e) => setFamily(e.target.value)}
-          className="w-auto"
-        >
-          <option value="">{t("allFamilies")}</option>
-          {familyOptions.map((f) => (
-            <option key={f} value={f}>{f}</option>
-          ))}
-        </Select>
         {servers.length > 1 && (
           <Select
             value={selectedServer}
@@ -140,10 +154,33 @@ export default function DiscoverPage() {
             className="w-auto"
           >
             {servers.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
+              <option
+                key={s.id}
+                value={s.id}
+                className="bg-[hsl(var(--background))] text-[hsl(var(--foreground))]"
+              >
+                {s.name}
+              </option>
             ))}
           </Select>
         )}
+      </div>
+
+      {/* Category multi-select */}
+      <div className="mt-3 flex flex-wrap gap-2">
+        {CAPABILITY_OPTIONS.map((cap) => (
+          <button
+            key={cap}
+            onClick={() => toggleCap(cap)}
+            className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+              selectedCaps.includes(cap)
+                ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]"
+                : "border-[hsl(var(--border))] hover:bg-[hsl(var(--accent))]"
+            }`}
+          >
+            {cap}
+          </button>
+        ))}
       </div>
 
       {loading ? (
@@ -162,41 +199,63 @@ export default function DiscoverPage() {
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {models.map((model) => (
             <Card key={model.id}>
-              <div className="flex items-start justify-between">
-                <div>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
                   <h3 className="font-medium">{model.name}</h3>
-                  {model.family && (
-                    <Badge variant="muted" className="mt-1">
-                      {model.family}
-                    </Badge>
-                  )}
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {model.capabilities.map((cap) => (
+                      <Badge
+                        key={cap}
+                        variant="muted"
+                        className="text-[10px]"
+                      >
+                        {cap}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
-                <Button
-                  size="sm"
-                  onClick={() => handlePull(model.name)}
-                  disabled={pullingModel === model.name || !selectedServer}
-                  loading={pullingModel === model.name}
-                >
-                  {pullingModel === model.name ? pullProgress : t("pullModel")}
-                </Button>
               </div>
               {model.description && (
                 <p className="mt-2 line-clamp-2 text-xs text-[hsl(var(--muted-foreground))]">
                   {model.description}
                 </p>
               )}
-              <div className="mt-2 flex flex-wrap gap-1">
-                {model.tags.split(",").map((tag) => (
-                  <Badge key={tag} variant="muted" className="text-[10px]">
-                    {tag.trim()}
-                  </Badge>
-                ))}
+              {/* Size variant pull buttons */}
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {model.sizes.length > 0 ? (
+                  model.sizes.map((size) => {
+                    const pullKey = `${model.id}:${size}`;
+                    return (
+                      <button
+                        key={size}
+                        onClick={() => handlePull(model.id, size)}
+                        disabled={
+                          pullingModels.has(pullKey) || !selectedServer
+                        }
+                        className="flex items-center gap-1 rounded-md border px-2 py-1 text-xs transition-colors hover:bg-[hsl(var(--accent))] disabled:opacity-50"
+                      >
+                        <Download className="h-3 w-3" />
+                        {size}
+                      </button>
+                    );
+                  })
+                ) : (
+                  <button
+                    onClick={() => handlePull(model.id)}
+                    disabled={
+                      pullingModels.has(model.id) || !selectedServer
+                    }
+                    className="flex items-center gap-1 rounded-md border px-2 py-1 text-xs transition-colors hover:bg-[hsl(var(--accent))] disabled:opacity-50"
+                  >
+                    <Download className="h-3 w-3" />
+                    {t("pullModel")}
+                  </button>
+                )}
               </div>
-              {model.pullCount && (
-                <p className="mt-2 text-xs text-[hsl(var(--muted-foreground))]">
-                  {model.pullCount.toLocaleString()} {t("downloads")}
-                </p>
-              )}
+              <div className="mt-2 flex items-center gap-3 text-[10px] text-[hsl(var(--muted-foreground))]">
+                {model.pulls && <span>{model.pulls} pulls</span>}
+                {model.updated && <span>{model.updated}</span>}
+              </div>
             </Card>
           ))}
         </div>

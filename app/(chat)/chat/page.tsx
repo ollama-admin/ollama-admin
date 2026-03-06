@@ -8,19 +8,23 @@ import {
   Pencil,
   RefreshCw,
   Download,
-  ImagePlus,
+  Plus,
+  Send,
+  Square,
+  Search,
+  ChevronDown,
+  Settings2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TypingIndicator } from "@/components/ui/typing-indicator";
 import { useToast } from "@/components/ui/toast";
 import {
-  ChatParametersPanel,
+  ChatParametersModal,
   type ChatParameters,
 } from "@/components/chat/chat-parameters";
 import { MessageContent } from "@/components/chat/message-content";
+import { cn } from "@/lib/cn";
 
 interface ChatSummary {
   id: string;
@@ -66,10 +70,11 @@ export default function ChatPage() {
   const [chatParameters, setChatParameters] = useState<ChatParameters>({});
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
-  const [attachedImages, setAttachedImages] = useState<string[]>([]);
+  const [paramsOpen, setParamsOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const fetchChats = useCallback(async () => {
     const params = searchQuery ? `?q=${encodeURIComponent(searchQuery)}` : "";
@@ -102,9 +107,13 @@ export default function ChatPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedServer]);
 
+  const shouldAutoScroll = useRef(false);
+
   useEffect(() => {
+    if (!shouldAutoScroll.current) return;
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, streamingContent]);
+    shouldAutoScroll.current = false;
+  }, [messages]);
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -116,16 +125,48 @@ export default function ChatPage() {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [input, streaming]);
 
+  const autoResizeTextarea = () => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const maxHeight = 120;
+    const newHeight = Math.min(el.scrollHeight, maxHeight);
+    el.style.height = newHeight + "px";
+    el.style.overflowY = el.scrollHeight > maxHeight ? "auto" : "hidden";
+  };
+
+  const handleServerChange = async (serverId: string) => {
+    setSelectedServer(serverId);
+    if (currentChatId) {
+      await fetch(`/api/chats/${currentChatId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ serverId }),
+      });
+    }
+  };
+
+  const handleModelChange = async (model: string) => {
+    setSelectedModel(model);
+    if (currentChatId) {
+      await fetch(`/api/chats/${currentChatId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model }),
+      });
+    }
+  };
+
   const loadChat = async (id: string) => {
     const res = await fetch(`/api/chats/${id}`);
     const data = await res.json();
     setCurrentChatId(id);
+    shouldAutoScroll.current = true;
     setMessages(data.messages || []);
     setSelectedModel(data.model);
     setSelectedServer(data.serverId);
     setChatParameters(data.parameters ? JSON.parse(data.parameters) : {});
     setEditingMessageId(null);
-    setAttachedImages([]);
   };
 
   const createNewChat = async () => {
@@ -140,8 +181,8 @@ export default function ChatPage() {
       setCurrentChatId(chat.id);
       setMessages([]);
       setChatParameters({});
-      setAttachedImages([]);
       fetchChats();
+      setTimeout(() => textareaRef.current?.focus(), 100);
     } catch {
       toast("Error creating conversation", "error");
     }
@@ -165,6 +206,7 @@ export default function ChatPage() {
     setStreaming(true);
     setStreamingContent("");
     abortRef.current = new AbortController();
+    let didInitialScroll = false;
 
     try {
       const res = await fetch(`/api/chats/${chatId}/messages`, {
@@ -196,6 +238,10 @@ export default function ChatPage() {
             if (json.message?.content) {
               fullContent += json.message.content;
               setStreamingContent(fullContent);
+              if (!didInitialScroll) {
+                didInitialScroll = true;
+                messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+              }
             }
             if (json.done && json.promptTokens !== undefined) {
               meta = {
@@ -232,23 +278,63 @@ export default function ChatPage() {
   };
 
   const sendMessage = async () => {
-    if (!input.trim() || !currentChatId || streaming) return;
+    if (!input.trim() || streaming) return;
+
+    if (!currentChatId) {
+      if (!selectedServer || !selectedModel) return;
+      try {
+        const res = await fetch("/api/chats", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: selectedModel,
+            serverId: selectedServer,
+            parameters: Object.keys(chatParameters).length > 0 ? chatParameters : undefined,
+          }),
+        });
+        const chat = await res.json();
+        setCurrentChatId(chat.id);
+        fetchChats();
+
+        if (Object.keys(chatParameters).length > 0) {
+          await fetch(`/api/chats/${chat.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ parameters: chatParameters }),
+          });
+        }
+
+        const userMessage: Message = {
+          id: `temp-${Date.now()}`,
+          role: "user",
+          content: input,
+        };
+        shouldAutoScroll.current = true;
+        setMessages([userMessage]);
+        const msgContent = input;
+        setInput("");
+        if (textareaRef.current) textareaRef.current.style.height = "auto";
+
+        await handleStream(chat.id, { content: msgContent });
+        return;
+      } catch {
+        toast("Error creating conversation", "error");
+        return;
+      }
+    }
 
     const userMessage: Message = {
       id: `temp-${Date.now()}`,
       role: "user",
       content: input,
     };
+    shouldAutoScroll.current = true;
     setMessages((prev) => [...prev, userMessage]);
     const msgContent = input;
-    const imgs = attachedImages.length > 0 ? [...attachedImages] : undefined;
     setInput("");
-    setAttachedImages([]);
+    if (textareaRef.current) textareaRef.current.style.height = "auto";
 
-    await handleStream(currentChatId, {
-      content: msgContent,
-      ...(imgs ? { images: imgs } : {}),
-    });
+    await handleStream(currentChatId, { content: msgContent });
   };
 
   const regenerateResponse = async () => {
@@ -289,6 +375,7 @@ export default function ChatPage() {
   };
 
   const deleteChat = async (id: string) => {
+    if (!window.confirm(t("confirmDelete"))) return;
     try {
       await fetch(`/api/chats/${id}`, { method: "DELETE" });
       if (currentChatId === id) {
@@ -307,51 +394,42 @@ export default function ChatPage() {
     window.open(`/api/chats/${currentChatId}/export?format=${format}`, "_blank");
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const base64 = (reader.result as string).split(",")[1];
-        setAttachedImages((prev) => [...prev, base64]);
-      };
-      reader.readAsDataURL(file);
-    });
-
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
+  const canSend = input.trim().length > 0 && !streaming && (!!currentChatId || (!!selectedServer && !!selectedModel));
 
   return (
     <div className="flex h-full">
       {/* Chat sidebar */}
-      <div className="flex w-64 flex-col border-r">
-        <div className="border-b p-3">
-          <Button
+      <div className="flex w-64 flex-col border-r bg-[hsl(var(--sidebar))] text-[hsl(var(--sidebar-foreground))]">
+        <div className="p-3">
+          <button
             onClick={createNewChat}
             disabled={!selectedServer || !selectedModel}
-            className="w-full"
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-[hsl(var(--border))] px-3 py-2.5 text-sm font-medium transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] disabled:pointer-events-none disabled:opacity-50"
           >
+            <Plus className="h-4 w-4" />
             {t("newConversation")}
-          </Button>
+          </button>
         </div>
-        <div className="border-b p-2">
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t("searchConversations")}
-            className="h-8 text-xs"
-          />
+        <div className="px-3 pb-2">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[hsl(var(--muted-foreground))]" />
+            <input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={t("searchConversations")}
+              className="h-8 w-full rounded-md border bg-transparent pl-8 pr-3 text-xs transition-colors placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]"
+            />
+          </div>
         </div>
         <div className="flex-1 overflow-auto">
           {chats.map((chat) => (
             <div
               key={chat.id}
               onClick={() => loadChat(chat.id)}
-              className={`group flex cursor-pointer items-center justify-between border-b px-3 py-2.5 text-sm transition-colors hover:bg-[hsl(var(--accent))] ${
-                currentChatId === chat.id ? "bg-[hsl(var(--accent))]" : ""
-              }`}
+              className={cn(
+                "group flex cursor-pointer items-center justify-between px-3 py-2.5 text-sm transition-colors hover:bg-[hsl(var(--accent))]",
+                currentChatId === chat.id && "bg-[hsl(var(--accent))]"
+              )}
             >
               <div className="min-w-0 flex-1">
                 <div className="truncate font-medium">{chat.title}</div>
@@ -364,7 +442,7 @@ export default function ChatPage() {
                   e.stopPropagation();
                   deleteChat(chat.id);
                 }}
-                className="ml-2 hidden rounded p-0.5 text-[hsl(var(--destructive))] hover:bg-[hsl(var(--accent))] group-hover:block"
+                className="ml-2 hidden rounded p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))] group-hover:block"
                 aria-label="Delete conversation"
               >
                 <X className="h-3.5 w-3.5" />
@@ -383,30 +461,36 @@ export default function ChatPage() {
       <div className="flex flex-1 flex-col">
         {/* Top bar */}
         <div className="flex items-center gap-3 border-b px-4 py-2">
-          <Select
-            value={selectedServer}
-            onChange={(e) => setSelectedServer(e.target.value)}
-            className="w-auto"
-            aria-label={t("selectServer")}
-          >
-            {servers.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </Select>
-          <Select
-            value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
-            className="w-auto"
-            aria-label={t("selectModel")}
-          >
-            {models.map((m) => (
-              <option key={m.name} value={m.name}>
-                {m.name}
-              </option>
-            ))}
-          </Select>
+          <div className="relative">
+            <select
+              value={selectedServer}
+              onChange={(e) => handleServerChange(e.target.value)}
+              aria-label={t("selectServer")}
+              className="h-8 appearance-none rounded-md border bg-transparent pl-3 pr-8 text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]"
+            >
+              {servers.map((s) => (
+                <option key={s.id} value={s.id} className="bg-[hsl(var(--background))] text-[hsl(var(--foreground))]">
+                  {s.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[hsl(var(--muted-foreground))]" />
+          </div>
+          <div className="relative">
+            <select
+              value={selectedModel}
+              onChange={(e) => handleModelChange(e.target.value)}
+              aria-label={t("selectModel")}
+              className="h-8 appearance-none rounded-md border bg-transparent pl-3 pr-8 text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]"
+            >
+              {models.map((m) => (
+                <option key={m.name} value={m.name} className="bg-[hsl(var(--background))] text-[hsl(var(--foreground))]">
+                  {m.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[hsl(var(--muted-foreground))]" />
+          </div>
           {currentChatId && (
             <div className="ml-auto flex items-center gap-1">
               <Button
@@ -431,21 +515,22 @@ export default function ChatPage() {
           )}
         </div>
 
-        {currentChatId && (
-          <ChatParametersPanel
-            parameters={chatParameters}
-            onChange={updateParameters}
-          />
-        )}
+        <ChatParametersModal
+          open={paramsOpen}
+          onClose={() => setParamsOpen(false)}
+          parameters={chatParameters}
+          onChange={currentChatId ? updateParameters : setChatParameters}
+        />
 
         {/* Messages */}
         <div
+          ref={messagesContainerRef}
           className="flex-1 overflow-auto p-4"
           aria-live="polite"
           aria-relevant="additions"
         >
-          {!currentChatId ? (
-            <div className="flex h-full items-center justify-center">
+          {!currentChatId && messages.length === 0 ? (
+            <div className="flex h-full flex-col items-center justify-center gap-4">
               <EmptyState
                 icon={MessageSquare}
                 title={t("emptyTitle")}
@@ -453,112 +538,95 @@ export default function ChatPage() {
               />
             </div>
           ) : (
-            <div className="mx-auto max-w-3xl space-y-4">
+            <div className="mx-auto max-w-3xl space-y-6">
               {messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`group flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                >
-                  <div
-                    className={`max-w-[80%] rounded-lg px-4 py-2.5 ${
-                      msg.role === "user"
-                        ? "bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]"
-                        : "bg-[hsl(var(--muted))]"
-                    }`}
-                  >
-                    {msg.images && (
-                      <div className="mb-2 flex flex-wrap gap-1">
-                        {JSON.parse(msg.images).map(
-                          (img: string, i: number) => (
-                            <img
-                              key={i}
-                              src={`data:image/jpeg;base64,${img}`}
-                              alt={`Attachment ${i + 1}`}
-                              className="h-16 w-16 rounded object-cover"
-                            />
-                          )
+                <div key={msg.id} className="group">
+                  {msg.role === "user" ? (
+                    <div className="flex justify-end">
+                      <div className="flex items-start gap-1">
+                        {!streaming && editingMessageId !== msg.id && (
+                          <button
+                            onClick={() => {
+                              setEditingMessageId(msg.id);
+                              setEditContent(msg.content);
+                            }}
+                            className="mt-2 rounded p-1 text-[hsl(var(--muted-foreground))] opacity-0 transition-opacity hover:bg-[hsl(var(--accent))] group-hover:opacity-100"
+                            aria-label={t("editMessage")}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
                         )}
-                      </div>
-                    )}
-
-                    {editingMessageId === msg.id ? (
-                      <div className="space-y-2">
-                        <textarea
-                          value={editContent}
-                          onChange={(e) => setEditContent(e.target.value)}
-                          className="w-full rounded border bg-[hsl(var(--background))] p-2 text-sm text-[hsl(var(--foreground))]"
-                          rows={3}
-                          autoFocus
-                        />
-                        <div className="flex gap-1">
-                          <Button
-                            size="sm"
-                            onClick={() => editMessage(msg.id)}
-                          >
-                            {t("editSend")}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setEditingMessageId(null)}
-                          >
-                            {t("editCancel")}
-                          </Button>
+                        <div className="max-w-[85%] rounded-2xl bg-[hsl(var(--primary))] px-5 py-3.5 text-[hsl(var(--primary-foreground))]">
+                          {editingMessageId === msg.id ? (
+                            <div className="space-y-2">
+                              <textarea
+                                value={editContent}
+                                onChange={(e) => setEditContent(e.target.value)}
+                                className="w-full rounded-lg border-none bg-[hsl(var(--background))] p-2 text-sm text-[hsl(var(--foreground))] focus:outline-none"
+                                rows={3}
+                                autoFocus
+                              />
+                              <div className="flex gap-1">
+                                <Button
+                                  size="sm"
+                                  onClick={() => editMessage(msg.id)}
+                                >
+                                  {t("editSend")}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setEditingMessageId(null)}
+                                  className="text-[hsl(var(--primary-foreground))] hover:text-[hsl(var(--primary-foreground))]"
+                                >
+                                  {t("editCancel")}
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="whitespace-pre-wrap text-sm">
+                              {msg.content}
+                            </div>
+                          )}
                         </div>
                       </div>
-                    ) : msg.role === "assistant" ? (
-                      <MessageContent content={msg.content} />
-                    ) : (
-                      <div className="whitespace-pre-wrap text-sm">
-                        {msg.content}
+                    </div>
+                  ) : (
+                    <div className="flex justify-start">
+                      <div className="flex items-start gap-1">
+                        <div className="max-w-[80%] rounded-2xl bg-[hsl(var(--muted))] px-4 py-2.5">
+                          <MessageContent content={msg.content} />
+                          {msg.latencyMs && (
+                            <div className="mt-2 text-[11px] text-[hsl(var(--muted-foreground))]">
+                              {(msg.promptTokens || 0) + (msg.completionTokens || 0)}{" "}
+                              {t("tokens")} · {msg.latencyMs}ms
+                            </div>
+                          )}
+                        </div>
+                        {!streaming && (
+                          <button
+                            onClick={regenerateResponse}
+                            className="mt-2 rounded p-1 text-[hsl(var(--muted-foreground))] opacity-0 transition-opacity hover:bg-[hsl(var(--accent))] group-hover:opacity-100"
+                            aria-label={t("regenerate")}
+                          >
+                            <RefreshCw className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
-                    )}
-
-                    {msg.role === "assistant" && msg.latencyMs && (
-                      <div className="mt-1 text-xs opacity-60">
-                        {(msg.promptTokens || 0) + (msg.completionTokens || 0)}{" "}
-                        {t("tokens")} · {msg.latencyMs}ms
-                      </div>
-                    )}
-                  </div>
-
-                  {!streaming && editingMessageId !== msg.id && (
-                    <div className="ml-1 flex flex-col gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                      {msg.role === "user" && (
-                        <button
-                          onClick={() => {
-                            setEditingMessageId(msg.id);
-                            setEditContent(msg.content);
-                          }}
-                          className="rounded p-1 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))]"
-                          aria-label={t("editMessage")}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                      {msg.role === "assistant" && (
-                        <button
-                          onClick={regenerateResponse}
-                          className="rounded p-1 text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--accent))]"
-                          aria-label={t("regenerate")}
-                        >
-                          <RefreshCw className="h-3.5 w-3.5" />
-                        </button>
-                      )}
                     </div>
                   )}
                 </div>
               ))}
               {streaming && !streamingContent && (
                 <div className="flex justify-start">
-                  <div className="max-w-[80%] rounded-lg bg-[hsl(var(--muted))] px-4 py-3">
+                  <div className="rounded-2xl bg-[hsl(var(--muted))] px-4 py-3">
                     <TypingIndicator />
                   </div>
                 </div>
               )}
               {streamingContent && (
                 <div className="flex justify-start">
-                  <div className="max-w-[80%] rounded-lg bg-[hsl(var(--muted))] px-4 py-2.5">
+                  <div className="max-w-[80%] rounded-2xl bg-[hsl(var(--muted))] px-4 py-2.5">
                     <MessageContent content={streamingContent} />
                   </div>
                 </div>
@@ -568,87 +636,57 @@ export default function ChatPage() {
           )}
         </div>
 
-        {/* Input area */}
-        {currentChatId && (
-          <div className="border-t p-4">
-            {attachedImages.length > 0 && (
-              <div className="mx-auto mb-2 flex max-w-3xl flex-wrap gap-2">
-                {attachedImages.map((img, i) => (
-                  <div key={i} className="relative">
-                    <img
-                      src={`data:image/jpeg;base64,${img}`}
-                      alt={`Attachment ${i + 1}`}
-                      className="h-12 w-12 rounded object-cover"
-                    />
-                    <button
-                      onClick={() =>
-                        setAttachedImages((prev) =>
-                          prev.filter((_, idx) => idx !== i)
-                        )
-                      }
-                      className="absolute -right-1 -top-1 rounded-full bg-[hsl(var(--destructive))] p-0.5 text-white"
-                      aria-label={`Remove image ${i + 1}`}
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="mx-auto flex max-w-3xl gap-2">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                title={t("attachImage")}
-                disabled={streaming}
+        {/* Input area — always visible at bottom */}
+        <div className="bg-[hsl(var(--background))] px-4 py-3">
+          <div className="mx-auto flex max-w-3xl items-end gap-2">
+            <div className="relative flex-1">
+              <button
+                onClick={() => setParamsOpen(true)}
+                className="absolute left-0 top-0 ml-[7px] mt-[7px] rounded-lg p-1.5 text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))]"
+                aria-label={t("parametersButton")}
+                title={t("parametersButton")}
               >
-                <ImagePlus className="h-4 w-4" />
-              </Button>
+                <Settings2 className="h-4 w-4" />
+              </button>
               <textarea
+                ref={textareaRef}
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  autoResizeTextarea();
+                }}
                 onKeyDown={(e) => {
-                  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                  if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
                     sendMessage();
                   }
                 }}
                 placeholder={t("typeMessage")}
                 rows={1}
-                className="flex-1 resize-none rounded-md border bg-transparent px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-1"
+                disabled={streaming}
+                className="w-full resize-none overflow-y-hidden rounded-xl border bg-[hsl(var(--card))] py-3 pl-12 pr-12 text-sm shadow-sm transition-colors placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] disabled:opacity-50"
               />
               {streaming ? (
-                <Button variant="destructive" onClick={stopGeneration}>
-                  {t("stopGeneration")}
-                </Button>
+                <button
+                  onClick={stopGeneration}
+                  className="absolute right-0 top-0 mr-[7px] mt-[7px] rounded-lg bg-[hsl(var(--destructive))] p-1.5 text-[hsl(var(--destructive-foreground))] transition-colors hover:opacity-90"
+                  aria-label={t("stopGeneration")}
+                >
+                  <Square className="h-4 w-4" />
+                </button>
               ) : (
-                <Button onClick={sendMessage} disabled={!input.trim()}>
-                  {t("sendMessage")}
-                </Button>
+                <button
+                  onClick={sendMessage}
+                  disabled={!canSend}
+                  className="absolute right-0 top-0 mr-[7px] mt-[7px] rounded-lg bg-[hsl(var(--primary))] p-1.5 text-[hsl(var(--primary-foreground))] transition-colors hover:opacity-90 disabled:opacity-30"
+                  aria-label={t("sendMessage")}
+                >
+                  <Send className="h-4 w-4" />
+                </button>
               )}
             </div>
-            <p className="mt-1 text-center text-xs text-[hsl(var(--muted-foreground))]">
-              Press{" "}
-              <kbd className="rounded border px-1 py-0.5 text-[10px]">
-                Ctrl
-              </kbd>
-              +
-              <kbd className="rounded border px-1 py-0.5 text-[10px]">
-                Enter
-              </kbd>{" "}
-              to send
-            </p>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

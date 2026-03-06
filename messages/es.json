@@ -68,7 +68,9 @@
     "regenerate": "Regenerar respuesta",
     "exportMarkdown": "Exportar como Markdown",
     "exportJson": "Exportar como JSON",
+    "confirmDelete": "¿Estás seguro de que quieres eliminar esta conversación?",
     "attachImage": "Adjuntar imagen",
+    "parametersButton": "Parámetros",
     "parameters": {
       "title": "Parámetros",
       "temperature": "Temperatura",
@@ -114,18 +116,12 @@
   "discover": {
     "title": "Descubrir modelos",
     "searchModels": "Buscar modelos...",
-    "filterByFamily": "Filtrar por familia",
-    "allFamilies": "Todas las familias",
-    "maxVram": "VRAM máxima",
     "pullModel": "Descargar",
-    "installed": "Instalado",
-    "downloads": "descargas",
-    "lastUpdated": "Última actualización",
-    "refreshCatalog": "Actualizar catálogo",
-    "lastRefresh": "Última actualización",
-    "emptyTitle": "El catálogo está vacío",
-    "emptyDescription": "Actualiza el catálogo para explorar los modelos disponibles.",
-    "emptyAction": "Actualizar catálogo"
+    "pullStarted": "Descargando ''{name}''... Aparecerá en Modelos cuando esté listo.",
+    "pullComplete": "Modelo ''{name}'' descargado correctamente!",
+    "pullError": "Error al descargar ''{name}''",
+    "emptyTitle": "No se encontraron modelos",
+    "emptyDescription": "Prueba con otra búsqueda o filtro."
   },
   "admin": {
     "models": {
@@ -139,6 +135,9 @@
       "emptyTitle": "No hay modelos instalados",
       "emptyDescription": "Explora el catálogo para encontrar y descargar modelos.",
       "emptyAction": "Explorar catálogo",
+      "searchPlaceholder": "Buscar modelos instalados...",
+      "noResults": "No hay coincidencias",
+      "noResultsDescription": "Prueba con otro término de búsqueda.",
       "name": "Nombre",
       "size": "Tamaño",
       "family": "Familia",
