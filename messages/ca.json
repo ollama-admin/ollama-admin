@@ -32,6 +32,7 @@
     "gpu": "GPU",
     "alerts": "Alertes",
     "users": "Usuaris",
+    "tools": "Eines",
     "settings": "Configuració"
   },
   "dashboard": {
@@ -281,6 +282,25 @@
       "delete": "Eliminar",
       "emptyTitle": "Encara no hi ha usuaris",
       "emptyDescription": "Crea el primer usuari per començar."
+    },
+    "tools": {
+      "title": "Eines",
+      "selectServer": "Selecciona servidor",
+      "selectModel": "Selecciona model de visió",
+      "noVisionModels": "No hi ha models de visió disponibles",
+      "noVisionModelsDescription": "Instal·la un model de visió (p. ex. llava, granite3.2-vision) per usar les eines OCR.",
+      "uploadImage": "Pujar imatge",
+      "dropOrClick": "Arrossega una imatge aquí o fes clic per explorar",
+      "supportedFormats": "Suporta PNG, JPG, WebP",
+      "customPrompt": "Prompt",
+      "defaultPrompt": "Quin text veus en aquesta imatge?",
+      "analyze": "Analitzar",
+      "analyzing": "Analitzant...",
+      "result": "Resultat",
+      "resultEmpty": "Puja una imatge i fes clic a Analitzar per veure els resultats.",
+      "clearImage": "Netejar",
+      "error": "Error en analitzar la imatge",
+      "imageTooLarge": "La imatge ha de ser menor de 20 MB"
     }
   },
   "setup": {

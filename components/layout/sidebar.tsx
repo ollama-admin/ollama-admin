@@ -16,6 +16,7 @@ import {
   Zap,
   Bell,
   Users,
+  Wrench,
   Settings,
   PanelLeftClose,
   PanelLeftOpen,
@@ -51,6 +52,7 @@ const navGroups: NavGroup[] = [
     title: "admin",
     items: [
       { href: "/admin/models", label: "models", icon: Package },
+      { href: "/admin/tools", label: "tools", icon: Wrench },
       { href: "/admin/servers", label: "servers", icon: Server },
       { href: "/admin/logs", label: "logs", icon: ClipboardList },
       { href: "/admin/metrics", label: "metrics", icon: BarChart3 },
