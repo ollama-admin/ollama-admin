@@ -31,7 +31,7 @@ function cosineSimilarity(a: number[], b: number[]): number {
 }
 
 export default function EmbeddingsPage() {
-  const t = useTranslations("admin.tools.embeddings");
+  const t = useTranslations("tools.embeddings");
   const { toast } = useToast();
 
   const [servers, setServers] = useState<Server[]>([]);

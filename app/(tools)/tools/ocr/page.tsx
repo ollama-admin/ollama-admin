@@ -22,7 +22,7 @@ interface Server {
 const MAX_IMAGE_SIZE = 20 * 1024 * 1024;
 
 export default function OcrPage() {
-  const t = useTranslations("admin.tools.ocr");
+  const t = useTranslations("tools.ocr");
   const { toast } = useToast();
 
   const [servers, setServers] = useState<Server[]>([]);

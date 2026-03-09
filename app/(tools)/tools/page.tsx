@@ -6,12 +6,12 @@ import { ScanEye, Binary } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
 const tools = [
-  { href: "/admin/tools/ocr", icon: ScanEye, key: "ocr" as const },
-  { href: "/admin/tools/embeddings", icon: Binary, key: "embeddings" as const },
+  { href: "/tools/ocr", icon: ScanEye, key: "ocr" as const },
+  { href: "/tools/embeddings", icon: Binary, key: "embeddings" as const },
 ];
 
 export default function ToolsPage() {
-  const t = useTranslations("admin.tools");
+  const t = useTranslations("tools");
 
   return (
     <div className="p-6">
