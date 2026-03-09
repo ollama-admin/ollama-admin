@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getRateLimitKey } from "@/lib/with-rate-limit";
 import { logger } from "@/lib/logger";
+import { logAsync } from "@/lib/log-async";
 
 interface ModelTarget {
   serverId: string;
@@ -213,16 +214,14 @@ export async function POST(
           },
         });
 
-        await prisma.log.create({
-          data: {
-            serverId: server.id,
-            model: target.model,
-            endpoint: "/api/chat/compare",
-            promptTokens,
-            completionTokens,
-            latencyMs,
-            statusCode: 200,
-          },
+        logAsync({
+          serverId: server.id,
+          model: target.model,
+          endpoint: "/api/chat/compare",
+          promptTokens,
+          completionTokens,
+          latencyMs,
+          statusCode: 200,
         });
 
         controller.enqueue(

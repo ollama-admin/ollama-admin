@@ -314,6 +314,8 @@
     "themeLight": "Clair",
     "themeDark": "Sombre",
     "themeAuto": "Automatique",
+    "logRetentionDays": "Rétention des logs (jours)",
+    "logRetentionDescription": "Les logs plus anciens seront automatiquement supprimés. Vous pouvez modifier cela dans Paramètres.",
     "next": "Suivant",
     "back": "Retour",
     "finish": "Terminer"

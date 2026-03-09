@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { logAsync } from "@/lib/log-async";
 import { withRateLimit } from "@/lib/with-rate-limit";
 import { validateApiKey } from "@/lib/validate-api-key";
 
@@ -73,15 +74,13 @@ async function proxyToOllama(req: NextRequest) {
       logger.debug("Proxy response", { ollamaUrl, statusCode, latencyMs });
     }
 
-    await prisma.log.create({
-      data: {
-        serverId: server.id,
-        model,
-        endpoint,
-        latencyMs,
-        statusCode,
-        ip: req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || null,
-      },
+    logAsync({
+      serverId: server.id,
+      model,
+      endpoint,
+      latencyMs,
+      statusCode,
+      ip: req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || null,
     });
 
     const responseBody = ollamaRes.body;
@@ -97,14 +96,12 @@ async function proxyToOllama(req: NextRequest) {
 
     logger.error("Proxy connection failed", { ollamaUrl, error: message, latencyMs, model });
 
-    await prisma.log.create({
-      data: {
-        serverId: server.id,
-        model,
-        endpoint,
-        latencyMs,
-        statusCode: 502,
-      },
+    logAsync({
+      serverId: server.id,
+      model,
+      endpoint,
+      latencyMs,
+      statusCode: 502,
     });
 
     return new Response(JSON.stringify({ error: message }), {

@@ -314,6 +314,8 @@
     "themeLight": "Clar",
     "themeDark": "Fosc",
     "themeAuto": "Automàtic",
+    "logRetentionDays": "Retenció de logs (dies)",
+    "logRetentionDescription": "Els logs més antics s'eliminaran automàticament. Pots canviar-ho a Configuració.",
     "next": "Següent",
     "back": "Enrere",
     "finish": "Finalitzar"
