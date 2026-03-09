@@ -22,7 +22,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { TypingIndicator } from "@/components/ui/typing-indicator";
 import { useToast } from "@/components/ui/toast";
 import {
-  ChatParametersPanel,
+  ChatParametersModal,
   type ChatParameters,
 } from "@/components/chat/chat-parameters";
 import { MessageContent } from "@/components/chat/message-content";
@@ -170,6 +170,38 @@ export default function ChatPage() {
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [input, streaming, compareStreaming]);
+
+  const autoResizeTextarea = () => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const maxHeight = 120;
+    const newHeight = Math.min(el.scrollHeight, maxHeight);
+    el.style.height = newHeight + "px";
+    el.style.overflowY = el.scrollHeight > maxHeight ? "auto" : "hidden";
+  };
+
+  const handleServerChange = async (serverId: string) => {
+    setSelectedServer(serverId);
+    if (currentChatId) {
+      await fetch(`/api/chats/${currentChatId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ serverId }),
+      });
+    }
+  };
+
+  const handleModelChange = async (model: string) => {
+    setSelectedModel(model);
+    if (currentChatId) {
+      await fetch(`/api/chats/${currentChatId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model }),
+      });
+    }
+  };
 
   const autoResizeTextarea = () => {
     const el = textareaRef.current;
