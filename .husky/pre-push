@@ -2,9 +2,9 @@ echo "Running pre-push checks..."
 
 # Version bump check: ensure version differs from main
 CURRENT_VERSION=$(node -p "require('./package.json').version")
-MAIN_VERSION=$(git show main:package.json 2>/dev/null | node -p "JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')).version" 2>/dev/null)
+MAIN_VERSION=$(git show main:package.json 2>/dev/null | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{console.log(JSON.parse(d).version)})" 2>/dev/null)
 
-if [ "$CURRENT_VERSION" = "$MAIN_VERSION" ]; then
+if [ -n "$MAIN_VERSION" ] && [ "$CURRENT_VERSION" = "$MAIN_VERSION" ]; then
   echo ""
   echo "ERROR: Version in package.json ($CURRENT_VERSION) has not been bumped."
   echo "Run one of:"
