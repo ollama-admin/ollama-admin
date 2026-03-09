@@ -18,7 +18,9 @@
     "export": "Exportar",
     "refresh": "Actualizar",
     "noResults": "No se encontraron resultados",
-    "appName": "Ollama Admin"
+    "appName": "Ollama Admin",
+    "connectionError": "No se puede conectar al servidor Ollama",
+    "connectionErrorDescription": "El servidor no responde. Comprueba que Ollama esté en ejecución y que la URL configurada sea correcta."
   },
   "sidebar": {
     "dashboard": "Panel",

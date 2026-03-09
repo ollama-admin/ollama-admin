@@ -17,6 +17,7 @@ import {
   PlusCircle,
   MinusCircle,
   Settings2,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -73,12 +74,14 @@ const emptyResult = (model: string): CompareResult => ({
 
 export default function ChatPage() {
   const t = useTranslations("chat");
+  const tc = useTranslations("common");
   const { toast } = useToast();
   const [chats, setChats] = useState<ChatSummary[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [servers, setServers] = useState<Server[]>([]);
   const [selectedServer, setSelectedServer] = useState("");
   const [models, setModels] = useState<OllamaModel[]>([]);
+  const [connectionError, setConnectionError] = useState(false);
   const [selectedModel, setSelectedModel] = useState("");
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -127,13 +130,26 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (!selectedServer) return;
+    setConnectionError(false);
     fetch(`/api/admin/models?serverId=${selectedServer}`)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) {
+          setConnectionError(true);
+          setModels([]);
+          return null;
+        }
+        return r.json();
+      })
       .then((data) => {
+        if (!data) return;
         const m = (data.models || []).filter(isChatModel);
         setModels(m);
         if (m.length > 0 && !selectedModel) setSelectedModel(m[0].name);
         setServerModelsCache((prev) => ({ ...prev, [selectedServer]: m }));
+      })
+      .catch(() => {
+        setConnectionError(true);
+        setModels([]);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedServer]);
@@ -941,7 +957,32 @@ export default function ChatPage() {
         />
 
         {/* Messages area */}
-        {!currentChatId && messages.length === 0 ? (
+        {connectionError && !currentChatId && messages.length === 0 ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 p-4">
+            <EmptyState
+              icon={AlertTriangle}
+              title={tc("connectionError")}
+              description={tc("connectionErrorDescription")}
+              action={
+                <Button onClick={() => {
+                  setConnectionError(false);
+                  fetch(`/api/admin/models?serverId=${selectedServer}`)
+                    .then((r) => {
+                      if (!r.ok) { setConnectionError(true); setModels([]); return null; }
+                      return r.json();
+                    })
+                    .then((data) => {
+                      if (!data) return;
+                      const m = (data.models || []).filter(isChatModel);
+                      setModels(m);
+                      if (m.length > 0) setSelectedModel(m[0].name);
+                    })
+                    .catch(() => { setConnectionError(true); setModels([]); });
+                }}>{tc("retry")}</Button>
+              }
+            />
+          </div>
+        ) : !currentChatId && messages.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 p-4">
             <EmptyState
               icon={MessageSquare}

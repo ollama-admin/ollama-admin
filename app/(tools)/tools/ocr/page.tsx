@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback, useRef } from "react";
 import type { OllamaModel } from "@/lib/ollama";
 import { isVisionModel } from "@/lib/model-utils";
-import { Wrench, Upload, X, ImageIcon } from "lucide-react";
+import { Wrench, Upload, X, ImageIcon, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,6 +23,7 @@ const MAX_IMAGE_SIZE = 20 * 1024 * 1024;
 
 export default function OcrPage() {
   const t = useTranslations("tools.ocr");
+  const tc = useTranslations("common");
   const { toast } = useToast();
 
   const [servers, setServers] = useState<Server[]>([]);
@@ -30,6 +31,7 @@ export default function OcrPage() {
   const [visionModels, setVisionModels] = useState<OllamaModel[]>([]);
   const [selectedModel, setSelectedModel] = useState("");
   const [loadingModels, setLoadingModels] = useState(true);
+  const [connectionError, setConnectionError] = useState(false);
 
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -51,14 +53,22 @@ export default function OcrPage() {
   const fetchModels = useCallback(async () => {
     if (!selectedServer) return;
     setLoadingModels(true);
+    setConnectionError(false);
     try {
       const res = await fetch(`/api/admin/models?serverId=${selectedServer}`);
+      if (!res.ok) {
+        setConnectionError(true);
+        setVisionModels([]);
+        setSelectedModel("");
+        return;
+      }
       const data = await res.json();
       const vision = (data.models || []).filter(isVisionModel);
       setVisionModels(vision);
       if (vision.length > 0) setSelectedModel(vision[0].name);
       else setSelectedModel("");
     } catch {
+      setConnectionError(true);
       setVisionModels([]);
     } finally {
       setLoadingModels(false);
@@ -145,6 +155,31 @@ export default function OcrPage() {
           <Skeleton variant="card" />
           <Skeleton variant="card" />
         </div>
+      </div>
+    );
+  }
+
+  if (connectionError && !loadingModels) {
+    return (
+      <div className="p-6">
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
+        {servers.length > 1 && (
+          <Select
+            value={selectedServer}
+            onChange={(e) => setSelectedServer(e.target.value)}
+            className="mt-4 w-auto"
+          >
+            {servers.map((s) => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </Select>
+        )}
+        <EmptyState
+          icon={AlertTriangle}
+          title={tc("connectionError")}
+          description={tc("connectionErrorDescription")}
+          action={<Button onClick={fetchModels}>{tc("retry")}</Button>}
+        />
       </div>
     );
   }

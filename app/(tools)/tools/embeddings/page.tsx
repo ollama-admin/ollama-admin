@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback } from "react";
 import type { OllamaModel } from "@/lib/ollama";
 import { isEmbeddingModel } from "@/lib/model-utils";
-import { Binary } from "lucide-react";
+import { Binary, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,6 +32,7 @@ function cosineSimilarity(a: number[], b: number[]): number {
 
 export default function EmbeddingsPage() {
   const t = useTranslations("tools.embeddings");
+  const tc = useTranslations("common");
   const { toast } = useToast();
 
   const [servers, setServers] = useState<Server[]>([]);
@@ -39,6 +40,7 @@ export default function EmbeddingsPage() {
   const [embeddingModels, setEmbeddingModels] = useState<OllamaModel[]>([]);
   const [selectedModel, setSelectedModel] = useState("");
   const [loadingModels, setLoadingModels] = useState(true);
+  const [connectionError, setConnectionError] = useState(false);
 
   const [textA, setTextA] = useState("");
   const [textB, setTextB] = useState("");
@@ -59,14 +61,22 @@ export default function EmbeddingsPage() {
   const fetchModels = useCallback(async () => {
     if (!selectedServer) return;
     setLoadingModels(true);
+    setConnectionError(false);
     try {
       const res = await fetch(`/api/admin/models?serverId=${selectedServer}`);
+      if (!res.ok) {
+        setConnectionError(true);
+        setEmbeddingModels([]);
+        setSelectedModel("");
+        return;
+      }
       const data = await res.json();
       const embedding = (data.models || []).filter(isEmbeddingModel);
       setEmbeddingModels(embedding);
       if (embedding.length > 0) setSelectedModel(embedding[0].name);
       else setSelectedModel("");
     } catch {
+      setConnectionError(true);
       setEmbeddingModels([]);
     } finally {
       setLoadingModels(false);
@@ -128,6 +138,31 @@ export default function EmbeddingsPage() {
           <Skeleton variant="card" />
           <Skeleton variant="card" />
         </div>
+      </div>
+    );
+  }
+
+  if (connectionError && !loadingModels) {
+    return (
+      <div className="p-6">
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
+        {servers.length > 1 && (
+          <Select
+            value={selectedServer}
+            onChange={(e) => setSelectedServer(e.target.value)}
+            className="mt-4 w-auto"
+          >
+            {servers.map((s) => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </Select>
+        )}
+        <EmptyState
+          icon={AlertTriangle}
+          title={tc("connectionError")}
+          description={tc("connectionErrorDescription")}
+          action={<Button onClick={fetchModels}>{tc("retry")}</Button>}
+        />
       </div>
     );
   }
