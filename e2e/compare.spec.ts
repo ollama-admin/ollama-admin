@@ -1,29 +1,31 @@
 import { test, expect } from "@playwright/test";
 
-test.describe("Compare Page", () => {
-  test("shows empty state", async ({ page }) => {
-    await page.goto("/compare");
-    await expect(
-      page.getByText(/Compare models side by side|Compara modelos lado a lado/)
-    ).toBeVisible();
+test.describe("Compare Mode (integrated in Chat)", () => {
+  test("shows compare toggle button in chat page", async ({ page }) => {
+    await page.goto("/chat");
+    const compareBtn = page.getByRole("button", { name: /Compare|Comparar|Comparer/ });
+    await expect(compareBtn).toBeVisible();
   });
 
-  test("has model selectors for both sides", async ({ page }) => {
-    await page.goto("/compare");
-    const selects = page.locator("select");
-    await expect(selects).toHaveCount(4); // 2 servers + 2 models
+  test("activates compare mode with model selectors", async ({ page }) => {
+    await page.goto("/chat");
+    const compareBtn = page.getByRole("button", { name: /Compare|Comparar|Comparer/ });
+    await compareBtn.click();
+
+    // Should show add model button when compare mode is active
+    const addModelBtn = page.getByText(/Add model|Añadir modelo|Afegir model|Ajouter/);
+    await expect(addModelBtn).toBeVisible();
   });
 
-  test("has prompt textarea", async ({ page }) => {
-    await page.goto("/compare");
-    await expect(
-      page.getByPlaceholder(/Enter a prompt|Escribe un prompt/)
-    ).toBeVisible();
-  });
+  test("can toggle compare mode off", async ({ page }) => {
+    await page.goto("/chat");
+    const compareBtn = page.getByRole("button", { name: /Compare|Comparar|Comparer/ });
+    await compareBtn.click();
 
-  test("compare button is disabled without prompt", async ({ page }) => {
-    await page.goto("/compare");
-    const btn = page.getByRole("button", { name: /Compare|Comparar/ });
-    await expect(btn).toBeDisabled();
+    await expect(page.getByText(/Add model|Añadir modelo/)).toBeVisible();
+
+    // Toggle off
+    await compareBtn.click();
+    await expect(page.getByText(/Add model|Añadir modelo/)).not.toBeVisible();
   });
 });

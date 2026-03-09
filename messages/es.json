@@ -70,6 +70,9 @@
     "exportJson": "Exportar como JSON",
     "confirmDelete": "¿Estás seguro de que quieres eliminar esta conversación?",
     "attachImage": "Adjuntar imagen",
+    "compareMode": "Comparar",
+    "comparePlaceholder": "Escribe un prompt para comparar modelos...",
+    "addModel": "Añadir modelo",
     "parametersButton": "Parámetros",
     "parameters": {
       "title": "Parámetros",
