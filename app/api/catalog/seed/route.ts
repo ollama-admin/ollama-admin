@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/require-admin";
 import catalogSnapshot from "@/data/catalog-snapshot.json";
 
 interface CatalogEntry {
@@ -13,6 +14,10 @@ interface CatalogEntry {
 }
 
 export async function POST() {
+  const session = await requireAdmin();
+  if (!session) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
   const count = await prisma.catalogModel.count();
   if (count > 0) {
     return NextResponse.json({ message: "Catalog already seeded", count });

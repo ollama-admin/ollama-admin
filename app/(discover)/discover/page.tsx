@@ -1,8 +1,9 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
-import { Search } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { useSession } from "next-auth/react";
+import { Search, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -22,23 +23,30 @@ interface CatalogModel {
   lastUpdated: string | null;
 }
 
+interface CatalogResponse {
+  models: CatalogModel[];
+  families: string[];
+  lastRefreshed: string | null;
+  total: number;
+}
+
 interface Server {
   id: string;
   name: string;
 }
 
-const familyOptions = [
-  "llama", "mistral", "gemma", "phi", "qwen", "codellama",
-  "deepseek", "vicuna", "starcoder", "command-r",
-];
-
 export default function DiscoverPage() {
   const t = useTranslations("discover");
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "admin";
   const { toast } = useToast();
   const [models, setModels] = useState<CatalogModel[]>([]);
+  const [families, setFamilies] = useState<string[]>([]);
+  const [lastRefreshed, setLastRefreshed] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [family, setFamily] = useState("");
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [servers, setServers] = useState<Server[]>([]);
   const [selectedServer, setSelectedServer] = useState("");
   const [pullingModel, setPullingModel] = useState<string | null>(null);
@@ -53,7 +61,7 @@ export default function DiscoverPage() {
       });
   }, []);
 
-  useEffect(() => {
+  const fetchCatalog = useCallback(() => {
     const params = new URLSearchParams();
     if (search) params.set("search", search);
     if (family) params.set("family", family);
@@ -61,9 +69,35 @@ export default function DiscoverPage() {
     setLoading(true);
     fetch(`/api/catalog?${params}`)
       .then((r) => r.json())
-      .then(setModels)
+      .then((data: CatalogResponse) => {
+        setModels(data.models);
+        setFamilies(data.families);
+        setLastRefreshed(data.lastRefreshed);
+      })
       .finally(() => setLoading(false));
   }, [search, family]);
+
+  useEffect(() => {
+    fetchCatalog();
+  }, [fetchCatalog]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const res = await fetch("/api/catalog/refresh", { method: "POST" });
+      if (!res.ok) {
+        const data = await res.json();
+        toast(data.error || t("refreshError"), "error");
+        return;
+      }
+      toast(t("refreshSuccess"), "success");
+      fetchCatalog();
+    } catch {
+      toast(t("refreshError"), "error");
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handlePull = async (modelName: string) => {
     if (!selectedServer) return;
@@ -103,9 +137,9 @@ export default function DiscoverPage() {
           }
         }
       }
-      toast(`Model '${modelName}' downloaded`, "success");
+      toast(t("pullComplete", { name: modelName }), "success");
     } catch {
-      toast(`Failed to download '${modelName}'`, "error");
+      toast(t("pullError", { name: modelName }), "error");
     } finally {
       setPullingModel(null);
       setPullProgress("");
@@ -114,7 +148,28 @@ export default function DiscoverPage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold">{t("title")}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
+        <div className="flex items-center gap-2">
+          {lastRefreshed && (
+            <span className="text-xs text-[hsl(var(--muted-foreground))]">
+              {t("lastRefresh")}: {new Date(lastRefreshed).toLocaleDateString()}
+            </span>
+          )}
+          {isAdmin && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              loading={refreshing}
+            >
+              <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+              {refreshing ? t("refreshing") : t("refreshCatalog")}
+            </Button>
+          )}
+        </div>
+      </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <Input
@@ -129,11 +184,11 @@ export default function DiscoverPage() {
           className="w-auto"
         >
           <option value="">{t("allFamilies")}</option>
-          {familyOptions.map((f) => (
+          {families.map((f) => (
             <option key={f} value={f}>{f}</option>
           ))}
         </Select>
-        {servers.length > 1 && (
+        {isAdmin && servers.length > 1 && (
           <Select
             value={selectedServer}
             onChange={(e) => setSelectedServer(e.target.value)}
@@ -157,6 +212,13 @@ export default function DiscoverPage() {
           icon={Search}
           title={t("emptyTitle")}
           description={t("emptyDescription")}
+          action={
+            isAdmin ? (
+              <Button onClick={handleRefresh} disabled={refreshing} loading={refreshing}>
+                {refreshing ? t("refreshing") : t("emptyAction")}
+              </Button>
+            ) : undefined
+          }
         />
       ) : (
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -171,14 +233,16 @@ export default function DiscoverPage() {
                     </Badge>
                   )}
                 </div>
-                <Button
-                  size="sm"
-                  onClick={() => handlePull(model.name)}
-                  disabled={pullingModel === model.name || !selectedServer}
-                  loading={pullingModel === model.name}
-                >
-                  {pullingModel === model.name ? pullProgress : t("pullModel")}
-                </Button>
+                {isAdmin && (
+                  <Button
+                    size="sm"
+                    onClick={() => handlePull(model.name)}
+                    disabled={pullingModel === model.name || !selectedServer}
+                    loading={pullingModel === model.name}
+                  >
+                    {pullingModel === model.name ? pullProgress : t("pullModel")}
+                  </Button>
+                )}
               </div>
               {model.description && (
                 <p className="mt-2 line-clamp-2 text-xs text-[hsl(var(--muted-foreground))]">
@@ -186,13 +250,13 @@ export default function DiscoverPage() {
                 </p>
               )}
               <div className="mt-2 flex flex-wrap gap-1">
-                {model.tags.split(",").map((tag) => (
+                {model.tags.split(",").filter(Boolean).map((tag) => (
                   <Badge key={tag} variant="muted" className="text-[10px]">
                     {tag.trim()}
                   </Badge>
                 ))}
               </div>
-              {model.pullCount && (
+              {model.pullCount != null && model.pullCount > 0 && (
                 <p className="mt-2 text-xs text-[hsl(var(--muted-foreground))]">
                   {model.pullCount.toLocaleString()} {t("downloads")}
                 </p>

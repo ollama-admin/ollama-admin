@@ -54,7 +54,10 @@ export async function middleware(req: NextRequest) {
   }
 
   // Admin-only routes
-  if (path.startsWith("/admin/users") || path.startsWith("/api/users")) {
+  if (
+    path.startsWith("/admin/users") ||
+    path.startsWith("/api/users")
+  ) {
     if (token.role !== "admin") {
       logRequest(method, path, 403, Date.now() - start, "forbidden");
       return NextResponse.redirect(new URL("/", req.url));
