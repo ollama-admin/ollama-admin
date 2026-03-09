@@ -1,7 +1,7 @@
 """
 Ollama Admin GPU Agent — Lightweight sidecar that exposes GPU metrics via HTTP.
 
-Supports NVIDIA GPUs (nvidia-smi), AMD GPUs (rocm-smi), Intel GPUs (xpu-smi), and Apple Silicon (Metal).
+Supports NVIDIA (nvidia-smi), AMD (rocm-smi), Intel (xpu-smi), and Apple Silicon (Metal).
 Deploy alongside each Ollama server to enable GPU monitoring in Ollama Admin.
 """
 
@@ -11,6 +11,7 @@ import platform
 import plistlib
 import shutil
 import subprocess
+
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
@@ -102,7 +103,7 @@ def query_amd() -> list[dict]:
 
         row = dict(zip(headers, parts))
 
-        name = row.get("card series", row.get("device name", f"AMD GPU"))
+        name = row.get("card series", row.get("device name", "AMD GPU"))
         temp = float(row.get("temperature (sensor edge) (c)", row.get("temperature", "0")))
         usage = float(row.get("gpu use (%)", row.get("gpu usage", "0")))
         vram_total = int(float(row.get("vram total memory (b)", "0")))
@@ -288,7 +289,10 @@ def get_gpu_info():
     if backend is None:
         return JSONResponse(
             status_code=503,
-            content={"error": "No GPU backend available. Install nvidia-smi, rocm-smi, xpu-smi, or run on macOS."},
+            content={
+                "error": "No GPU backend available. "
+                "Install nvidia-smi, rocm-smi, xpu-smi, or run on macOS."
+            },
         )
 
     try:

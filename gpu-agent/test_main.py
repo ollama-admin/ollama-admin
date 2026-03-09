@@ -1,8 +1,20 @@
 """Tests for GPU Agent."""
 
-from unittest.mock import patch, MagicMock
+import json
+from unittest.mock import MagicMock, patch
+
 from fastapi.testclient import TestClient
-from main import app, detect_backend, query_nvidia, query_amd, query_intel, query_apple, MIB_TO_BYTES, GIB_TO_BYTES
+
+from main import (
+    GIB_TO_BYTES,
+    MIB_TO_BYTES,
+    app,
+    detect_backend,
+    query_amd,
+    query_apple,
+    query_intel,
+    query_nvidia,
+)
 
 client = TestClient(app)
 
@@ -17,8 +29,6 @@ ROCM_SMI_OUTPUT = (
     "card series,temperature,gpu use (%),vram total memory (b),vram total used memory (b)\n"
     "AMD Radeon RX 7900 XTX,55,30,25769803776,8589934592\n"
 )
-
-import json
 
 XPU_DISCOVERY_OUTPUT = json.dumps({
     "device_list": [
@@ -92,23 +102,27 @@ class TestDetectBackend:
         assert detect_backend() == "apple"
 
     @patch("main.GPU_BACKEND", "auto")
-    @patch("main.shutil.which", side_effect=lambda cmd: "/usr/bin/nvidia-smi" if cmd == "nvidia-smi" else None)
+    @patch("main.shutil.which", side_effect=lambda cmd: (
+        "/usr/bin/nvidia-smi" if cmd == "nvidia-smi" else None))
     def test_auto_detects_nvidia(self, _mock):
         assert detect_backend() == "nvidia"
 
     @patch("main.GPU_BACKEND", "auto")
-    @patch("main.shutil.which", side_effect=lambda cmd: "/usr/bin/rocm-smi" if cmd == "rocm-smi" else None)
+    @patch("main.shutil.which", side_effect=lambda cmd: (
+        "/usr/bin/rocm-smi" if cmd == "rocm-smi" else None))
     def test_auto_detects_amd(self, _mock):
         assert detect_backend() == "amd"
 
     @patch("main.GPU_BACKEND", "auto")
-    @patch("main.shutil.which", side_effect=lambda cmd: "/usr/bin/xpu-smi" if cmd == "xpu-smi" else None)
+    @patch("main.shutil.which", side_effect=lambda cmd: (
+        "/usr/bin/xpu-smi" if cmd == "xpu-smi" else None))
     def test_auto_detects_intel(self, _mock):
         assert detect_backend() == "intel"
 
     @patch("main.GPU_BACKEND", "auto")
     @patch("main.platform.system", return_value="Darwin")
-    @patch("main.shutil.which", side_effect=lambda cmd: "/usr/sbin/system_profiler" if cmd == "system_profiler" else None)
+    @patch("main.shutil.which", side_effect=lambda cmd: (
+        "/usr/sbin/system_profiler" if cmd == "system_profiler" else None))
     def test_auto_detects_apple(self, _mock_which, _mock_platform):
         assert detect_backend() == "apple"
 
@@ -245,9 +259,17 @@ class TestQueryIntel:
     @patch("main.subprocess.run")
     def test_flat_discovery_format(self, mock_run):
         flat_discovery = json.dumps([
-            {"device_id": 0, "device_name": "Intel Arc A770", "memory_physical_size_byte": 17179869184}
+            {
+                "device_id": 0,
+                "device_name": "Intel Arc A770",
+                "memory_physical_size_byte": 17179869184,
+            }
         ])
-        flat_stats = json.dumps({"gpu_utilization": "30", "gpu_temperature": "55", "memory_used": "4294967296"})
+        flat_stats = json.dumps({
+            "gpu_utilization": "30",
+            "gpu_temperature": "55",
+            "memory_used": "4294967296",
+        })
 
         def side_effect(cmd, **kwargs):
             if cmd[1] == "discovery":
@@ -286,7 +308,9 @@ class TestQueryApple:
 
     @patch("main.subprocess.run")
     def test_parses_apple_gpu(self, mock_run):
-        mock_run.return_value = MagicMock(returncode=0, stdout=self.SYSTEM_PROFILER_PLIST, stderr=b"")
+        mock_run.return_value = MagicMock(
+            returncode=0, stdout=self.SYSTEM_PROFILER_PLIST, stderr=b""
+        )
         gpus = query_apple()
 
         assert len(gpus) == 1
