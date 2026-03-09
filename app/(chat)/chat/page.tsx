@@ -16,13 +16,14 @@ import {
   GitCompareArrows,
   PlusCircle,
   MinusCircle,
+  Settings2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { TypingIndicator } from "@/components/ui/typing-indicator";
 import { useToast } from "@/components/ui/toast";
 import {
-  ChatParametersPanel,
+  ChatParametersModal,
   type ChatParameters,
 } from "@/components/chat/chat-parameters";
 import { MessageContent } from "@/components/chat/message-content";
@@ -86,6 +87,7 @@ export default function ChatPage() {
   const [streaming, setStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
   const [chatParameters, setChatParameters] = useState<ChatParameters>({});
+  const [showParameters, setShowParameters] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
 
@@ -924,7 +926,17 @@ export default function ChatPage() {
           </div>
         )}
 
-        <ChatParametersPanel
+        <div className="flex justify-end px-4">
+          <button
+            onClick={() => setShowParameters(true)}
+            className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))]"
+          >
+            <Settings2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+        <ChatParametersModal
+          open={showParameters}
+          onClose={() => setShowParameters(false)}
           parameters={chatParameters}
           onChange={currentChatId ? updateParameters : setChatParameters}
         />

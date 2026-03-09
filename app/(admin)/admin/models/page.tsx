@@ -3,16 +3,15 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback } from "react";
 import type { OllamaModel, OllamaRunningModel, OllamaShowResponse } from "@/lib/ollama";
-import { Package } from "lucide-react";
+import { Package, Search, Cpu, Eye, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { Card } from "@/components/ui/card";
 import { Modal } from "@/components/ui/modal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
-import { ProgressBar } from "@/components/ui/progress-bar";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
 
@@ -37,10 +36,7 @@ export default function ModelsPage() {
   const [models, setModels] = useState<OllamaModel[]>([]);
   const [running, setRunning] = useState<OllamaRunningModel[]>([]);
   const [loading, setLoading] = useState(true);
-  const [pullName, setPullName] = useState("");
-  const [pullProgress, setPullProgress] = useState<number | null>(null);
-  const [pullStatus, setPullStatus] = useState<string | null>(null);
-  const [pulling, setPulling] = useState(false);
+  const [search, setSearch] = useState("");
   const [inspecting, setInspecting] = useState<OllamaShowResponse | null>(null);
   const [inspectName, setInspectName] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
@@ -86,61 +82,6 @@ export default function ModelsPage() {
     return () => document.removeEventListener("visibilitychange", onVisible);
   }, [fetchModels]);
 
-  const handlePull = async () => {
-    if (!pullName.trim() || !selectedServer) return;
-    setPulling(true);
-    setPullStatus("Starting...");
-    setPullProgress(null);
-
-    try {
-      const res = await fetch("/api/admin/models/pull", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ serverId: selectedServer, name: pullName, stream: true }),
-      });
-
-      if (!res.body) return;
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            const json = JSON.parse(line);
-            if (json.total && json.completed) {
-              const pct = Math.round((json.completed / json.total) * 100);
-              setPullProgress(pct);
-              setPullStatus(json.status || "Downloading...");
-            } else {
-              setPullStatus(json.status || "Downloading...");
-            }
-          } catch {
-            // skip
-          }
-        }
-      }
-
-      toast(`Model '${pullName}' downloaded`, "success");
-      setPullName("");
-      fetchModels();
-    } catch {
-      toast("Pull failed", "error");
-    } finally {
-      setPulling(false);
-      setPullProgress(null);
-      setPullStatus(null);
-    }
-  };
-
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
@@ -176,13 +117,17 @@ export default function ModelsPage() {
     return r ? formatBytes(r.size_vram) : null;
   };
 
+  const filtered = models.filter((m) =>
+    m.name.toLowerCase().includes(search.toLowerCase())
+  );
+
   if (loading && models.length === 0) {
     return (
       <div className="p-6">
         <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <div className="mt-6 space-y-3">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} variant="row" className="h-14" />
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Skeleton key={i} variant="card" />
           ))}
         </div>
       </div>
@@ -235,71 +180,77 @@ export default function ModelsPage() {
         )}
       </div>
 
-      <div className="mt-4 flex gap-2">
+      <div className="mt-4">
         <Input
-          value={pullName}
-          onChange={(e) => setPullName(e.target.value)}
-          placeholder={t("pullPlaceholder")}
-          onKeyDown={(e) => e.key === "Enter" && handlePull()}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={t("searchPlaceholder")}
         />
-        <Button onClick={handlePull} disabled={!pullName.trim() || pulling} loading={pulling}>
-          {t("pullModel")}
-        </Button>
       </div>
 
-      {pullStatus && (
-        <div className="mt-2 space-y-1" aria-live="polite">
-          <p className="text-sm">{pullStatus}</p>
-          {pullProgress !== null && <ProgressBar value={pullProgress} />}
-        </div>
-      )}
-
-      <div className="mt-6">
-        <Table caption="Installed models">
-          <TableHeader>
-            <tr>
-              <TableHead>{t("name")}</TableHead>
-              <TableHead>{t("size")}</TableHead>
-              <TableHead>{t("family")}</TableHead>
-              <TableHead>{t("quantization")}</TableHead>
-              <TableHead>{t("modified")}</TableHead>
-              <TableHead />
-            </tr>
-          </TableHeader>
-          <TableBody>
-            {models.map((model) => (
-              <TableRow key={model.name}>
-                <TableCell>
+      {filtered.length === 0 ? (
+        <EmptyState
+          icon={Search}
+          title={t("noResults")}
+          description={t("noResultsDescription")}
+        />
+      ) : (
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((model) => (
+            <Card key={model.name}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium">{model.name}</span>
+                    <h3 className="truncate font-medium" title={model.name}>
+                      {model.name}
+                    </h3>
                     {isRunning(model.name) && (
-                      <Badge variant="success">
+                      <Badge variant="success" className="shrink-0">
+                        <Cpu className="mr-1 h-3 w-3" />
                         loaded {getVram(model.name) && `· ${getVram(model.name)}`}
                       </Badge>
                     )}
                   </div>
-                </TableCell>
-                <TableCell>{formatBytes(model.size)}</TableCell>
-                <TableCell>{model.details?.family || "—"}</TableCell>
-                <TableCell>{model.details?.quantization_level || "—"}</TableCell>
-                <TableCell>
-                  {new Date(model.modified_at).toLocaleDateString()}
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
-                    <Button variant="secondary" size="sm" onClick={() => handleInspect(model.name)}>
-                      {t("inspect")}
-                    </Button>
-                    <Button variant="destructive" size="sm" onClick={() => setDeleteTarget(model.name)}>
-                      {tc("delete")}
-                    </Button>
+                  <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">
+                    {formatBytes(model.size)}
+                  </p>
+
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {model.details?.family && (
+                      <Badge variant="muted" className="text-[10px]">
+                        {model.details.family}
+                      </Badge>
+                    )}
+                    {model.details?.parameter_size && (
+                      <Badge variant="muted" className="text-[10px]">
+                        {model.details.parameter_size}
+                      </Badge>
+                    )}
+                    {model.details?.quantization_level && (
+                      <Badge variant="muted" className="text-[10px]">
+                        {model.details.quantization_level}
+                      </Badge>
+                    )}
                   </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+
+                  <p className="mt-2 text-xs text-[hsl(var(--muted-foreground))]">
+                    {t("modified")}: {new Date(model.modified_at).toLocaleDateString()}
+                  </p>
+                </div>
+
+                <div className="flex shrink-0 gap-1.5">
+                  <Button variant="secondary" size="sm" onClick={() => handleInspect(model.name)} title={t("inspect")}>
+                    <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button variant="destructive" size="sm" onClick={() => setDeleteTarget(model.name)} title={tc("delete")}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
 
       <Modal open={!!inspecting} onClose={() => setInspecting(null)} title={inspectName}>
         {inspecting && (

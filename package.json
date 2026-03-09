@@ -1,6 +1,6 @@
 {
   "name": "ollama-admin",
-  "version": "0.6.0",
+  "version": "0.5.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -16,7 +16,12 @@
     "db:generate": "npm run db:provider && prisma generate",
     "db:push": "npm run db:provider && prisma db push",
     "db:studio": "prisma studio",
-    "postinstall": "npm run db:provider && prisma generate"
+    "postinstall": "npm run db:provider && prisma generate",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": "eslint --max-warnings 0",
+    "gpu-agent/**/*.py": "ruff check"
   },
   "dependencies": {
     "@prisma/client": "^5.20.0",
@@ -30,6 +35,8 @@
     "next-themes": "^0.4.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "shiki": "^4.0.0",
     "swr": "^2.4.0",
     "tailwind-merge": "^3.5.0"
@@ -44,7 +51,9 @@
     "autoprefixer": "^10.4.0",
     "eslint": "^8.57.0",
     "eslint-config-next": "^14.2.0",
+    "husky": "^9.1.7",
     "jsdom": "^25.0.0",
+    "lint-staged": "^16.3.2",
     "postcss": "^8.4.0",
     "prisma": "^5.20.0",
     "tailwindcss": "^3.4.0",

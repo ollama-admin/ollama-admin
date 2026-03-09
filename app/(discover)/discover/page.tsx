@@ -11,23 +11,15 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
-import { getSizeTags, getCapabilityTags } from "@/lib/catalog-utils";
 
 interface CatalogModel {
   id: string;
   name: string;
-  description: string | null;
-  family: string | null;
-  tags: string;
-  pullCount: number | null;
-  lastUpdated: string | null;
-}
-
-interface CatalogResponse {
-  models: CatalogModel[];
-  families: string[];
-  lastRefreshed: string | null;
-  total: number;
+  description: string;
+  capabilities: string[];
+  sizes: string[];
+  pulls: string;
+  updated: string;
 }
 
 interface Server {
@@ -35,17 +27,16 @@ interface Server {
   name: string;
 }
 
+const CAPABILITY_OPTIONS = ["tools", "vision", "embedding", "thinking", "code"];
+
 export default function DiscoverPage() {
   const t = useTranslations("discover");
   const { toast } = useToast();
   const [isAdmin, setIsAdmin] = useState(false);
   const [models, setModels] = useState<CatalogModel[]>([]);
-  const [families, setFamilies] = useState<string[]>([]);
-  const [lastRefreshed, setLastRefreshed] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [family, setFamily] = useState("");
+  const [selectedCaps, setSelectedCaps] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [servers, setServers] = useState<Server[]>([]);
   const [selectedServer, setSelectedServer] = useState("");
   const [downloadedModels, setDownloadedModels] = useState<Set<string>>(new Set());
@@ -176,40 +167,26 @@ export default function DiscoverPage() {
 
   const fetchCatalog = useCallback(() => {
     const params = new URLSearchParams();
-    if (search) params.set("search", search);
-    if (family) params.set("family", family);
+    if (search) params.set("q", search);
+    if (selectedCaps.length > 0) params.set("c", selectedCaps.join(","));
 
     setLoading(true);
     fetch(`/api/catalog?${params}`)
       .then((r) => r.json())
-      .then((data: CatalogResponse) => {
-        setModels(data.models);
-        setFamilies(data.families);
-        setLastRefreshed(data.lastRefreshed);
+      .then((data) => {
+        if (Array.isArray(data)) setModels(data);
       })
       .finally(() => setLoading(false));
-  }, [search, family]);
+  }, [search, selectedCaps]);
 
   useEffect(() => {
     fetchCatalog();
   }, [fetchCatalog]);
 
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    try {
-      const res = await fetch("/api/catalog/refresh", { method: "POST" });
-      if (!res.ok) {
-        const data = await res.json();
-        toast(data.error || t("refreshError"), "error");
-        return;
-      }
-      toast(t("refreshSuccess"), "success");
-      fetchCatalog();
-    } catch {
-      toast(t("refreshError"), "error");
-    } finally {
-      setRefreshing(false);
-    }
+  const toggleCap = (cap: string) => {
+    setSelectedCaps((prev) =>
+      prev.includes(cap) ? prev.filter((c) => c !== cap) : [...prev, cap]
+    );
   };
 
   const handlePull = async (modelName: string, tag?: string) => {
@@ -263,25 +240,6 @@ export default function DiscoverPage() {
     <div className="p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <div className="flex items-center gap-2">
-          {lastRefreshed && (
-            <span className="text-xs text-[hsl(var(--muted-foreground))]">
-              {t("lastRefresh")}: {new Date(lastRefreshed).toLocaleDateString()}
-            </span>
-          )}
-          {isAdmin && (
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={handleRefresh}
-              disabled={refreshing}
-              loading={refreshing}
-            >
-              <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-              {refreshing ? t("refreshing") : t("refreshCatalog")}
-            </Button>
-          )}
-        </div>
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -291,17 +249,7 @@ export default function DiscoverPage() {
           placeholder={t("searchModels")}
           className="flex-1"
         />
-        <Select
-          value={family}
-          onChange={(e) => setFamily(e.target.value)}
-          className="w-auto"
-        >
-          <option value="">{t("allFamilies")}</option>
-          {families.map((f) => (
-            <option key={f} value={f}>{f}</option>
-          ))}
-        </Select>
-        {isAdmin && servers.length > 1 && (
+        {servers.length > 1 && (
           <Select
             value={selectedServer}
             onChange={(e) => setSelectedServer(e.target.value)}
@@ -312,6 +260,23 @@ export default function DiscoverPage() {
             ))}
           </Select>
         )}
+      </div>
+
+      {/* Capability multi-select */}
+      <div className="mt-3 flex flex-wrap gap-2">
+        {CAPABILITY_OPTIONS.map((cap) => (
+          <button
+            key={cap}
+            onClick={() => toggleCap(cap)}
+            className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+              selectedCaps.includes(cap)
+                ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]"
+                : "border-[hsl(var(--border))] hover:bg-[hsl(var(--accent))]"
+            }`}
+          >
+            {cap}
+          </button>
+        ))}
       </div>
 
       {loading ? (
@@ -325,120 +290,101 @@ export default function DiscoverPage() {
           icon={Search}
           title={t("emptyTitle")}
           description={t("emptyDescription")}
-          action={
-            isAdmin ? (
-              <Button onClick={handleRefresh} disabled={refreshing} loading={refreshing}>
-                {refreshing ? t("refreshing") : t("emptyAction")}
-              </Button>
-            ) : undefined
-          }
         />
       ) : (
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {models.map((model) => {
-            const sizeTags = getSizeTags(model.tags);
-            const capTags = getCapabilityTags(model.tags);
-
-            return (
-              <Card key={model.id}>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-medium">{model.name}</h3>
-                    {model.family && (
-                      <Badge variant="muted" className="mt-1">
-                        {model.family}
-                      </Badge>
-                    )}
-                  </div>
-                  {isAdmin && sizeTags.length === 0 && (
-                    <Button
-                      size="sm"
-                      onClick={() => handlePull(model.name)}
-                      disabled={
-                        isDownloading(model.name, "latest") ||
-                        isModelTagDownloaded(model.name, "latest") ||
-                        !selectedServer
-                      }
-                      loading={isDownloading(model.name, "latest")}
-                    >
-                      {isModelTagDownloaded(model.name, "latest") ? (
-                        <><Check className="mr-1 h-3 w-3" />{t("downloaded")}</>
-                      ) : isDownloading(model.name, "latest") ? (
-                        t("downloading")
-                      ) : (
-                        t("pullModel")
-                      )}
-                    </Button>
+          {models.map((model) => (
+            <Card key={model.id}>
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-medium">{model.name}</h3>
+                  {model.capabilities.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {model.capabilities.map((cap) => (
+                        <Badge key={cap} variant="muted" className="text-[10px]">
+                          {cap}
+                        </Badge>
+                      ))}
+                    </div>
                   )}
                 </div>
-                {model.description && (
-                  <p className="mt-2 line-clamp-2 text-xs text-[hsl(var(--muted-foreground))]">
-                    {model.description}
-                  </p>
-                )}
-                {capTags.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {capTags.map((tag) => (
-                      <Badge key={tag} variant="muted" className="text-[10px]">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-                {sizeTags.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {sizeTags.map((tag) => {
-                      const downloaded = isModelTagDownloaded(model.name, tag);
-                      const pulling = isDownloading(model.name, tag);
+              </div>
+              {model.description && (
+                <p className="mt-2 line-clamp-2 text-xs text-[hsl(var(--muted-foreground))]">
+                  {model.description}
+                </p>
+              )}
+              {/* Size variant pull buttons */}
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {model.sizes.length > 0 ? (
+                  model.sizes.map((size) => {
+                    const downloaded = isModelTagDownloaded(model.name, size);
+                    const pulling = isDownloading(model.name, size);
 
-                      if (downloaded) {
-                        return (
-                          <Badge key={tag} variant="success" className="text-[10px]">
-                            <Check className="mr-0.5 h-2.5 w-2.5" />
-                            {tag}
-                          </Badge>
-                        );
-                      }
-
-                      if (pulling) {
-                        return (
-                          <Badge key={tag} variant="default" className="text-[10px]">
-                            <Loader2 className="mr-0.5 h-2.5 w-2.5 animate-spin" />
-                            {tag}
-                          </Badge>
-                        );
-                      }
-
-                      if (isAdmin) {
-                        return (
-                          <button
-                            key={tag}
-                            onClick={() => handlePull(model.name, tag)}
-                            disabled={!selectedServer}
-                            className="inline-flex items-center rounded bg-[hsl(var(--muted))] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--primary))] hover:text-[hsl(var(--primary-foreground))] disabled:opacity-50"
-                          >
-                            <Download className="mr-0.5 h-2.5 w-2.5" />
-                            {tag}
-                          </button>
-                        );
-                      }
-
+                    if (downloaded) {
                       return (
-                        <Badge key={tag} variant="muted" className="text-[10px]">
-                          {tag}
+                        <Badge key={size} variant="success" className="text-[10px]">
+                          <Check className="mr-0.5 h-2.5 w-2.5" />
+                          {size}
                         </Badge>
                       );
-                    })}
-                  </div>
-                )}
-                {model.pullCount != null && model.pullCount > 0 && (
-                  <p className="mt-2 text-xs text-[hsl(var(--muted-foreground))]">
-                    {model.pullCount.toLocaleString()} {t("downloads")}
-                  </p>
-                )}
-              </Card>
-            );
-          })}
+                    }
+
+                    if (pulling) {
+                      return (
+                        <Badge key={size} variant="default" className="text-[10px]">
+                          <Loader2 className="mr-0.5 h-2.5 w-2.5 animate-spin" />
+                          {size}
+                        </Badge>
+                      );
+                    }
+
+                    if (isAdmin) {
+                      return (
+                        <button
+                          key={size}
+                          onClick={() => handlePull(model.name, size)}
+                          disabled={!selectedServer}
+                          className="inline-flex items-center rounded bg-[hsl(var(--muted))] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--primary))] hover:text-[hsl(var(--primary-foreground))] disabled:opacity-50"
+                        >
+                          <Download className="mr-0.5 h-2.5 w-2.5" />
+                          {size}
+                        </button>
+                      );
+                    }
+
+                    return (
+                      <Badge key={size} variant="muted" className="text-[10px]">
+                        {size}
+                      </Badge>
+                    );
+                  })
+                ) : isAdmin ? (
+                  <button
+                    onClick={() => handlePull(model.name)}
+                    disabled={
+                      isDownloading(model.name, "latest") ||
+                      isModelTagDownloaded(model.name, "latest") ||
+                      !selectedServer
+                    }
+                    className="inline-flex items-center rounded bg-[hsl(var(--muted))] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--primary))] hover:text-[hsl(var(--primary-foreground))] disabled:opacity-50"
+                  >
+                    {isModelTagDownloaded(model.name, "latest") ? (
+                      <><Check className="mr-0.5 h-2.5 w-2.5" />{t("downloaded")}</>
+                    ) : isDownloading(model.name, "latest") ? (
+                      <><Loader2 className="mr-0.5 h-2.5 w-2.5 animate-spin" />{t("downloading")}</>
+                    ) : (
+                      <><Download className="mr-0.5 h-2.5 w-2.5" />{t("pullModel")}</>
+                    )}
+                  </button>
+                ) : null}
+              </div>
+              <div className="mt-2 flex items-center gap-3 text-[10px] text-[hsl(var(--muted-foreground))]">
+                {model.pulls && <span>{model.pulls} pulls</span>}
+                {model.updated && <span>{model.updated}</span>}
+              </div>
+            </Card>
+          ))}
         </div>
       )}
     </div>
