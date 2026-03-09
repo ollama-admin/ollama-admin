@@ -313,6 +313,8 @@
     "themeLight": "Claro",
     "themeDark": "Oscuro",
     "themeAuto": "Automático",
+    "logRetentionDays": "Retención de logs (días)",
+    "logRetentionDescription": "Los logs más antiguos se eliminarán automáticamente. Puedes cambiarlo en Ajustes.",
     "next": "Siguiente",
     "back": "Atrás",
     "finish": "Finalizar"

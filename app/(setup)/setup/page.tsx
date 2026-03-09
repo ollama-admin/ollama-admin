@@ -41,6 +41,7 @@ export default function SetupPage() {
   const [serverName, setServerName] = useState("My Ollama Server");
   const [serverId, setServerId] = useState<string | null>(null);
   const [theme, setTheme] = useState("system");
+  const [logRetention, setLogRetention] = useState("90");
 
   // Admin account state
   const [adminUsername, setAdminUsername] = useState("");
@@ -228,6 +229,11 @@ export default function SetupPage() {
   };
 
   const handleFinish = async () => {
+    await fetch("/api/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ logRetentionDays: logRetention }),
+    });
     await fetch("/api/setup/complete", { method: "POST" });
     router.push("/auth/signin");
   };
@@ -483,6 +489,23 @@ export default function SetupPage() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">
+                  {t("logRetentionDays")}
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="365"
+                  value={logRetention}
+                  onChange={(e) => setLogRetention(e.target.value)}
+                  className="w-full rounded-md border bg-transparent px-3 py-2 text-sm"
+                />
+                <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">
+                  {t("logRetentionDescription")}
+                </p>
               </div>
 
               <div className="flex gap-2">

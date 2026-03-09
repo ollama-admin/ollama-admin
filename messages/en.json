@@ -313,6 +313,8 @@
     "themeLight": "Light",
     "themeDark": "Dark",
     "themeAuto": "Auto",
+    "logRetentionDays": "Log retention (days)",
+    "logRetentionDescription": "Logs older than this will be automatically deleted. You can change this in Settings.",
     "next": "Next",
     "back": "Back",
     "finish": "Finish"
