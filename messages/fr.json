@@ -122,14 +122,22 @@
     "allFamilies": "Toutes les familles",
     "maxVram": "VRAM maximum",
     "pullModel": "Télécharger",
+    "pullStarted": "Téléchargement de ''{name}''... Il apparaîtra dans Modèles une fois prêt.",
+    "pullComplete": "Modèle ''{name}'' téléchargé avec succès !",
+    "pullError": "Échec du téléchargement de ''{name}''",
+    "downloaded": "Téléchargé",
     "installed": "Installé",
     "downloads": "téléchargements",
     "lastUpdated": "Dernière mise à jour",
     "refreshCatalog": "Actualiser le catalogue",
+    "refreshing": "Actualisation...",
+    "refreshSuccess": "Catalogue mis à jour avec succès",
+    "refreshError": "Échec de l'actualisation du catalogue",
     "lastRefresh": "Dernière actualisation",
     "emptyTitle": "Le catalogue est vide",
     "emptyDescription": "Actualisez le catalogue pour parcourir les modèles disponibles.",
-    "emptyAction": "Actualiser le catalogue"
+    "emptyAction": "Actualiser le catalogue",
+    "downloading": "Téléchargement..."
   },
   "admin": {
     "models": {
@@ -143,6 +151,9 @@
       "emptyTitle": "Aucun modèle installé",
       "emptyDescription": "Parcourez le catalogue pour trouver et télécharger des modèles.",
       "emptyAction": "Parcourir le catalogue",
+      "searchPlaceholder": "Rechercher des modèles installés...",
+      "noResults": "Aucun modèle correspondant",
+      "noResultsDescription": "Essayez un autre terme de recherche.",
       "name": "Nom",
       "size": "Taille",
       "family": "Famille",

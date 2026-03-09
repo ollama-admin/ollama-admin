@@ -122,14 +122,22 @@
     "allFamilies": "Totes les famílies",
     "maxVram": "VRAM màxima",
     "pullModel": "Descarregar",
+    "pullStarted": "Descarregant ''{name}''... Apareixerà a Models quan estigui llest.",
+    "pullComplete": "Model ''{name}'' descarregat correctament!",
+    "pullError": "Error en descarregar ''{name}''",
+    "downloaded": "Descarregat",
     "installed": "Instal·lat",
     "downloads": "descàrregues",
     "lastUpdated": "Darrera actualització",
     "refreshCatalog": "Actualitzar catàleg",
+    "refreshing": "Actualitzant...",
+    "refreshSuccess": "Catàleg actualitzat correctament",
+    "refreshError": "Error en actualitzar el catàleg",
     "lastRefresh": "Darrera actualització",
     "emptyTitle": "El catàleg està buit",
     "emptyDescription": "Actualitza el catàleg per explorar els models disponibles.",
-    "emptyAction": "Actualitzar catàleg"
+    "emptyAction": "Actualitzar catàleg",
+    "downloading": "Descarregant..."
   },
   "admin": {
     "models": {
@@ -143,6 +151,9 @@
       "emptyTitle": "No hi ha models instal·lats",
       "emptyDescription": "Explora el catàleg per trobar i descarregar models.",
       "emptyAction": "Explorar catàleg",
+      "searchPlaceholder": "Cercar models instal·lats...",
+      "noResults": "Cap model coincideix",
+      "noResultsDescription": "Prova amb un altre terme de cerca.",
       "name": "Nom",
       "size": "Mida",
       "family": "Família",

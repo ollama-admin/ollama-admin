@@ -16,6 +16,7 @@ import {
   GitCompareArrows,
   PlusCircle,
   MinusCircle,
+  Settings2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -86,6 +87,7 @@ export default function ChatPage() {
   const [streaming, setStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
   const [chatParameters, setChatParameters] = useState<ChatParameters>({});
+  const [showParameters, setShowParameters] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
 
@@ -170,38 +172,6 @@ export default function ChatPage() {
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [input, streaming, compareStreaming]);
-
-  const autoResizeTextarea = () => {
-    const el = textareaRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    const maxHeight = 120;
-    const newHeight = Math.min(el.scrollHeight, maxHeight);
-    el.style.height = newHeight + "px";
-    el.style.overflowY = el.scrollHeight > maxHeight ? "auto" : "hidden";
-  };
-
-  const handleServerChange = async (serverId: string) => {
-    setSelectedServer(serverId);
-    if (currentChatId) {
-      await fetch(`/api/chats/${currentChatId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ serverId }),
-      });
-    }
-  };
-
-  const handleModelChange = async (model: string) => {
-    setSelectedModel(model);
-    if (currentChatId) {
-      await fetch(`/api/chats/${currentChatId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model }),
-      });
-    }
-  };
 
   const autoResizeTextarea = () => {
     const el = textareaRef.current;
@@ -956,7 +926,17 @@ export default function ChatPage() {
           </div>
         )}
 
-        <ChatParametersPanel
+        <div className="flex justify-end px-4">
+          <button
+            onClick={() => setShowParameters(true)}
+            className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))]"
+          >
+            <Settings2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+        <ChatParametersModal
+          open={showParameters}
+          onClose={() => setShowParameters(false)}
           parameters={chatParameters}
           onChange={currentChatId ? updateParameters : setChatParameters}
         />

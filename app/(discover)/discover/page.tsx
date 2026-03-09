@@ -1,8 +1,9 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useEffect, useState, useCallback } from "react";
-import { Search, Download } from "lucide-react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { Search, RefreshCw, Check, Download, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
@@ -31,15 +32,25 @@ const CAPABILITY_OPTIONS = ["tools", "vision", "embedding", "thinking", "code"];
 export default function DiscoverPage() {
   const t = useTranslations("discover");
   const { toast } = useToast();
+  const [isAdmin, setIsAdmin] = useState(false);
   const [models, setModels] = useState<CatalogModel[]>([]);
   const [search, setSearch] = useState("");
   const [selectedCaps, setSelectedCaps] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [servers, setServers] = useState<Server[]>([]);
   const [selectedServer, setSelectedServer] = useState("");
-  const [pullingModels, setPullingModels] = useState<Set<string>>(new Set());
+  const [downloadedModels, setDownloadedModels] = useState<Set<string>>(new Set());
+  const [downloadingRefs, setDownloadingRefs] = useState<Set<string>>(new Set());
+  const downloadingRefsRef = useRef(downloadingRefs);
+  downloadingRefsRef.current = downloadingRefs;
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
+    fetch("/api/auth/session")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.user?.role === "admin") setIsAdmin(true);
+      });
     fetch("/api/servers")
       .then((r) => r.json())
       .then((data: Server[]) => {
@@ -48,7 +59,113 @@ export default function DiscoverPage() {
       });
   }, []);
 
+  const fetchDownloaded = useCallback((serverId: string) => {
+    if (!serverId) return;
+    fetch(`/api/admin/models?serverId=${serverId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.models) {
+          const names = new Set<string>(
+            data.models.map((m: { name: string }) => m.name)
+          );
+          setDownloadedModels(names);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
+    if (selectedServer) fetchDownloaded(selectedServer);
+  }, [selectedServer, fetchDownloaded]);
+
+  // Poll for download completion and errors
+  useEffect(() => {
+    if (downloadingRefs.size === 0) {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+      return;
+    }
+
+    if (pollRef.current) return;
+
+    pollRef.current = setInterval(async () => {
+      if (!selectedServer) return;
+
+      // Check pull status for errors
+      try {
+        const statusRes = await fetch(
+          `/api/admin/models/pull/status?serverId=${selectedServer}`
+        );
+        if (statusRes.ok) {
+          const jobs: { id: string; model: string; tag: string; status: string; error?: string }[] =
+            await statusRes.json();
+
+          for (const job of jobs) {
+            const ref = job.tag ? `${job.model}:${job.tag}` : job.model;
+            if (job.status === "error" && downloadingRefsRef.current.has(ref)) {
+              const msg = job.error
+                ? `${t("pullError", { name: ref })}: ${job.error}`
+                : t("pullError", { name: ref });
+              toast(msg, "error");
+              setDownloadingRefs((prev) => {
+                const next = new Set(prev);
+                next.delete(ref);
+                return next;
+              });
+            }
+          }
+        }
+      } catch {
+        // ignore polling errors
+      }
+
+      // Check if models appeared on server
+      try {
+        const modelsRes = await fetch(
+          `/api/admin/models?serverId=${selectedServer}`
+        );
+        if (modelsRes.ok) {
+          const data = await modelsRes.json();
+          if (data.models) {
+            const names = new Set<string>(
+              data.models.map((m: { name: string }) => m.name)
+            );
+            setDownloadedModels(names);
+
+            setDownloadingRefs((prev) => {
+              const next = new Set(prev);
+              let changed = false;
+              const namesArr = Array.from(names);
+              Array.from(prev).forEach((ref) => {
+                const isNowDownloaded = namesArr.some(
+                  (n) => n === ref || n.startsWith(`${ref}-`)
+                );
+                if (isNowDownloaded) {
+                  next.delete(ref);
+                  changed = true;
+                  toast(t("pullComplete", { name: ref }), "success");
+                }
+              });
+              return changed ? next : prev;
+            });
+          }
+        }
+      } catch {
+        // ignore polling errors
+      }
+    }, 5000);
+
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+  }, [downloadingRefs.size, selectedServer, t, toast]);
+
+  const fetchCatalog = useCallback(() => {
     const params = new URLSearchParams();
     if (search) params.set("q", search);
     if (selectedCaps.length > 0) params.set("c", selectedCaps.join(","));
@@ -62,83 +179,68 @@ export default function DiscoverPage() {
       .finally(() => setLoading(false));
   }, [search, selectedCaps]);
 
+  useEffect(() => {
+    fetchCatalog();
+  }, [fetchCatalog]);
+
   const toggleCap = (cap: string) => {
     setSelectedCaps((prev) =>
       prev.includes(cap) ? prev.filter((c) => c !== cap) : [...prev, cap]
     );
   };
 
-  const handlePull = useCallback(
-    async (modelName: string, size?: string) => {
-      if (!selectedServer) return;
-      const pullTag = size ? `${modelName}:${size}` : modelName;
-      const pullKey = pullTag;
+  const handlePull = async (modelName: string, tag?: string) => {
+    if (!selectedServer) return;
+    const ref = tag ? `${modelName}:${tag}` : modelName;
 
-      setPullingModels((prev) => new Set(prev).add(pullKey));
-      toast(t("pullStarted", { name: pullTag }), "info");
+    if (downloadingRefs.has(ref)) return;
 
-      try {
-        const res = await fetch("/api/admin/models/pull", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            serverId: selectedServer,
-            name: pullTag,
-          }),
-        });
+    setDownloadingRefs((prev) => new Set(prev).add(ref));
 
-        if (!res.ok) {
-          toast(t("pullError", { name: pullTag }), "error");
-          return;
-        }
+    try {
+      const res = await fetch("/api/admin/models/pull", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ serverId: selectedServer, name: ref }),
+      });
 
-        if (!res.body) return;
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-        let errorMsg = "";
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
-
-          for (const line of lines) {
-            if (!line.trim()) continue;
-            try {
-              const json = JSON.parse(line);
-              if (json.error) {
-                errorMsg = json.error;
-              }
-            } catch {
-              // skip
-            }
-          }
-        }
-
-        if (errorMsg) {
-          toast(`${pullTag}: ${errorMsg}`, "error");
-        } else {
-          toast(t("pullComplete", { name: pullTag }), "success");
-        }
-      } catch {
-        toast(t("pullError", { name: pullTag }), "error");
-      } finally {
-        setPullingModels((prev) => {
+      if (!res.ok) {
+        toast(t("pullError", { name: ref }), "error");
+        setDownloadingRefs((prev) => {
           const next = new Set(prev);
-          next.delete(pullKey);
+          next.delete(ref);
           return next;
         });
+        return;
       }
-    },
-    [selectedServer, toast, t]
-  );
+
+      toast(t("pullStarted", { name: ref }), "success");
+    } catch {
+      toast(t("pullError", { name: ref }), "error");
+      setDownloadingRefs((prev) => {
+        const next = new Set(prev);
+        next.delete(ref);
+        return next;
+      });
+    }
+  };
+
+  const isModelTagDownloaded = (modelName: string, tag: string) => {
+    const ref = `${modelName}:${tag}`;
+    return Array.from(downloadedModels).some(
+      (name) => name === ref || name.startsWith(`${ref}-`)
+    );
+  };
+
+  const isDownloading = (modelName: string, tag: string) => {
+    return downloadingRefs.has(`${modelName}:${tag}`);
+  };
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold">{t("title")}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
+      </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <Input
@@ -154,19 +256,13 @@ export default function DiscoverPage() {
             className="w-auto"
           >
             {servers.map((s) => (
-              <option
-                key={s.id}
-                value={s.id}
-                className="bg-[hsl(var(--background))] text-[hsl(var(--foreground))]"
-              >
-                {s.name}
-              </option>
+              <option key={s.id} value={s.id}>{s.name}</option>
             ))}
           </Select>
         )}
       </div>
 
-      {/* Category multi-select */}
+      {/* Capability multi-select */}
       <div className="mt-3 flex flex-wrap gap-2">
         {CAPABILITY_OPTIONS.map((cap) => (
           <button
@@ -202,17 +298,15 @@ export default function DiscoverPage() {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <h3 className="font-medium">{model.name}</h3>
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {model.capabilities.map((cap) => (
-                      <Badge
-                        key={cap}
-                        variant="muted"
-                        className="text-[10px]"
-                      >
-                        {cap}
-                      </Badge>
-                    ))}
-                  </div>
+                  {model.capabilities.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {model.capabilities.map((cap) => (
+                        <Badge key={cap} variant="muted" className="text-[10px]">
+                          {cap}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
               {model.description && (
@@ -224,33 +318,66 @@ export default function DiscoverPage() {
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {model.sizes.length > 0 ? (
                   model.sizes.map((size) => {
-                    const pullKey = `${model.id}:${size}`;
+                    const downloaded = isModelTagDownloaded(model.name, size);
+                    const pulling = isDownloading(model.name, size);
+
+                    if (downloaded) {
+                      return (
+                        <Badge key={size} variant="success" className="text-[10px]">
+                          <Check className="mr-0.5 h-2.5 w-2.5" />
+                          {size}
+                        </Badge>
+                      );
+                    }
+
+                    if (pulling) {
+                      return (
+                        <Badge key={size} variant="default" className="text-[10px]">
+                          <Loader2 className="mr-0.5 h-2.5 w-2.5 animate-spin" />
+                          {size}
+                        </Badge>
+                      );
+                    }
+
+                    if (isAdmin) {
+                      return (
+                        <button
+                          key={size}
+                          onClick={() => handlePull(model.name, size)}
+                          disabled={!selectedServer}
+                          className="inline-flex items-center rounded bg-[hsl(var(--muted))] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--primary))] hover:text-[hsl(var(--primary-foreground))] disabled:opacity-50"
+                        >
+                          <Download className="mr-0.5 h-2.5 w-2.5" />
+                          {size}
+                        </button>
+                      );
+                    }
+
                     return (
-                      <button
-                        key={size}
-                        onClick={() => handlePull(model.id, size)}
-                        disabled={
-                          pullingModels.has(pullKey) || !selectedServer
-                        }
-                        className="flex items-center gap-1 rounded-md border px-2 py-1 text-xs transition-colors hover:bg-[hsl(var(--accent))] disabled:opacity-50"
-                      >
-                        <Download className="h-3 w-3" />
+                      <Badge key={size} variant="muted" className="text-[10px]">
                         {size}
-                      </button>
+                      </Badge>
                     );
                   })
-                ) : (
+                ) : isAdmin ? (
                   <button
-                    onClick={() => handlePull(model.id)}
+                    onClick={() => handlePull(model.name)}
                     disabled={
-                      pullingModels.has(model.id) || !selectedServer
+                      isDownloading(model.name, "latest") ||
+                      isModelTagDownloaded(model.name, "latest") ||
+                      !selectedServer
                     }
-                    className="flex items-center gap-1 rounded-md border px-2 py-1 text-xs transition-colors hover:bg-[hsl(var(--accent))] disabled:opacity-50"
+                    className="inline-flex items-center rounded bg-[hsl(var(--muted))] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--primary))] hover:text-[hsl(var(--primary-foreground))] disabled:opacity-50"
                   >
-                    <Download className="h-3 w-3" />
-                    {t("pullModel")}
+                    {isModelTagDownloaded(model.name, "latest") ? (
+                      <><Check className="mr-0.5 h-2.5 w-2.5" />{t("downloaded")}</>
+                    ) : isDownloading(model.name, "latest") ? (
+                      <><Loader2 className="mr-0.5 h-2.5 w-2.5 animate-spin" />{t("downloading")}</>
+                    ) : (
+                      <><Download className="mr-0.5 h-2.5 w-2.5" />{t("pullModel")}</>
+                    )}
                   </button>
-                )}
+                ) : null}
               </div>
               <div className="mt-2 flex items-center gap-3 text-[10px] text-[hsl(var(--muted-foreground))]">
                 {model.pulls && <span>{model.pulls} pulls</span>}

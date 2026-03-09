@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
+function withNoCache(res: NextResponse, path: string): NextResponse {
+  if (path.startsWith("/api/")) {
+    res.headers.set("Cache-Control", "no-store");
+  }
+  return res;
+}
+
 export async function middleware(req: NextRequest) {
   const start = Date.now();
   const { method } = req;
@@ -10,7 +17,7 @@ export async function middleware(req: NextRequest) {
   // Always allow static assets, auth endpoints, setup, health check
   const publicPaths = ["/api/auth", "/api/setup", "/api/health", "/_next", "/favicon.ico"];
   if (publicPaths.some((p) => path.startsWith(p))) {
-    const res = NextResponse.next();
+    const res = withNoCache(NextResponse.next(), path);
     logRequest(method, path, res.status, Date.now() - start);
     return res;
   }
@@ -25,7 +32,7 @@ export async function middleware(req: NextRequest) {
   // Check if setup is completed — redirect to /setup if not
   try {
     const statusUrl = new URL("/api/setup/status", req.url);
-    const statusRes = await fetch(statusUrl);
+    const statusRes = await fetch(statusUrl, { cache: "no-store" });
     if (statusRes.ok) {
       const data = await statusRes.json();
       if (!data.completed) {
@@ -39,7 +46,7 @@ export async function middleware(req: NextRequest) {
 
   // Dev bypass — opt-in to disable auth for local development
   if (process.env.AUTH_DISABLED === "true") {
-    const res = NextResponse.next();
+    const res = withNoCache(NextResponse.next(), path);
     logRequest(method, path, res.status, Date.now() - start);
     return res;
   }
@@ -61,7 +68,7 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  const res = NextResponse.next();
+  const res = withNoCache(NextResponse.next(), path);
   logRequest(method, path, res.status, Date.now() - start);
   return res;
 }

@@ -119,12 +119,24 @@
   "discover": {
     "title": "Descubrir modelos",
     "searchModels": "Buscar modelos...",
+    "filterByFamily": "Filtrar por familia",
+    "allFamilies": "Todas las familias",
     "pullModel": "Descargar",
     "pullStarted": "Descargando ''{name}''... Aparecerá en Modelos cuando esté listo.",
     "pullComplete": "Modelo ''{name}'' descargado correctamente!",
     "pullError": "Error al descargar ''{name}''",
-    "emptyTitle": "No se encontraron modelos",
-    "emptyDescription": "Prueba con otra búsqueda o filtro."
+    "downloaded": "Descargado",
+    "downloads": "descargas",
+    "lastUpdated": "Última actualización",
+    "refreshCatalog": "Actualizar catálogo",
+    "refreshing": "Actualizando...",
+    "refreshSuccess": "Catálogo actualizado correctamente",
+    "refreshError": "Error al actualizar el catálogo",
+    "lastRefresh": "Última actualización",
+    "emptyTitle": "El catálogo está vacío",
+    "emptyDescription": "Actualiza el catálogo para explorar los modelos disponibles.",
+    "emptyAction": "Actualizar catálogo",
+    "downloading": "Descargando..."
   },
   "admin": {
     "models": {

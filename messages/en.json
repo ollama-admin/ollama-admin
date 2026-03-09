@@ -119,12 +119,24 @@
   "discover": {
     "title": "Discover Models",
     "searchModels": "Search models...",
+    "filterByFamily": "Filter by family",
+    "allFamilies": "All families",
     "pullModel": "Pull",
     "pullStarted": "Downloading ''{name}''... It will appear in Models when ready.",
     "pullComplete": "Model ''{name}'' downloaded successfully!",
     "pullError": "Failed to download ''{name}''",
-    "emptyTitle": "No models found",
-    "emptyDescription": "Try a different search or filter."
+    "downloaded": "Downloaded",
+    "downloads": "downloads",
+    "lastUpdated": "Last updated",
+    "refreshCatalog": "Refresh catalog",
+    "refreshing": "Refreshing...",
+    "refreshSuccess": "Catalog updated successfully",
+    "refreshError": "Failed to refresh catalog",
+    "lastRefresh": "Last refresh",
+    "emptyTitle": "Catalog is empty",
+    "emptyDescription": "Refresh the catalog to browse available models.",
+    "emptyAction": "Refresh catalog",
+    "downloading": "Downloading..."
   },
   "admin": {
     "models": {
