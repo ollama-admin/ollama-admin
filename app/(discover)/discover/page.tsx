@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { Search, RefreshCw, Check, Download } from "lucide-react";
+import { Search, RefreshCw, Check, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -35,11 +35,6 @@ interface Server {
   name: string;
 }
 
-interface ActivePull {
-  modelRef: string;
-  progress: number;
-}
-
 export default function DiscoverPage() {
   const t = useTranslations("discover");
   const { toast } = useToast();
@@ -54,9 +49,10 @@ export default function DiscoverPage() {
   const [servers, setServers] = useState<Server[]>([]);
   const [selectedServer, setSelectedServer] = useState("");
   const [downloadedModels, setDownloadedModels] = useState<Set<string>>(new Set());
-  const [activePulls, setActivePulls] = useState<Map<string, ActivePull>>(new Map());
-  const activePullsRef = useRef(activePulls);
-  activePullsRef.current = activePulls;
+  const [downloadingRefs, setDownloadingRefs] = useState<Set<string>>(new Set());
+  const downloadingRefsRef = useRef(downloadingRefs);
+  downloadingRefsRef.current = downloadingRefs;
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     fetch("/api/auth/session")
@@ -90,6 +86,93 @@ export default function DiscoverPage() {
   useEffect(() => {
     if (selectedServer) fetchDownloaded(selectedServer);
   }, [selectedServer, fetchDownloaded]);
+
+  // Poll for download completion and errors
+  useEffect(() => {
+    if (downloadingRefs.size === 0) {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+      return;
+    }
+
+    if (pollRef.current) return;
+
+    pollRef.current = setInterval(async () => {
+      if (!selectedServer) return;
+
+      // Check pull status for errors
+      try {
+        const statusRes = await fetch(
+          `/api/admin/models/pull/status?serverId=${selectedServer}`
+        );
+        if (statusRes.ok) {
+          const jobs: { id: string; model: string; tag: string; status: string; error?: string }[] =
+            await statusRes.json();
+
+          for (const job of jobs) {
+            const ref = job.tag ? `${job.model}:${job.tag}` : job.model;
+            if (job.status === "error" && downloadingRefsRef.current.has(ref)) {
+              const msg = job.error
+                ? `${t("pullError", { name: ref })}: ${job.error}`
+                : t("pullError", { name: ref });
+              toast(msg, "error");
+              setDownloadingRefs((prev) => {
+                const next = new Set(prev);
+                next.delete(ref);
+                return next;
+              });
+            }
+          }
+        }
+      } catch {
+        // ignore polling errors
+      }
+
+      // Check if models appeared on server
+      try {
+        const modelsRes = await fetch(
+          `/api/admin/models?serverId=${selectedServer}`
+        );
+        if (modelsRes.ok) {
+          const data = await modelsRes.json();
+          if (data.models) {
+            const names = new Set<string>(
+              data.models.map((m: { name: string }) => m.name)
+            );
+            setDownloadedModels(names);
+
+            setDownloadingRefs((prev) => {
+              const next = new Set(prev);
+              let changed = false;
+              const namesArr = Array.from(names);
+              Array.from(prev).forEach((ref) => {
+                const isNowDownloaded = namesArr.some(
+                  (n) => n === ref || n.startsWith(`${ref}-`)
+                );
+                if (isNowDownloaded) {
+                  next.delete(ref);
+                  changed = true;
+                  toast(t("pullComplete", { name: ref }), "success");
+                }
+              });
+              return changed ? next : prev;
+            });
+          }
+        }
+      } catch {
+        // ignore polling errors
+      }
+    }, 5000);
+
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+  }, [downloadingRefs.size, selectedServer, t, toast]);
 
   const fetchCatalog = useCallback(() => {
     const params = new URLSearchParams();
@@ -133,21 +216,21 @@ export default function DiscoverPage() {
     if (!selectedServer) return;
     const ref = tag ? `${modelName}:${tag}` : modelName;
 
-    if (activePullsRef.current.has(ref)) return;
+    if (downloadingRefs.has(ref)) return;
 
-    setActivePulls((prev) => new Map(prev).set(ref, { modelRef: ref, progress: 0 }));
+    setDownloadingRefs((prev) => new Set(prev).add(ref));
 
     try {
       const res = await fetch("/api/admin/models/pull", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ serverId: selectedServer, name: ref, stream: true }),
+        body: JSON.stringify({ serverId: selectedServer, name: ref }),
       });
 
-      if (!res.ok || !res.body) {
+      if (!res.ok) {
         toast(t("pullError", { name: ref }), "error");
-        setActivePulls((prev) => {
-          const next = new Map(prev);
+        setDownloadingRefs((prev) => {
+          const next = new Set(prev);
           next.delete(ref);
           return next;
         });
@@ -155,53 +238,10 @@ export default function DiscoverPage() {
       }
 
       toast(t("pullStarted", { name: ref }), "success");
-      consumePullStream(res.body, ref);
     } catch {
       toast(t("pullError", { name: ref }), "error");
-      setActivePulls((prev) => {
-        const next = new Map(prev);
-        next.delete(ref);
-        return next;
-      });
-    }
-  };
-
-  const consumePullStream = async (body: ReadableStream, ref: string) => {
-    const reader = body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          try {
-            const json = JSON.parse(line);
-            if (json.total && json.completed) {
-              const progress = Math.round((json.completed / json.total) * 100);
-              setActivePulls((prev) =>
-                new Map(prev).set(ref, { modelRef: ref, progress })
-              );
-            }
-          } catch {
-            // skip
-          }
-        }
-      }
-
-      toast(t("pullComplete", { name: ref }), "success");
-      if (selectedServer) fetchDownloaded(selectedServer);
-    } catch {
-      toast(t("pullError", { name: ref }), "error");
-    } finally {
-      setActivePulls((prev) => {
-        const next = new Map(prev);
+      setDownloadingRefs((prev) => {
+        const next = new Set(prev);
         next.delete(ref);
         return next;
       });
@@ -210,14 +250,13 @@ export default function DiscoverPage() {
 
   const isModelTagDownloaded = (modelName: string, tag: string) => {
     const ref = `${modelName}:${tag}`;
-    for (const name of downloadedModels) {
-      if (name === ref || name.startsWith(`${ref}-`)) return true;
-    }
-    return false;
+    return Array.from(downloadedModels).some(
+      (name) => name === ref || name.startsWith(`${ref}-`)
+    );
   };
 
-  const getActivePull = (modelName: string, tag: string): ActivePull | undefined => {
-    return activePulls.get(`${modelName}:${tag}`);
+  const isDownloading = (modelName: string, tag: string) => {
+    return downloadingRefs.has(`${modelName}:${tag}`);
   };
 
   return (
@@ -316,16 +355,16 @@ export default function DiscoverPage() {
                       size="sm"
                       onClick={() => handlePull(model.name)}
                       disabled={
-                        !!getActivePull(model.name, "latest") ||
+                        isDownloading(model.name, "latest") ||
                         isModelTagDownloaded(model.name, "latest") ||
                         !selectedServer
                       }
-                      loading={!!getActivePull(model.name, "latest")}
+                      loading={isDownloading(model.name, "latest")}
                     >
                       {isModelTagDownloaded(model.name, "latest") ? (
                         <><Check className="mr-1 h-3 w-3" />{t("downloaded")}</>
-                      ) : getActivePull(model.name, "latest") ? (
-                        `${getActivePull(model.name, "latest")?.progress}%`
+                      ) : isDownloading(model.name, "latest") ? (
+                        t("downloading")
                       ) : (
                         t("pullModel")
                       )}
@@ -350,7 +389,7 @@ export default function DiscoverPage() {
                   <div className="mt-2 flex flex-wrap gap-1">
                     {sizeTags.map((tag) => {
                       const downloaded = isModelTagDownloaded(model.name, tag);
-                      const pull = getActivePull(model.name, tag);
+                      const pulling = isDownloading(model.name, tag);
 
                       if (downloaded) {
                         return (
@@ -361,10 +400,11 @@ export default function DiscoverPage() {
                         );
                       }
 
-                      if (pull) {
+                      if (pulling) {
                         return (
                           <Badge key={tag} variant="default" className="text-[10px]">
-                            {tag} {pull.progress}%
+                            <Loader2 className="mr-0.5 h-2.5 w-2.5 animate-spin" />
+                            {tag}
                           </Badge>
                         );
                       }

@@ -136,7 +136,8 @@
     "lastRefresh": "Darrera actualització",
     "emptyTitle": "El catàleg està buit",
     "emptyDescription": "Actualitza el catàleg per explorar els models disponibles.",
-    "emptyAction": "Actualitzar catàleg"
+    "emptyAction": "Actualitzar catàleg",
+    "downloading": "Descarregant..."
   },
   "admin": {
     "models": {

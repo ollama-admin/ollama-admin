@@ -91,6 +91,7 @@ export async function ollamaFetch<T>(
   const url = `${baseUrl.replace(/\/$/, "")}${path}`;
   const res = await fetch(url, {
     ...options,
+    cache: "no-store",
     headers: {
       "Content-Type": "application/json",
       ...options?.headers,

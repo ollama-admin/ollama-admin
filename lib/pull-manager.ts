@@ -59,9 +59,16 @@ class PullManager {
       });
 
       if (!res.ok || !res.body) {
+        let detail = `${res.status} ${res.statusText}`;
+        try {
+          const body = await res.json();
+          if (body?.error) detail = body.error;
+        } catch {
+          // use status text as fallback
+        }
         job.status = "error";
-        job.error = `Pull failed: ${res.status} ${res.statusText}`;
-        logger.error("Pull failed", { model: modelRef, status: res.status });
+        job.error = detail;
+        logger.error("Pull failed", { model: modelRef, error: detail });
         this.scheduleCleanup(job.id);
         return;
       }
@@ -82,6 +89,13 @@ class PullManager {
           if (!line.trim()) continue;
           try {
             const data = JSON.parse(line);
+            if (data.error) {
+              job.status = "error";
+              job.error = data.error;
+              logger.error("Pull error from Ollama", { model: modelRef, error: data.error });
+              this.scheduleCleanup(job.id);
+              return;
+            }
             if (data.total && data.completed) {
               job.progress = Math.round((data.completed / data.total) * 100);
             }

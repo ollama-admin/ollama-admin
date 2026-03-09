@@ -78,6 +78,14 @@ export default function ModelsPage() {
     fetchModels();
   }, [fetchModels]);
 
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") fetchModels();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [fetchModels]);
+
   const handlePull = async () => {
     if (!pullName.trim() || !selectedServer) return;
     setPulling(true);

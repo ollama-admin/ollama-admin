@@ -136,7 +136,8 @@
     "lastRefresh": "Dernière actualisation",
     "emptyTitle": "Le catalogue est vide",
     "emptyDescription": "Actualisez le catalogue pour parcourir les modèles disponibles.",
-    "emptyAction": "Actualiser le catalogue"
+    "emptyAction": "Actualiser le catalogue",
+    "downloading": "Téléchargement..."
   },
   "admin": {
     "models": {

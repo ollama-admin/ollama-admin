@@ -135,7 +135,8 @@
     "lastRefresh": "Last refresh",
     "emptyTitle": "Catalog is empty",
     "emptyDescription": "Refresh the catalog to browse available models.",
-    "emptyAction": "Refresh catalog"
+    "emptyAction": "Refresh catalog",
+    "downloading": "Downloading..."
   },
   "admin": {
     "models": {
