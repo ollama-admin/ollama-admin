@@ -138,7 +138,14 @@
     "emptyTitle": "Le catalogue est vide",
     "emptyDescription": "Actualisez le catalogue pour parcourir les modèles disponibles.",
     "emptyAction": "Actualiser le catalogue",
-    "downloading": "Téléchargement..."
+    "downloading": "Téléchargement...",
+    "capabilities": {
+      "tools": "Outils",
+      "vision": "Vision / OCR",
+      "embedding": "Embedding",
+      "thinking": "Raisonnement",
+      "code": "Code"
+    }
   },
   "admin": {
     "models": {

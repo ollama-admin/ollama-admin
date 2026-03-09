@@ -274,7 +274,7 @@ export default function DiscoverPage() {
                 : "border-[hsl(var(--border))] hover:bg-[hsl(var(--accent))]"
             }`}
           >
-            {cap}
+            {t(`capabilities.${cap}`)}
           </button>
         ))}
       </div>
@@ -302,7 +302,7 @@ export default function DiscoverPage() {
                     <div className="mt-1 flex flex-wrap gap-1">
                       {model.capabilities.map((cap) => (
                         <Badge key={cap} variant="muted" className="text-[10px]">
-                          {cap}
+                          {t(`capabilities.${cap}`)}
                         </Badge>
                       ))}
                     </div>

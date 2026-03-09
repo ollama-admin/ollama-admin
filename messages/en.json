@@ -137,7 +137,14 @@
     "emptyTitle": "Catalog is empty",
     "emptyDescription": "Refresh the catalog to browse available models.",
     "emptyAction": "Refresh catalog",
-    "downloading": "Downloading..."
+    "downloading": "Downloading...",
+    "capabilities": {
+      "tools": "Tools",
+      "vision": "Vision / OCR",
+      "embedding": "Embedding",
+      "thinking": "Thinking",
+      "code": "Code"
+    }
   },
   "admin": {
     "models": {

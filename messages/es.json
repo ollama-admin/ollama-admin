@@ -137,7 +137,14 @@
     "emptyTitle": "El catálogo está vacío",
     "emptyDescription": "Actualiza el catálogo para explorar los modelos disponibles.",
     "emptyAction": "Actualizar catálogo",
-    "downloading": "Descargando..."
+    "downloading": "Descargando...",
+    "capabilities": {
+      "tools": "Herramientas",
+      "vision": "Visión / OCR",
+      "embedding": "Embedding",
+      "thinking": "Razonamiento",
+      "code": "Código"
+    }
   },
   "admin": {
     "models": {

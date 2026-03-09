@@ -138,7 +138,14 @@
     "emptyTitle": "El catàleg està buit",
     "emptyDescription": "Actualitza el catàleg per explorar els models disponibles.",
     "emptyAction": "Actualitzar catàleg",
-    "downloading": "Descarregant..."
+    "downloading": "Descarregant...",
+    "capabilities": {
+      "tools": "Eines",
+      "vision": "Visió / OCR",
+      "embedding": "Embedding",
+      "thinking": "Raonament",
+      "code": "Codi"
+    }
   },
   "admin": {
     "models": {
