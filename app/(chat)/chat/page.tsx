@@ -56,9 +56,8 @@ interface Server {
   name: string;
 }
 
-interface OllamaModel {
-  name: string;
-}
+import type { OllamaModel } from "@/lib/ollama";
+import { isChatModel } from "@/lib/model-utils";
 
 interface CompareTarget {
   serverId: string;
@@ -131,7 +130,7 @@ export default function ChatPage() {
     fetch(`/api/admin/models?serverId=${selectedServer}`)
       .then((r) => r.json())
       .then((data) => {
-        const m = data.models || [];
+        const m = (data.models || []).filter(isChatModel);
         setModels(m);
         if (m.length > 0 && !selectedModel) setSelectedModel(m[0].name);
         setServerModelsCache((prev) => ({ ...prev, [selectedServer]: m }));
@@ -144,7 +143,7 @@ export default function ChatPage() {
     if (serverModelsCache[serverId]) return;
     const res = await fetch(`/api/admin/models?serverId=${serverId}`);
     const data = await res.json();
-    const m = data.models || [];
+    const m = (data.models || []).filter(isChatModel);
     setServerModelsCache((prev) => ({ ...prev, [serverId]: m }));
   }, [serverModelsCache]);
 
