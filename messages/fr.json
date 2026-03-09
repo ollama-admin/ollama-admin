@@ -125,6 +125,7 @@
     "pullStarted": "Téléchargement de ''{name}''... Il apparaîtra dans Modèles une fois prêt.",
     "pullComplete": "Modèle ''{name}'' téléchargé avec succès !",
     "pullError": "Échec du téléchargement de ''{name}''",
+    "downloaded": "Téléchargé",
     "installed": "Installé",
     "downloads": "téléchargements",
     "lastUpdated": "Dernière mise à jour",

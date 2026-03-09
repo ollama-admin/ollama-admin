@@ -88,7 +88,7 @@ export default function ModelsPage() {
       const res = await fetch("/api/admin/models/pull", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ serverId: selectedServer, name: pullName }),
+        body: JSON.stringify({ serverId: selectedServer, name: pullName, stream: true }),
       });
 
       if (!res.body) return;

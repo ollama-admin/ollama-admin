@@ -125,6 +125,7 @@
     "pullStarted": "Descargando ''{name}''... Aparecerá en Modelos cuando esté listo.",
     "pullComplete": "Modelo ''{name}'' descargado correctamente!",
     "pullError": "Error al descargar ''{name}''",
+    "downloaded": "Descargado",
     "downloads": "descargas",
     "lastUpdated": "Última actualización",
     "refreshCatalog": "Actualizar catálogo",

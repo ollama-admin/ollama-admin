@@ -1,8 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useEffect, useState, useCallback } from "react";
-import { Search, RefreshCw } from "lucide-react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { Search, RefreshCw, Check, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
+import { getSizeTags, getCapabilityTags } from "@/lib/catalog-utils";
 
 interface CatalogModel {
   id: string;
@@ -34,6 +35,11 @@ interface Server {
   name: string;
 }
 
+interface ActivePull {
+  modelRef: string;
+  progress: number;
+}
+
 export default function DiscoverPage() {
   const t = useTranslations("discover");
   const { toast } = useToast();
@@ -47,8 +53,10 @@ export default function DiscoverPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [servers, setServers] = useState<Server[]>([]);
   const [selectedServer, setSelectedServer] = useState("");
-  const [pullingModel, setPullingModel] = useState<string | null>(null);
-  const [pullProgress, setPullProgress] = useState("");
+  const [downloadedModels, setDownloadedModels] = useState<Set<string>>(new Set());
+  const [activePulls, setActivePulls] = useState<Map<string, ActivePull>>(new Map());
+  const activePullsRef = useRef(activePulls);
+  activePullsRef.current = activePulls;
 
   useEffect(() => {
     fetch("/api/auth/session")
@@ -63,6 +71,25 @@ export default function DiscoverPage() {
         if (data.length > 0) setSelectedServer(data[0].id);
       });
   }, []);
+
+  const fetchDownloaded = useCallback((serverId: string) => {
+    if (!serverId) return;
+    fetch(`/api/admin/models?serverId=${serverId}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.models) {
+          const names = new Set<string>(
+            data.models.map((m: { name: string }) => m.name)
+          );
+          setDownloadedModels(names);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (selectedServer) fetchDownloaded(selectedServer);
+  }, [selectedServer, fetchDownloaded]);
 
   const fetchCatalog = useCallback(() => {
     const params = new URLSearchParams();
@@ -102,23 +129,49 @@ export default function DiscoverPage() {
     }
   };
 
-  const handlePull = async (modelName: string) => {
+  const handlePull = async (modelName: string, tag?: string) => {
     if (!selectedServer) return;
-    setPullingModel(modelName);
-    setPullProgress("Starting...");
+    const ref = tag ? `${modelName}:${tag}` : modelName;
+
+    if (activePullsRef.current.has(ref)) return;
+
+    setActivePulls((prev) => new Map(prev).set(ref, { modelRef: ref, progress: 0 }));
 
     try {
       const res = await fetch("/api/admin/models/pull", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ serverId: selectedServer, name: modelName }),
+        body: JSON.stringify({ serverId: selectedServer, name: ref, stream: true }),
       });
 
-      if (!res.body) return;
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
+      if (!res.ok || !res.body) {
+        toast(t("pullError", { name: ref }), "error");
+        setActivePulls((prev) => {
+          const next = new Map(prev);
+          next.delete(ref);
+          return next;
+        });
+        return;
+      }
 
+      toast(t("pullStarted", { name: ref }), "success");
+      consumePullStream(res.body, ref);
+    } catch {
+      toast(t("pullError", { name: ref }), "error");
+      setActivePulls((prev) => {
+        const next = new Map(prev);
+        next.delete(ref);
+        return next;
+      });
+    }
+  };
+
+  const consumePullStream = async (body: ReadableStream, ref: string) => {
+    const reader = body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    try {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -131,22 +184,40 @@ export default function DiscoverPage() {
           try {
             const json = JSON.parse(line);
             if (json.total && json.completed) {
-              setPullProgress(`${Math.round((json.completed / json.total) * 100)}%`);
-            } else {
-              setPullProgress(json.status || "Downloading...");
+              const progress = Math.round((json.completed / json.total) * 100);
+              setActivePulls((prev) =>
+                new Map(prev).set(ref, { modelRef: ref, progress })
+              );
             }
           } catch {
             // skip
           }
         }
       }
-      toast(t("pullComplete", { name: modelName }), "success");
+
+      toast(t("pullComplete", { name: ref }), "success");
+      if (selectedServer) fetchDownloaded(selectedServer);
     } catch {
-      toast(t("pullError", { name: modelName }), "error");
+      toast(t("pullError", { name: ref }), "error");
     } finally {
-      setPullingModel(null);
-      setPullProgress("");
+      setActivePulls((prev) => {
+        const next = new Map(prev);
+        next.delete(ref);
+        return next;
+      });
     }
+  };
+
+  const isModelTagDownloaded = (modelName: string, tag: string) => {
+    const ref = `${modelName}:${tag}`;
+    for (const name of downloadedModels) {
+      if (name === ref || name.startsWith(`${ref}-`)) return true;
+    }
+    return false;
+  };
+
+  const getActivePull = (modelName: string, tag: string): ActivePull | undefined => {
+    return activePulls.get(`${modelName}:${tag}`);
   };
 
   return (
@@ -225,47 +296,109 @@ export default function DiscoverPage() {
         />
       ) : (
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {models.map((model) => (
-            <Card key={model.id}>
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-medium">{model.name}</h3>
-                  {model.family && (
-                    <Badge variant="muted" className="mt-1">
-                      {model.family}
-                    </Badge>
+          {models.map((model) => {
+            const sizeTags = getSizeTags(model.tags);
+            const capTags = getCapabilityTags(model.tags);
+
+            return (
+              <Card key={model.id}>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-medium">{model.name}</h3>
+                    {model.family && (
+                      <Badge variant="muted" className="mt-1">
+                        {model.family}
+                      </Badge>
+                    )}
+                  </div>
+                  {isAdmin && sizeTags.length === 0 && (
+                    <Button
+                      size="sm"
+                      onClick={() => handlePull(model.name)}
+                      disabled={
+                        !!getActivePull(model.name, "latest") ||
+                        isModelTagDownloaded(model.name, "latest") ||
+                        !selectedServer
+                      }
+                      loading={!!getActivePull(model.name, "latest")}
+                    >
+                      {isModelTagDownloaded(model.name, "latest") ? (
+                        <><Check className="mr-1 h-3 w-3" />{t("downloaded")}</>
+                      ) : getActivePull(model.name, "latest") ? (
+                        `${getActivePull(model.name, "latest")?.progress}%`
+                      ) : (
+                        t("pullModel")
+                      )}
+                    </Button>
                   )}
                 </div>
-                {isAdmin && (
-                  <Button
-                    size="sm"
-                    onClick={() => handlePull(model.name)}
-                    disabled={pullingModel === model.name || !selectedServer}
-                    loading={pullingModel === model.name}
-                  >
-                    {pullingModel === model.name ? pullProgress : t("pullModel")}
-                  </Button>
+                {model.description && (
+                  <p className="mt-2 line-clamp-2 text-xs text-[hsl(var(--muted-foreground))]">
+                    {model.description}
+                  </p>
                 )}
-              </div>
-              {model.description && (
-                <p className="mt-2 line-clamp-2 text-xs text-[hsl(var(--muted-foreground))]">
-                  {model.description}
-                </p>
-              )}
-              <div className="mt-2 flex flex-wrap gap-1">
-                {model.tags.split(",").filter(Boolean).map((tag) => (
-                  <Badge key={tag} variant="muted" className="text-[10px]">
-                    {tag.trim()}
-                  </Badge>
-                ))}
-              </div>
-              {model.pullCount != null && model.pullCount > 0 && (
-                <p className="mt-2 text-xs text-[hsl(var(--muted-foreground))]">
-                  {model.pullCount.toLocaleString()} {t("downloads")}
-                </p>
-              )}
-            </Card>
-          ))}
+                {capTags.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {capTags.map((tag) => (
+                      <Badge key={tag} variant="muted" className="text-[10px]">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                {sizeTags.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {sizeTags.map((tag) => {
+                      const downloaded = isModelTagDownloaded(model.name, tag);
+                      const pull = getActivePull(model.name, tag);
+
+                      if (downloaded) {
+                        return (
+                          <Badge key={tag} variant="success" className="text-[10px]">
+                            <Check className="mr-0.5 h-2.5 w-2.5" />
+                            {tag}
+                          </Badge>
+                        );
+                      }
+
+                      if (pull) {
+                        return (
+                          <Badge key={tag} variant="default" className="text-[10px]">
+                            {tag} {pull.progress}%
+                          </Badge>
+                        );
+                      }
+
+                      if (isAdmin) {
+                        return (
+                          <button
+                            key={tag}
+                            onClick={() => handlePull(model.name, tag)}
+                            disabled={!selectedServer}
+                            className="inline-flex items-center rounded bg-[hsl(var(--muted))] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--primary))] hover:text-[hsl(var(--primary-foreground))] disabled:opacity-50"
+                          >
+                            <Download className="mr-0.5 h-2.5 w-2.5" />
+                            {tag}
+                          </button>
+                        );
+                      }
+
+                      return (
+                        <Badge key={tag} variant="muted" className="text-[10px]">
+                          {tag}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                )}
+                {model.pullCount != null && model.pullCount > 0 && (
+                  <p className="mt-2 text-xs text-[hsl(var(--muted-foreground))]">
+                    {model.pullCount.toLocaleString()} {t("downloads")}
+                  </p>
+                )}
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>

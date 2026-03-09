@@ -125,6 +125,7 @@
     "pullStarted": "Descarregant ''{name}''... Apareixerà a Models quan estigui llest.",
     "pullComplete": "Model ''{name}'' descarregat correctament!",
     "pullError": "Error en descarregar ''{name}''",
+    "downloaded": "Descarregat",
     "installed": "Instal·lat",
     "downloads": "descàrregues",
     "lastUpdated": "Darrera actualització",

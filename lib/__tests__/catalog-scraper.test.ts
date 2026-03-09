@@ -158,4 +158,44 @@ describe("parseModelsFromHtml", () => {
     const models = parseModelsFromHtml("<html><body></body></html>", "");
     expect(models).toHaveLength(0);
   });
+
+  it("excludes cloud-only models (no sizes + cloud badge)", () => {
+    const cloudOnlyHtml = `
+<html><body>
+<li x-test-model class="flex">
+  <a href="/library/cloud-model" class="group w-full">
+    <div class="flex flex-col mb-1" title="cloud-model">
+      <h2><span x-test-search-response-title>cloud-model</span></h2>
+      <p class="max-w-lg break-words text-neutral-800">A cloud-only model.</p>
+    </div>
+    <div class="flex flex-col">
+      <div class="flex flex-wrap space-x-2">
+        <span x-test-capability class="inline-flex">tools</span>
+        <span class="inline-flex bg-cyan-50 text-cyan-500">cloud</span>
+      </div>
+      <p><span class="flex"><span x-test-pull-count>500K</span></span></p>
+    </div>
+  </a>
+</li>
+<li x-test-model class="flex">
+  <a href="/library/local-model" class="group w-full">
+    <div class="flex flex-col mb-1" title="local-model">
+      <h2><span x-test-search-response-title>local-model</span></h2>
+      <p class="max-w-lg break-words text-neutral-800">A local model.</p>
+    </div>
+    <div class="flex flex-col">
+      <div class="flex flex-wrap space-x-2">
+        <span x-test-capability class="inline-flex">tools</span>
+        <span class="inline-flex bg-cyan-50 text-cyan-500">cloud</span>
+        <span x-test-size class="inline-flex">8b</span>
+      </div>
+      <p><span class="flex"><span x-test-pull-count>1M</span></span></p>
+    </div>
+  </a>
+</li>
+</body></html>`;
+    const models = parseModelsFromHtml(cloudOnlyHtml, "");
+    expect(models).toHaveLength(1);
+    expect(models[0].name).toBe("local-model");
+  });
 });

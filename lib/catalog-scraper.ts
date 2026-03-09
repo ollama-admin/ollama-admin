@@ -80,6 +80,12 @@ function parseModelsFromHtml(
       sizes.push($(size).text().trim());
     });
 
+    // Detect cloud-only models: have "cloud" badge but no downloadable sizes
+    const isCloudOnly =
+      sizes.length === 0 &&
+      $el.find("span").filter((_, span) => $(span).text().trim() === "cloud").length > 0;
+    if (isCloudOnly) return;
+
     const tags = [...capabilities, ...sizes].join(", ");
     const pullCountText =
       $el.find("[x-test-pull-count]").text().trim() || "0";
