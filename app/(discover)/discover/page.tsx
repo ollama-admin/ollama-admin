@@ -2,7 +2,6 @@
 
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback } from "react";
-import { useSession } from "next-auth/react";
 import { Search, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,9 +36,8 @@ interface Server {
 
 export default function DiscoverPage() {
   const t = useTranslations("discover");
-  const { data: session } = useSession();
-  const isAdmin = session?.user?.role === "admin";
   const { toast } = useToast();
+  const [isAdmin, setIsAdmin] = useState(false);
   const [models, setModels] = useState<CatalogModel[]>([]);
   const [families, setFamilies] = useState<string[]>([]);
   const [lastRefreshed, setLastRefreshed] = useState<string | null>(null);
@@ -53,6 +51,11 @@ export default function DiscoverPage() {
   const [pullProgress, setPullProgress] = useState("");
 
   useEffect(() => {
+    fetch("/api/auth/session")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.user?.role === "admin") setIsAdmin(true);
+      });
     fetch("/api/servers")
       .then((r) => r.json())
       .then((data: Server[]) => {
