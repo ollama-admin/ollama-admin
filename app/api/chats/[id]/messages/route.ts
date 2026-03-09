@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { checkRateLimit, getRateLimitConfig } from "@/lib/rate-limit";
 import { getRateLimitKey } from "@/lib/with-rate-limit";
 import { logger } from "@/lib/logger";
+import { logAsync } from "@/lib/log-async";
 
 function buildOllamaRequest(
   chat: {
@@ -102,16 +103,14 @@ function createSSEStream(
         },
       });
 
-      await prisma.log.create({
-        data: {
-          serverId: chat.server.id,
-          model: chat.model,
-          endpoint: "/api/chat",
-          promptTokens,
-          completionTokens,
-          latencyMs,
-          statusCode: 200,
-        },
+      logAsync({
+        serverId: chat.server.id,
+        model: chat.model,
+        endpoint: "/api/chat",
+        promptTokens,
+        completionTokens,
+        latencyMs,
+        statusCode: 200,
       });
 
       logger.info("Chat completed", { chatId: chat.id, model: chat.model, promptTokens, completionTokens, latencyMs });
