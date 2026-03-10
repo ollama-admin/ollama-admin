@@ -65,52 +65,41 @@ async function fetchPage(url: string): Promise<string> {
   return res.text();
 }
 
-async function scrapeAllModels(): Promise<ScrapedModel[]> {
-  if (cache && Date.now() - cache.timestamp < CACHE_TTL) {
-    return cache.data;
-  }
-
-  const letters = "abcdefghijklmnopqrstuvwxyz0123456789".split("");
-  const batchSize = 6;
-  const modelMap = new Map<string, ScrapedModel>();
-
-  // Also scrape the default page and each category
-  const extraUrls = [
-    "https://ollama.com/search",
-    ...KNOWN_CAPABILITIES.map(
-      (c) => `https://ollama.com/search?c=${c}`
-    ),
-  ];
-
-  for (const url of extraUrls) {
+async function scrapeAllPages(
+  baseUrl: string,
+  modelMap: Map<string, ScrapedModel>
+): Promise<void> {
+  for (let page = 1; page <= 50; page++) {
+    const separator = baseUrl.includes("?") ? "&" : "?";
+    const url = page === 1 ? baseUrl : `${baseUrl}${separator}page=${page}`;
     try {
       const html = await fetchPage(url);
-      for (const model of parseModelsFromHtml(html)) {
+      const models = parseModelsFromHtml(html);
+      if (models.length === 0) break;
+      for (const model of models) {
         if (!modelMap.has(model.id)) {
           modelMap.set(model.id, model);
         }
       }
     } catch {
-      // continue on error
+      break;
     }
   }
+}
 
-  // Scrape by letter in batches to avoid overwhelming the server
-  for (let i = 0; i < letters.length; i += batchSize) {
-    const batch = letters.slice(i, i + batchSize);
-    const results = await Promise.all(
-      batch.map((letter) =>
-        fetchPage(`https://ollama.com/search?q=${letter}`).catch(() => "")
-      )
-    );
-    for (const html of results) {
-      if (!html) continue;
-      for (const model of parseModelsFromHtml(html)) {
-        if (!modelMap.has(model.id)) {
-          modelMap.set(model.id, model);
-        }
-      }
-    }
+async function scrapeAllModels(): Promise<ScrapedModel[]> {
+  if (cache && Date.now() - cache.timestamp < CACHE_TTL) {
+    return cache.data;
+  }
+
+  const modelMap = new Map<string, ScrapedModel>();
+
+  // Scrape main listing (all pages)
+  await scrapeAllPages("https://ollama.com/search", modelMap);
+
+  // Scrape each capability category (all pages)
+  for (const cap of KNOWN_CAPABILITIES) {
+    await scrapeAllPages(`https://ollama.com/search?c=${cap}`, modelMap);
   }
 
   // Filter out cloud-only models (no sizes, only cloud capability)
