@@ -18,7 +18,12 @@
     "export": "Exportar",
     "refresh": "Actualizar",
     "noResults": "No se encontraron resultados",
-    "appName": "Ollama Admin"
+    "appName": "Ollama Admin",
+    "connectionError": "No se puede conectar al servidor Ollama",
+    "connectionErrorDescription": "El servidor no responde. Comprueba que Ollama esté en ejecución y que la URL configurada sea correcta.",
+    "unload": "Descargar",
+    "unloadSuccess": "Modelo \"{model}\" descargado de memoria",
+    "unloadError": "Error al descargar el modelo"
   },
   "sidebar": {
     "dashboard": "Panel",
@@ -32,6 +37,7 @@
     "gpu": "GPU",
     "alerts": "Alertas",
     "users": "Usuarios",
+    "tools": "Herramientas",
     "settings": "Ajustes"
   },
   "dashboard": {
@@ -136,7 +142,14 @@
     "emptyTitle": "El catálogo está vacío",
     "emptyDescription": "Actualiza el catálogo para explorar los modelos disponibles.",
     "emptyAction": "Actualizar catálogo",
-    "downloading": "Descargando..."
+    "downloading": "Descargando...",
+    "capabilities": {
+      "tools": "Herramientas",
+      "vision": "Visión / OCR",
+      "embedding": "Embedding",
+      "thinking": "Razonamiento",
+      "code": "Código"
+    }
   },
   "admin": {
     "models": {
@@ -157,7 +170,11 @@
       "size": "Tamaño",
       "family": "Familia",
       "quantization": "Cuantización",
-      "modified": "Modificado"
+      "modified": "Modificado",
+      "unload": "Descargar",
+      "unloadConfirm": "¿Descargar \"{model}\" de la memoria? Esto detendrá cualquier inferencia en curso y liberará VRAM.",
+      "unloadSuccess": "Modelo \"{model}\" descargado",
+      "unloadError": "Error al descargar el modelo"
     },
     "servers": {
       "title": "Servidores",
@@ -280,6 +297,51 @@
       "delete": "Eliminar",
       "emptyTitle": "Sin usuarios",
       "emptyDescription": "Crea el primer usuario para comenzar."
+    }
+  },
+  "tools": {
+    "title": "Herramientas",
+    "description": "Prueba modelos especializados con interfaces dedicadas.",
+    "ocr": {
+      "title": "OCR / Visión",
+      "description": "Extrae texto de imágenes usando modelos de visión.",
+      "selectServer": "Seleccionar servidor",
+      "selectModel": "Seleccionar modelo de visión",
+      "noVisionModels": "No hay modelos de visión disponibles",
+      "noVisionModelsDescription": "Instala un modelo de visión (p. ej. llava, granite3.2-vision) para usar las herramientas OCR.",
+      "uploadImage": "Subir imagen",
+      "dropOrClick": "Arrastra una imagen aquí o haz clic para explorar",
+      "supportedFormats": "Soporta PNG, JPG, WebP",
+      "customPrompt": "Prompt",
+      "defaultPrompt": "¿Qué texto ves en esta imagen?",
+      "analyze": "Analizar",
+      "analyzing": "Analizando...",
+      "result": "Resultado",
+      "resultEmpty": "Sube una imagen y haz clic en Analizar para ver los resultados.",
+      "clearImage": "Limpiar",
+      "error": "Error al analizar la imagen",
+      "imageTooLarge": "La imagen debe ser menor de 20 MB"
+    },
+    "embeddings": {
+      "title": "Embeddings",
+      "description": "Genera y compara embeddings de texto.",
+      "noModels": "No hay modelos de embedding disponibles",
+      "noModelsDescription": "Instala un modelo de embedding (p. ej. nomic-embed-text, mxbai-embed-large) para usar esta herramienta.",
+      "inputText": "Entrada",
+      "textA": "Texto A",
+      "textAPlaceholder": "Introduce texto para generar embedding...",
+      "textB": "Texto B (opcional)",
+      "textBPlaceholder": "Introduce un segundo texto para comparar...",
+      "textBHint": "Añade un segundo texto para calcular la similitud coseno.",
+      "generate": "Generar",
+      "generating": "Generando...",
+      "result": "Resultado",
+      "resultEmpty": "Introduce texto y haz clic en Generar para ver los embeddings.",
+      "cosineSimilarity": "Similitud coseno",
+      "embeddingA": "Embedding A",
+      "embeddingB": "Embedding B",
+      "dimensions": "dimensiones",
+      "error": "Error al generar embeddings"
     }
   },
   "setup": {

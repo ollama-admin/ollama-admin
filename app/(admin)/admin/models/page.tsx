@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback } from "react";
 import type { OllamaModel, OllamaRunningModel, OllamaShowResponse } from "@/lib/ollama";
-import { Package, Search, Cpu, Eye, Trash2 } from "lucide-react";
+import { Package, Search, Cpu, Eye, Trash2, AlertTriangle, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -36,6 +36,7 @@ export default function ModelsPage() {
   const [models, setModels] = useState<OllamaModel[]>([]);
   const [running, setRunning] = useState<OllamaRunningModel[]>([]);
   const [loading, setLoading] = useState(true);
+  const [connectionError, setConnectionError] = useState(false);
   const [search, setSearch] = useState("");
   const [inspecting, setInspecting] = useState<OllamaShowResponse | null>(null);
   const [inspectName, setInspectName] = useState("");
@@ -53,16 +54,24 @@ export default function ModelsPage() {
   const fetchModels = useCallback(async () => {
     if (!selectedServer) return;
     setLoading(true);
+    setConnectionError(false);
     try {
       const [modelsRes, runningRes] = await Promise.all([
         fetch(`/api/admin/models?serverId=${selectedServer}`),
         fetch(`/api/admin/models/running?serverId=${selectedServer}`),
       ]);
+      if (!modelsRes.ok) {
+        setConnectionError(true);
+        setModels([]);
+        setRunning([]);
+        return;
+      }
       const modelsData = await modelsRes.json();
-      const runningData = await runningRes.json();
+      const runningData = runningRes.ok ? await runningRes.json() : { models: [] };
       setModels(modelsData.models || []);
       setRunning(runningData.models || []);
     } catch {
+      setConnectionError(true);
       setModels([]);
       setRunning([]);
     } finally {
@@ -109,6 +118,21 @@ export default function ModelsPage() {
     setInspectName(name);
   };
 
+  const handleUnload = async (name: string) => {
+    try {
+      const res = await fetch(`/api/proxy/api/generate?serverId=${selectedServer}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: name, keep_alive: 0 }),
+      });
+      if (!res.ok) throw new Error();
+      toast(t("unloadSuccess", { model: name }), "success");
+      fetchModels();
+    } catch {
+      toast(t("unloadError"), "error");
+    }
+  };
+
   const isRunning = (name: string) =>
     running.some((r) => r.name === name || r.model === name);
 
@@ -130,6 +154,31 @@ export default function ModelsPage() {
             <Skeleton key={i} variant="card" />
           ))}
         </div>
+      </div>
+    );
+  }
+
+  if (connectionError && !loading) {
+    return (
+      <div className="p-6">
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
+        {servers.length > 1 && (
+          <Select
+            value={selectedServer}
+            onChange={(e) => setSelectedServer(e.target.value)}
+            className="mt-4 w-auto"
+          >
+            {servers.map((s) => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </Select>
+        )}
+        <EmptyState
+          icon={AlertTriangle}
+          title={tc("connectionError")}
+          description={tc("connectionErrorDescription")}
+          action={<Button onClick={fetchModels}>{tc("retry")}</Button>}
+        />
       </div>
     );
   }
@@ -239,6 +288,11 @@ export default function ModelsPage() {
                 </div>
 
                 <div className="flex shrink-0 gap-1.5">
+                  {isRunning(model.name) && (
+                    <Button variant="secondary" size="sm" onClick={() => handleUnload(model.name)} title={t("unload")}>
+                      <Square className="h-4 w-4" />
+                    </Button>
+                  )}
                   <Button variant="secondary" size="sm" onClick={() => handleInspect(model.name)} title={t("inspect")}>
                     <Eye className="h-4 w-4" />
                   </Button>

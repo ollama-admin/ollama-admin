@@ -18,7 +18,12 @@
     "export": "Exporter",
     "refresh": "Actualiser",
     "noResults": "Aucun résultat trouvé",
-    "appName": "Ollama Admin"
+    "appName": "Ollama Admin",
+    "connectionError": "Impossible de se connecter au serveur Ollama",
+    "connectionErrorDescription": "Le serveur ne répond pas. Vérifiez qu'Ollama est en cours d'exécution et que l'URL configurée est correcte.",
+    "unload": "Décharger",
+    "unloadSuccess": "Modèle \"{model}\" déchargé de la mémoire",
+    "unloadError": "Erreur lors du déchargement du modèle"
   },
   "sidebar": {
     "dashboard": "Tableau de bord",
@@ -32,6 +37,7 @@
     "gpu": "GPU",
     "alerts": "Alertes",
     "users": "Utilisateurs",
+    "tools": "Outils",
     "settings": "Paramètres"
   },
   "dashboard": {
@@ -137,7 +143,14 @@
     "emptyTitle": "Le catalogue est vide",
     "emptyDescription": "Actualisez le catalogue pour parcourir les modèles disponibles.",
     "emptyAction": "Actualiser le catalogue",
-    "downloading": "Téléchargement..."
+    "downloading": "Téléchargement...",
+    "capabilities": {
+      "tools": "Outils",
+      "vision": "Vision / OCR",
+      "embedding": "Embedding",
+      "thinking": "Raisonnement",
+      "code": "Code"
+    }
   },
   "admin": {
     "models": {
@@ -158,7 +171,11 @@
       "size": "Taille",
       "family": "Famille",
       "quantization": "Quantification",
-      "modified": "Modifié"
+      "modified": "Modifié",
+      "unload": "Décharger",
+      "unloadConfirm": "Décharger \"{model}\" de la mémoire ? Cela arrêtera toute inférence en cours et libérera la VRAM.",
+      "unloadSuccess": "Modèle \"{model}\" déchargé",
+      "unloadError": "Erreur lors du déchargement du modèle"
     },
     "servers": {
       "title": "Serveurs",
@@ -281,6 +298,51 @@
       "delete": "Supprimer",
       "emptyTitle": "Aucun utilisateur",
       "emptyDescription": "Créez le premier utilisateur pour commencer."
+    }
+  },
+  "tools": {
+    "title": "Outils",
+    "description": "Testez des modèles spécialisés avec des interfaces dédiées.",
+    "ocr": {
+      "title": "OCR / Vision",
+      "description": "Extraire du texte d'images avec des modèles de vision.",
+      "selectServer": "Sélectionner le serveur",
+      "selectModel": "Sélectionner le modèle de vision",
+      "noVisionModels": "Aucun modèle de vision disponible",
+      "noVisionModelsDescription": "Installez un modèle de vision (ex. llava, granite3.2-vision) pour utiliser les outils OCR.",
+      "uploadImage": "Télécharger une image",
+      "dropOrClick": "Déposez une image ici ou cliquez pour parcourir",
+      "supportedFormats": "Prend en charge PNG, JPG, WebP",
+      "customPrompt": "Prompt",
+      "defaultPrompt": "Quel texte voyez-vous dans cette image ?",
+      "analyze": "Analyser",
+      "analyzing": "Analyse en cours...",
+      "result": "Résultat",
+      "resultEmpty": "Téléchargez une image et cliquez sur Analyser pour voir les résultats.",
+      "clearImage": "Effacer",
+      "error": "Échec de l'analyse de l'image",
+      "imageTooLarge": "L'image doit faire moins de 20 Mo"
+    },
+    "embeddings": {
+      "title": "Embeddings",
+      "description": "Générer et comparer des embeddings de texte.",
+      "noModels": "Aucun modèle d'embedding disponible",
+      "noModelsDescription": "Installez un modèle d'embedding (ex. nomic-embed-text, mxbai-embed-large) pour utiliser cet outil.",
+      "inputText": "Entrée",
+      "textA": "Texte A",
+      "textAPlaceholder": "Saisissez du texte pour générer un embedding...",
+      "textB": "Texte B (optionnel)",
+      "textBPlaceholder": "Saisissez un second texte pour comparer...",
+      "textBHint": "Ajoutez un second texte pour calculer la similarité cosinus.",
+      "generate": "Générer",
+      "generating": "Génération...",
+      "result": "Résultat",
+      "resultEmpty": "Saisissez du texte et cliquez sur Générer pour voir les embeddings.",
+      "cosineSimilarity": "Similarité cosinus",
+      "embeddingA": "Embedding A",
+      "embeddingB": "Embedding B",
+      "dimensions": "dimensions",
+      "error": "Échec de la génération des embeddings"
     }
   },
   "setup": {

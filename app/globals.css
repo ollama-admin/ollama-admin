@@ -134,6 +134,21 @@
   animation: slide-up 0.2s ease-out;
 }
 
+.scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+.dark .shiki,
+.dark .shiki span {
+  color: var(--shiki-dark) !important;
+  background-color: transparent !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

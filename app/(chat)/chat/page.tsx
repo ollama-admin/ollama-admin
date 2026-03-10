@@ -17,6 +17,7 @@ import {
   PlusCircle,
   MinusCircle,
   Settings2,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -56,9 +57,8 @@ interface Server {
   name: string;
 }
 
-interface OllamaModel {
-  name: string;
-}
+import type { OllamaModel } from "@/lib/ollama";
+import { isChatModel } from "@/lib/model-utils";
 
 interface CompareTarget {
   serverId: string;
@@ -74,12 +74,14 @@ const emptyResult = (model: string): CompareResult => ({
 
 export default function ChatPage() {
   const t = useTranslations("chat");
+  const tc = useTranslations("common");
   const { toast } = useToast();
   const [chats, setChats] = useState<ChatSummary[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [servers, setServers] = useState<Server[]>([]);
   const [selectedServer, setSelectedServer] = useState("");
   const [models, setModels] = useState<OllamaModel[]>([]);
+  const [connectionError, setConnectionError] = useState(false);
   const [selectedModel, setSelectedModel] = useState("");
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -128,13 +130,26 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (!selectedServer) return;
+    setConnectionError(false);
     fetch(`/api/admin/models?serverId=${selectedServer}`)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) {
+          setConnectionError(true);
+          setModels([]);
+          return null;
+        }
+        return r.json();
+      })
       .then((data) => {
-        const m = data.models || [];
+        if (!data) return;
+        const m = (data.models || []).filter(isChatModel);
         setModels(m);
         if (m.length > 0 && !selectedModel) setSelectedModel(m[0].name);
         setServerModelsCache((prev) => ({ ...prev, [selectedServer]: m }));
+      })
+      .catch(() => {
+        setConnectionError(true);
+        setModels([]);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedServer]);
@@ -144,7 +159,7 @@ export default function ChatPage() {
     if (serverModelsCache[serverId]) return;
     const res = await fetch(`/api/admin/models?serverId=${serverId}`);
     const data = await res.json();
-    const m = data.models || [];
+    const m = (data.models || []).filter(isChatModel);
     setServerModelsCache((prev) => ({ ...prev, [serverId]: m }));
   }, [serverModelsCache]);
 
@@ -202,6 +217,21 @@ export default function ChatPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ model }),
       });
+    }
+  };
+
+  const handleUnloadModel = async () => {
+    if (!selectedModel || !selectedServer) return;
+    try {
+      const res = await fetch(`/api/proxy/api/generate?serverId=${selectedServer}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: selectedModel, keep_alive: 0 }),
+      });
+      if (!res.ok) throw new Error();
+      toast(tc("unloadSuccess", { model: selectedModel }), "success");
+    } catch {
+      toast(tc("unloadError"), "error");
     }
   };
 
@@ -823,6 +853,14 @@ export default function ChatPage() {
             </select>
             <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[hsl(var(--muted-foreground))]" />
           </div>
+          <button
+            onClick={handleUnloadModel}
+            disabled={!selectedModel || isStreaming}
+            title={tc("unload")}
+            className="flex h-8 w-8 items-center justify-center rounded-md border text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))] disabled:opacity-50"
+          >
+            <Square className="h-3.5 w-3.5" />
+          </button>
 
           {/* Compare mode toggle */}
           <button
@@ -942,7 +980,32 @@ export default function ChatPage() {
         />
 
         {/* Messages area */}
-        {!currentChatId && messages.length === 0 ? (
+        {connectionError && !currentChatId && messages.length === 0 ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 p-4">
+            <EmptyState
+              icon={AlertTriangle}
+              title={tc("connectionError")}
+              description={tc("connectionErrorDescription")}
+              action={
+                <Button onClick={() => {
+                  setConnectionError(false);
+                  fetch(`/api/admin/models?serverId=${selectedServer}`)
+                    .then((r) => {
+                      if (!r.ok) { setConnectionError(true); setModels([]); return null; }
+                      return r.json();
+                    })
+                    .then((data) => {
+                      if (!data) return;
+                      const m = (data.models || []).filter(isChatModel);
+                      setModels(m);
+                      if (m.length > 0) setSelectedModel(m[0].name);
+                    })
+                    .catch(() => { setConnectionError(true); setModels([]); });
+                }}>{tc("retry")}</Button>
+              }
+            />
+          </div>
+        ) : !currentChatId && messages.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 p-4">
             <EmptyState
               icon={MessageSquare}

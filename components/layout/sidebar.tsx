@@ -16,6 +16,7 @@ import {
   Zap,
   Bell,
   Users,
+  Wrench,
   Settings,
   PanelLeftClose,
   PanelLeftOpen,
@@ -44,6 +45,7 @@ const navGroups: NavGroup[] = [
     items: [
       { href: "/", label: "dashboard", icon: LayoutDashboard },
       { href: "/chat", label: "chat", icon: MessageSquare },
+      { href: "/tools", label: "tools", icon: Wrench },
       { href: "/discover", label: "discover", icon: Search },
     ],
   },

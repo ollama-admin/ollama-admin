@@ -18,7 +18,12 @@
     "export": "Exportar",
     "refresh": "Actualitzar",
     "noResults": "No s'han trobat resultats",
-    "appName": "Ollama Admin"
+    "appName": "Ollama Admin",
+    "connectionError": "No es pot connectar al servidor Ollama",
+    "connectionErrorDescription": "El servidor no respon. Comprova que Ollama estigui en execució i que la URL configurada sigui correcta.",
+    "unload": "Descarregar",
+    "unloadSuccess": "Model \"{model}\" descarregat de memòria",
+    "unloadError": "Error en descarregar el model"
   },
   "sidebar": {
     "dashboard": "Tauler",
@@ -32,6 +37,7 @@
     "gpu": "GPU",
     "alerts": "Alertes",
     "users": "Usuaris",
+    "tools": "Eines",
     "settings": "Configuració"
   },
   "dashboard": {
@@ -137,7 +143,14 @@
     "emptyTitle": "El catàleg està buit",
     "emptyDescription": "Actualitza el catàleg per explorar els models disponibles.",
     "emptyAction": "Actualitzar catàleg",
-    "downloading": "Descarregant..."
+    "downloading": "Descarregant...",
+    "capabilities": {
+      "tools": "Eines",
+      "vision": "Visió / OCR",
+      "embedding": "Embedding",
+      "thinking": "Raonament",
+      "code": "Codi"
+    }
   },
   "admin": {
     "models": {
@@ -158,7 +171,11 @@
       "size": "Mida",
       "family": "Família",
       "quantization": "Quantització",
-      "modified": "Modificat"
+      "modified": "Modificat",
+      "unload": "Descarregar",
+      "unloadConfirm": "Descarregar \"{model}\" de la memòria? Això aturarà qualsevol inferència en curs i alliberarà VRAM.",
+      "unloadSuccess": "Model \"{model}\" descarregat",
+      "unloadError": "Error en descarregar el model"
     },
     "servers": {
       "title": "Servidors",
@@ -281,6 +298,51 @@
       "delete": "Eliminar",
       "emptyTitle": "Encara no hi ha usuaris",
       "emptyDescription": "Crea el primer usuari per començar."
+    }
+  },
+  "tools": {
+    "title": "Eines",
+    "description": "Prova models especialitzats amb interfícies dedicades.",
+    "ocr": {
+      "title": "OCR / Visió",
+      "description": "Extreu text d'imatges usant models de visió.",
+      "selectServer": "Selecciona servidor",
+      "selectModel": "Selecciona model de visió",
+      "noVisionModels": "No hi ha models de visió disponibles",
+      "noVisionModelsDescription": "Instal·la un model de visió (p. ex. llava, granite3.2-vision) per usar les eines OCR.",
+      "uploadImage": "Pujar imatge",
+      "dropOrClick": "Arrossega una imatge aquí o fes clic per explorar",
+      "supportedFormats": "Suporta PNG, JPG, WebP",
+      "customPrompt": "Prompt",
+      "defaultPrompt": "Quin text veus en aquesta imatge?",
+      "analyze": "Analitzar",
+      "analyzing": "Analitzant...",
+      "result": "Resultat",
+      "resultEmpty": "Puja una imatge i fes clic a Analitzar per veure els resultats.",
+      "clearImage": "Netejar",
+      "error": "Error en analitzar la imatge",
+      "imageTooLarge": "La imatge ha de ser menor de 20 MB"
+    },
+    "embeddings": {
+      "title": "Embeddings",
+      "description": "Genera i compara embeddings de text.",
+      "noModels": "No hi ha models d'embedding disponibles",
+      "noModelsDescription": "Instal·la un model d'embedding (p. ex. nomic-embed-text, mxbai-embed-large) per usar aquesta eina.",
+      "inputText": "Entrada",
+      "textA": "Text A",
+      "textAPlaceholder": "Introdueix text per generar embedding...",
+      "textB": "Text B (opcional)",
+      "textBPlaceholder": "Introdueix un segon text per comparar...",
+      "textBHint": "Afegeix un segon text per calcular la similitud cosinus.",
+      "generate": "Generar",
+      "generating": "Generant...",
+      "result": "Resultat",
+      "resultEmpty": "Introdueix text i fes clic a Generar per veure els embeddings.",
+      "cosineSimilarity": "Similitud cosinus",
+      "embeddingA": "Embedding A",
+      "embeddingB": "Embedding B",
+      "dimensions": "dimensions",
+      "error": "Error en generar embeddings"
     }
   },
   "setup": {
