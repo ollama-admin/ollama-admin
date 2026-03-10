@@ -93,7 +93,12 @@
       "keepAlive": "Maintenir actif",
       "systemPrompt": "Prompt système",
       "systemPromptPlaceholder": "Instructions personnalisées pour le modèle...",
-      "reset": "Réinitialiser"
+      "reset": "Réinitialiser",
+      "done": "Terminé",
+      "precise": "Précis",
+      "creative": "Créatif",
+      "focused": "Focalisé",
+      "diverse": "Divers"
     },
     "presets": {
       "save": "Enregistrer le preset",

@@ -94,7 +94,12 @@
       "keepAlive": "Keep Alive",
       "systemPrompt": "System Prompt",
       "systemPromptPlaceholder": "Custom instructions for the model...",
-      "reset": "Reset"
+      "reset": "Reset",
+      "done": "Done",
+      "precise": "Precise",
+      "creative": "Creative",
+      "focused": "Focused",
+      "diverse": "Diverse"
     },
     "presets": {
       "save": "Save preset",

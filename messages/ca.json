@@ -93,7 +93,12 @@
       "keepAlive": "Mantenir actiu",
       "systemPrompt": "Prompt del sistema",
       "systemPromptPlaceholder": "Instruccions personalitzades pel model...",
-      "reset": "Restablir"
+      "reset": "Restablir",
+      "done": "Fet",
+      "precise": "Precís",
+      "creative": "Creatiu",
+      "focused": "Enfocat",
+      "diverse": "Divers"
     },
     "presets": {
       "save": "Desar preset",

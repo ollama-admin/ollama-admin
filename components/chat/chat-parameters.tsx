@@ -2,17 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Settings2,
-  RotateCcw,
-  Save,
-  BookOpen,
-  Trash2,
-  X,
-} from "lucide-react";
+import { RotateCcw, Save, BookOpen, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 
 export interface ChatParameters {
@@ -68,15 +62,6 @@ export function ChatParametersModal({
     if (open) fetchPresets();
   }, [open, fetchPresets]);
 
-  useEffect(() => {
-    if (!open) return;
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [open, onClose]);
-
   const update = (key: keyof ChatParameters, value: unknown) => {
     onChange({ ...parameters, [key]: value || undefined });
   };
@@ -128,32 +113,14 @@ export function ChatParametersModal({
     }
   };
 
-  if (!open) return null;
+  const tempValue = parameters.temperature ?? DEFAULTS.temperature!;
+  const topPValue = parameters.topP ?? DEFAULTS.topP!;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div
-        className="absolute inset-0 bg-black/50"
-        onClick={onClose}
-        aria-hidden
-      />
-      <div className="relative w-full max-w-3xl rounded-xl border bg-[hsl(var(--background))] p-6 shadow-lg">
-        <div className="mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Settings2 className="h-5 w-5 text-[hsl(var(--muted-foreground))]" />
-            <h2 className="text-sm font-semibold">{t("title")}</h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="rounded-md p-1 text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))]"
-            aria-label="Close"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        {/* Presets */}
-        <div className="mb-4 flex flex-wrap items-center gap-2">
+    <Modal open={open} onClose={onClose} title={t("title")} className="max-w-2xl">
+      {/* Presets */}
+      {(presets.length > 0 || showSavePreset) && (
+        <div className="mb-6 flex flex-wrap items-center gap-2">
           <BookOpen className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
           {presets.map((preset) => (
             <span key={preset.id} className="flex items-center gap-1">
@@ -172,7 +139,7 @@ export function ChatParametersModal({
               </button>
             </span>
           ))}
-          {showSavePreset ? (
+          {showSavePreset && (
             <span className="flex items-center gap-1">
               <input
                 type="text"
@@ -180,105 +147,114 @@ export function ChatParametersModal({
                 onChange={(e) => setPresetName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && savePreset()}
                 placeholder={tPresets("namePlaceholder")}
-                className="h-6 w-28 rounded border bg-transparent px-2 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]"
+                className="h-7 w-32 rounded-md border bg-transparent px-2 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]"
                 autoFocus
               />
-              <Button variant="ghost" size="sm" onClick={savePreset} className="h-6 px-2" aria-label="Save preset">
-                <Save className="h-3 w-3" />
+              <Button variant="ghost" size="sm" onClick={savePreset} className="h-7 px-2">
+                <Save className="h-3.5 w-3.5" />
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => setShowSavePreset(false)} className="h-6 px-2" aria-label="Cancel">
-                ✕
+              <Button variant="ghost" size="sm" onClick={() => setShowSavePreset(false)} className="h-7 px-2">
+                <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </span>
-          ) : (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowSavePreset(true)}
-              className="h-6 px-2 text-xs"
-            >
-              <Save className="mr-1 h-3 w-3" />
+          )}
+        </div>
+      )}
+
+      <div className="grid gap-6 sm:grid-cols-2">
+        {/* Left: Parameters */}
+        <div className="space-y-5">
+          {/* Temperature */}
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <label className="text-sm font-medium">{t("temperature")}</label>
+              <span className="rounded-md bg-[hsl(var(--muted))] px-2 py-0.5 text-xs font-mono tabular-nums">
+                {tempValue.toFixed(1)}
+              </span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="2"
+              step="0.1"
+              value={tempValue}
+              onChange={(e) => update("temperature", parseFloat(e.target.value))}
+              className="w-full accent-[hsl(var(--primary))]"
+            />
+            <div className="mt-1 flex justify-between text-[10px] text-[hsl(var(--muted-foreground))]">
+              <span>{t("precise")}</span>
+              <span>{t("creative")}</span>
+            </div>
+          </div>
+
+          {/* Top P */}
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <label className="text-sm font-medium">{t("topP")}</label>
+              <span className="rounded-md bg-[hsl(var(--muted))] px-2 py-0.5 text-xs font-mono tabular-nums">
+                {topPValue.toFixed(2)}
+              </span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={topPValue}
+              onChange={(e) => update("topP", parseFloat(e.target.value))}
+              className="w-full accent-[hsl(var(--primary))]"
+            />
+            <div className="mt-1 flex justify-between text-[10px] text-[hsl(var(--muted-foreground))]">
+              <span>{t("focused")}</span>
+              <span>{t("diverse")}</span>
+            </div>
+          </div>
+
+          {/* Top K */}
+          <Input
+            label={t("topK")}
+            type="number"
+            min={0}
+            max={100}
+            value={parameters.topK ?? ""}
+            onChange={(e) =>
+              update("topK", e.target.value ? parseInt(e.target.value) : undefined)
+            }
+            className="text-sm"
+          />
+        </div>
+
+        {/* Right: System prompt */}
+        <div className="flex flex-col">
+          <Textarea
+            label={t("systemPrompt")}
+            value={parameters.systemPrompt ?? ""}
+            onChange={(e) => update("systemPrompt", e.target.value || undefined)}
+            placeholder={t("systemPromptPlaceholder")}
+            rows={9}
+            className="flex-1 text-sm"
+          />
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="mt-6 flex items-center justify-between border-t pt-4">
+        <div className="flex gap-2">
+          <Button variant="ghost" size="sm" onClick={reset}>
+            <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+            {t("reset")}
+          </Button>
+          {!showSavePreset && (
+            <Button variant="ghost" size="sm" onClick={() => setShowSavePreset(true)}>
+              <Save className="mr-1.5 h-3.5 w-3.5" />
               {tPresets("save")}
             </Button>
           )}
         </div>
-
-        {/* Two-column layout */}
-        <div className="grid grid-cols-2 gap-6">
-          {/* Left: sliders and inputs */}
-          <div className="space-y-4">
-            <div>
-              <label className="mb-1 block text-xs font-medium">
-                {t("temperature")}
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="2"
-                step="0.1"
-                value={parameters.temperature ?? DEFAULTS.temperature}
-                onChange={(e) => update("temperature", parseFloat(e.target.value))}
-                className="w-full accent-[hsl(var(--primary))]"
-              />
-              <span className="text-xs text-[hsl(var(--muted-foreground))]">
-                {parameters.temperature ?? DEFAULTS.temperature}
-              </span>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-medium">
-                {t("topP")}
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.05"
-                value={parameters.topP ?? DEFAULTS.topP}
-                onChange={(e) => update("topP", parseFloat(e.target.value))}
-                className="w-full accent-[hsl(var(--primary))]"
-              />
-              <span className="text-xs text-[hsl(var(--muted-foreground))]">
-                {parameters.topP ?? DEFAULTS.topP}
-              </span>
-            </div>
-
-            <Input
-              label={t("topK")}
-              type="number"
-              min={0}
-              max={100}
-              value={parameters.topK ?? ""}
-              onChange={(e) =>
-                update("topK", e.target.value ? parseInt(e.target.value) : undefined)
-              }
-              className="h-8 text-xs"
-            />
-          </div>
-
-          {/* Right: system prompt */}
-          <div className="flex flex-col">
-            <Textarea
-              label={t("systemPrompt")}
-              value={parameters.systemPrompt ?? ""}
-              onChange={(e) => update("systemPrompt", e.target.value || undefined)}
-              placeholder={t("systemPromptPlaceholder")}
-              rows={8}
-              className="flex-1 text-xs"
-            />
-          </div>
-        </div>
-
-        <div className="mt-4 flex justify-between">
-          <Button variant="ghost" size="sm" onClick={reset}>
-            <RotateCcw className="mr-1 h-3 w-3" />
-            {t("reset")}
-          </Button>
-          <Button size="sm" onClick={onClose}>
-            OK
-          </Button>
-        </div>
+        <Button size="sm" onClick={onClose}>
+          {t("done")}
+        </Button>
       </div>
-    </div>
+    </Modal>
   );
 }
