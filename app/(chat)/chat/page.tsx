@@ -220,6 +220,21 @@ export default function ChatPage() {
     }
   };
 
+  const handleUnloadModel = async () => {
+    if (!selectedModel || !selectedServer) return;
+    try {
+      const res = await fetch(`/api/proxy/api/generate?serverId=${selectedServer}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: selectedModel, keep_alive: 0 }),
+      });
+      if (!res.ok) throw new Error();
+      toast(tc("unloadSuccess", { model: selectedModel }), "success");
+    } catch {
+      toast(tc("unloadError"), "error");
+    }
+  };
+
   const loadChat = async (id: string) => {
     const res = await fetch(`/api/chats/${id}`);
     const data = await res.json();
@@ -838,6 +853,14 @@ export default function ChatPage() {
             </select>
             <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[hsl(var(--muted-foreground))]" />
           </div>
+          <button
+            onClick={handleUnloadModel}
+            disabled={!selectedModel || isStreaming}
+            title={tc("unload")}
+            className="flex h-8 w-8 items-center justify-center rounded-md border text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))] disabled:opacity-50"
+          >
+            <Square className="h-3.5 w-3.5" />
+          </button>
 
           {/* Compare mode toggle */}
           <button

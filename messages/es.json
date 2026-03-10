@@ -20,7 +20,10 @@
     "noResults": "No se encontraron resultados",
     "appName": "Ollama Admin",
     "connectionError": "No se puede conectar al servidor Ollama",
-    "connectionErrorDescription": "El servidor no responde. Comprueba que Ollama esté en ejecución y que la URL configurada sea correcta."
+    "connectionErrorDescription": "El servidor no responde. Comprueba que Ollama esté en ejecución y que la URL configurada sea correcta.",
+    "unload": "Descargar",
+    "unloadSuccess": "Modelo \"{model}\" descargado de memoria",
+    "unloadError": "Error al descargar el modelo"
   },
   "sidebar": {
     "dashboard": "Panel",
@@ -167,7 +170,11 @@
       "size": "Tamaño",
       "family": "Familia",
       "quantization": "Cuantización",
-      "modified": "Modificado"
+      "modified": "Modificado",
+      "unload": "Descargar",
+      "unloadConfirm": "¿Descargar \"{model}\" de la memoria? Esto detendrá cualquier inferencia en curso y liberará VRAM.",
+      "unloadSuccess": "Modelo \"{model}\" descargado",
+      "unloadError": "Error al descargar el modelo"
     },
     "servers": {
       "title": "Servidores",

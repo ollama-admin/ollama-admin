@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback } from "react";
 import type { OllamaModel, OllamaRunningModel, OllamaShowResponse } from "@/lib/ollama";
-import { Package, Search, Cpu, Eye, Trash2, AlertTriangle } from "lucide-react";
+import { Package, Search, Cpu, Eye, Trash2, AlertTriangle, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -116,6 +116,21 @@ export default function ModelsPage() {
     const data = await res.json();
     setInspecting(data);
     setInspectName(name);
+  };
+
+  const handleUnload = async (name: string) => {
+    try {
+      const res = await fetch(`/api/proxy/api/generate?serverId=${selectedServer}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: name, keep_alive: 0 }),
+      });
+      if (!res.ok) throw new Error();
+      toast(t("unloadSuccess", { model: name }), "success");
+      fetchModels();
+    } catch {
+      toast(t("unloadError"), "error");
+    }
   };
 
   const isRunning = (name: string) =>
@@ -273,6 +288,11 @@ export default function ModelsPage() {
                 </div>
 
                 <div className="flex shrink-0 gap-1.5">
+                  {isRunning(model.name) && (
+                    <Button variant="secondary" size="sm" onClick={() => handleUnload(model.name)} title={t("unload")}>
+                      <Square className="h-4 w-4" />
+                    </Button>
+                  )}
                   <Button variant="secondary" size="sm" onClick={() => handleInspect(model.name)} title={t("inspect")}>
                     <Eye className="h-4 w-4" />
                   </Button>

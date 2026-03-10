@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback, useRef } from "react";
 import type { OllamaModel } from "@/lib/ollama";
 import { isVisionModel } from "@/lib/model-utils";
-import { Wrench, Upload, X, ImageIcon, AlertTriangle } from "lucide-react";
+import { Wrench, Upload, X, ImageIcon, AlertTriangle, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -132,7 +132,7 @@ export default function OcrPage() {
                 images: [imageBase64],
               },
             ],
-            stream: false,
+            stream: true,
           }),
           signal: controller.signal,
         }
@@ -141,8 +141,38 @@ export default function OcrPage() {
         const err = await res.json().catch(() => null);
         throw new Error(err?.error || res.statusText);
       }
-      const data = await res.json();
-      setResult(data.message?.content || "");
+      if (!res.body) throw new Error("No response body");
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let fullContent = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            const json = JSON.parse(line);
+            if (json.error) throw new Error(json.error);
+            if (json.message?.content) {
+              fullContent += json.message.content;
+              setResult(fullContent);
+            }
+          } catch (e) {
+            if (e instanceof SyntaxError) continue;
+            throw e;
+          }
+        }
+      }
+
+      if (!fullContent) setResult("");
     } catch (err) {
       if (controller.signal.aborted) return;
       toast(
@@ -158,6 +188,21 @@ export default function OcrPage() {
     abortRef.current?.abort();
     abortRef.current = null;
     setAnalyzing(false);
+  };
+
+  const handleUnload = async () => {
+    if (!selectedModel || !selectedServer) return;
+    try {
+      const res = await fetch(`/api/proxy/api/generate?serverId=${selectedServer}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: selectedModel, keep_alive: 0 }),
+      });
+      if (!res.ok) throw new Error();
+      toast(tc("unloadSuccess", { model: selectedModel }), "success");
+    } catch {
+      toast(tc("unloadError"), "error");
+    }
   };
 
   if (loadingModels && visionModels.length === 0) {
@@ -252,6 +297,9 @@ export default function OcrPage() {
               </option>
             ))}
           </Select>
+          <Button variant="secondary" size="sm" onClick={handleUnload} title={tc("unload")} disabled={!selectedModel}>
+            <Square className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
@@ -331,15 +379,18 @@ export default function OcrPage() {
         <Card>
           <h2 className="mb-4 text-sm font-semibold">{t("result")}</h2>
 
-          {analyzing ? (
+          {result !== null ? (
+            <div className="max-h-[500px] overflow-y-auto">
+              <MessageContent content={result} />
+              {analyzing && (
+                <span className="mt-1 inline-block h-4 w-1.5 animate-pulse rounded-sm bg-[hsl(var(--foreground))]" />
+              )}
+            </div>
+          ) : analyzing ? (
             <div className="space-y-3">
               <Skeleton />
               <Skeleton />
               <Skeleton />
-            </div>
-          ) : result !== null ? (
-            <div className="max-h-[500px] overflow-y-auto">
-              <MessageContent content={result} />
             </div>
           ) : (
             <div className="flex h-48 flex-col items-center justify-center gap-2 text-[hsl(var(--muted-foreground))]">

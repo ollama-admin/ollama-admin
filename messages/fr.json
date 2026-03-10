@@ -20,7 +20,10 @@
     "noResults": "Aucun résultat trouvé",
     "appName": "Ollama Admin",
     "connectionError": "Impossible de se connecter au serveur Ollama",
-    "connectionErrorDescription": "Le serveur ne répond pas. Vérifiez qu'Ollama est en cours d'exécution et que l'URL configurée est correcte."
+    "connectionErrorDescription": "Le serveur ne répond pas. Vérifiez qu'Ollama est en cours d'exécution et que l'URL configurée est correcte.",
+    "unload": "Décharger",
+    "unloadSuccess": "Modèle \"{model}\" déchargé de la mémoire",
+    "unloadError": "Erreur lors du déchargement du modèle"
   },
   "sidebar": {
     "dashboard": "Tableau de bord",
@@ -168,7 +171,11 @@
       "size": "Taille",
       "family": "Famille",
       "quantization": "Quantification",
-      "modified": "Modifié"
+      "modified": "Modifié",
+      "unload": "Décharger",
+      "unloadConfirm": "Décharger \"{model}\" de la mémoire ? Cela arrêtera toute inférence en cours et libérera la VRAM.",
+      "unloadSuccess": "Modèle \"{model}\" déchargé",
+      "unloadError": "Erreur lors du déchargement du modèle"
     },
     "servers": {
       "title": "Serveurs",

@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback } from "react";
 import type { OllamaModel } from "@/lib/ollama";
 import { isEmbeddingModel } from "@/lib/model-utils";
-import { Binary, AlertTriangle } from "lucide-react";
+import { Binary, AlertTriangle, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -130,6 +130,21 @@ export default function EmbeddingsPage() {
     }
   };
 
+  const handleUnload = async () => {
+    if (!selectedModel || !selectedServer) return;
+    try {
+      const res = await fetch(`/api/proxy/api/generate?serverId=${selectedServer}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: selectedModel, keep_alive: 0 }),
+      });
+      if (!res.ok) throw new Error();
+      toast(tc("unloadSuccess", { model: selectedModel }), "success");
+    } catch {
+      toast(tc("unloadError"), "error");
+    }
+  };
+
   if (loadingModels && embeddingModels.length === 0) {
     return (
       <div className="p-6">
@@ -222,6 +237,9 @@ export default function EmbeddingsPage() {
               </option>
             ))}
           </Select>
+          <Button variant="secondary" size="sm" onClick={handleUnload} title={tc("unload")} disabled={!selectedModel}>
+            <Square className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 

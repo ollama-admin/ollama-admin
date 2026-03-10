@@ -20,7 +20,10 @@
     "noResults": "No results found",
     "appName": "Ollama Admin",
     "connectionError": "Cannot connect to Ollama server",
-    "connectionErrorDescription": "The server is not responding. Check that Ollama is running and the configured URL is correct."
+    "connectionErrorDescription": "The server is not responding. Check that Ollama is running and the configured URL is correct.",
+    "unload": "Unload",
+    "unloadSuccess": "Model \"{model}\" unloaded from memory",
+    "unloadError": "Failed to unload model"
   },
   "sidebar": {
     "dashboard": "Dashboard",
@@ -167,7 +170,11 @@
       "size": "Size",
       "family": "Family",
       "quantization": "Quantization",
-      "modified": "Modified"
+      "modified": "Modified",
+      "unload": "Unload",
+      "unloadConfirm": "Unload \"{model}\" from memory? This will stop any running inference and free VRAM.",
+      "unloadSuccess": "Model \"{model}\" unloaded",
+      "unloadError": "Failed to unload model"
     },
     "servers": {
       "title": "Servers",

@@ -20,7 +20,10 @@
     "noResults": "No s'han trobat resultats",
     "appName": "Ollama Admin",
     "connectionError": "No es pot connectar al servidor Ollama",
-    "connectionErrorDescription": "El servidor no respon. Comprova que Ollama estigui en execució i que la URL configurada sigui correcta."
+    "connectionErrorDescription": "El servidor no respon. Comprova que Ollama estigui en execució i que la URL configurada sigui correcta.",
+    "unload": "Descarregar",
+    "unloadSuccess": "Model \"{model}\" descarregat de memòria",
+    "unloadError": "Error en descarregar el model"
   },
   "sidebar": {
     "dashboard": "Tauler",
@@ -168,7 +171,11 @@
       "size": "Mida",
       "family": "Família",
       "quantization": "Quantització",
-      "modified": "Modificat"
+      "modified": "Modificat",
+      "unload": "Descarregar",
+      "unloadConfirm": "Descarregar \"{model}\" de la memòria? Això aturarà qualsevol inferència en curs i alliberarà VRAM.",
+      "unloadSuccess": "Model \"{model}\" descarregat",
+      "unloadError": "Error en descarregar el model"
     },
     "servers": {
       "title": "Servidors",
