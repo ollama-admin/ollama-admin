@@ -15,7 +15,7 @@ interface ScrapedModel {
 const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 let cache: { data: ScrapedModel[]; timestamp: number } | null = null;
 
-const KNOWN_CAPABILITIES = ["tools", "vision", "embedding", "thinking", "code", "cloud"];
+const KNOWN_CAPABILITIES = ["tools", "vision", "embedding", "thinking", "cloud"];
 
 function parseModelsFromHtml(html: string): ScrapedModel[] {
   const $ = cheerio.load(html);

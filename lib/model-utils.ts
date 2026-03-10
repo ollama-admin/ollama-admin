@@ -2,7 +2,7 @@ import type { OllamaModel } from "@/lib/ollama";
 
 const EMBEDDING_FAMILIES = new Set(["bert", "nomic-bert"]);
 const VISION_FAMILIES = new Set(["clip", "mllama"]);
-const VISION_NAME_HINTS = ["vision", "llava", "llava-phi", "bakllava", "moondream", "minicpm-v"];
+const VISION_NAME_HINTS = ["vision", "ocr", "llava", "llava-phi", "bakllava", "moondream", "minicpm-v"];
 const EMBEDDING_NAME_HINTS = ["embed", "embedding"];
 
 export function isChatModel(model: OllamaModel): boolean {

@@ -27,7 +27,7 @@ interface Server {
   name: string;
 }
 
-const CAPABILITY_OPTIONS = ["tools", "vision", "embedding", "thinking", "code"];
+const CAPABILITY_OPTIONS = ["tools", "vision", "embedding", "thinking"];
 
 export default function DiscoverPage() {
   const t = useTranslations("discover");
