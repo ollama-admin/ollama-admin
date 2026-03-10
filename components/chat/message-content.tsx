@@ -49,7 +49,7 @@ function CodeBlock({ code, language }: { code: string; language: string }) {
     let cancelled = false;
     codeToHtml(code, {
       lang: language,
-      themes: { light: "github-light", dark: "github-dark" },
+      themes: { light: "github-light", dark: "vitesse-dark" },
     })
       .then((result) => {
         if (!cancelled) setHtml(result);
@@ -90,11 +90,11 @@ function CodeBlock({ code, language }: { code: string; language: string }) {
       </div>
       {html ? (
         <div
-          className="overflow-x-auto p-3 text-sm [&_pre]:!bg-transparent [&_pre]:!p-0"
+          className="overflow-x-auto bg-[hsl(210,20%,90%)] p-3 text-sm dark:bg-[hsl(220,20%,12%)] [&_pre]:!bg-transparent [&_pre]:!p-0"
           dangerouslySetInnerHTML={{ __html: html }}
         />
       ) : (
-        <pre className="overflow-x-auto p-3 text-sm">
+        <pre className="overflow-x-auto bg-[hsl(210,20%,90%)] p-3 text-sm text-[hsl(222,47%,11%)] dark:bg-[hsl(220,20%,12%)] dark:text-[hsl(142,76%,56%)]">
           <code>{code}</code>
         </pre>
       )}
