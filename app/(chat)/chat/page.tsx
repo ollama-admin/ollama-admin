@@ -11,6 +11,7 @@ import {
   Plus,
   Send,
   Square,
+  Upload,
   Search,
   ChevronDown,
   GitCompareArrows,
@@ -58,7 +59,7 @@ interface Server {
 }
 
 import type { OllamaModel } from "@/lib/ollama";
-import { isChatModel } from "@/lib/model-utils";
+import { isChatModel, loadCatalogCapabilities } from "@/lib/model-utils";
 
 interface CompareTarget {
   serverId: string;
@@ -140,8 +141,9 @@ export default function ChatPage() {
         }
         return r.json();
       })
-      .then((data) => {
+      .then(async (data) => {
         if (!data) return;
+        await loadCatalogCapabilities();
         const m = (data.models || []).filter(isChatModel);
         setModels(m);
         if (m.length > 0 && !selectedModel) setSelectedModel(m[0].name);
@@ -159,6 +161,7 @@ export default function ChatPage() {
     if (serverModelsCache[serverId]) return;
     const res = await fetch(`/api/admin/models?serverId=${serverId}`);
     const data = await res.json();
+    await loadCatalogCapabilities();
     const m = (data.models || []).filter(isChatModel);
     setServerModelsCache((prev) => ({ ...prev, [serverId]: m }));
   }, [serverModelsCache]);
@@ -857,9 +860,10 @@ export default function ChatPage() {
             onClick={handleUnloadModel}
             disabled={!selectedModel || isStreaming}
             title={tc("unload")}
-            className="flex h-8 w-8 items-center justify-center rounded-md border text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))] disabled:opacity-50"
+            className="flex h-8 items-center gap-1.5 rounded-md border px-2 text-xs text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))] disabled:opacity-50"
           >
-            <Square className="h-3.5 w-3.5" />
+            <Upload className="h-3.5 w-3.5" />
+            {tc("unload")}
           </button>
 
           {/* Compare mode toggle */}
@@ -964,14 +968,6 @@ export default function ChatPage() {
           </div>
         )}
 
-        <div className="flex justify-end px-4">
-          <button
-            onClick={() => setShowParameters(true)}
-            className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))]"
-          >
-            <Settings2 className="h-3.5 w-3.5" />
-          </button>
-        </div>
         <ChatParametersModal
           open={showParameters}
           onClose={() => setShowParameters(false)}
@@ -994,8 +990,9 @@ export default function ChatPage() {
                       if (!r.ok) { setConnectionError(true); setModels([]); return null; }
                       return r.json();
                     })
-                    .then((data) => {
+                    .then(async (data) => {
                       if (!data) return;
+                      await loadCatalogCapabilities();
                       const m = (data.models || []).filter(isChatModel);
                       setModels(m);
                       if (m.length > 0) setSelectedModel(m[0].name);
@@ -1084,6 +1081,13 @@ export default function ChatPage() {
         <div className="bg-[hsl(var(--background))] px-4 py-3">
           <div className="mx-auto flex max-w-5xl items-end gap-2">
             <div className="relative flex-1">
+              <button
+                onClick={() => setShowParameters(true)}
+                className="absolute left-0 top-0 ml-[7px] mt-[7px] rounded-lg bg-[hsl(var(--muted))] p-1.5 text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))]"
+                aria-label={t("parametersButton")}
+              >
+                <Settings2 className="h-4 w-4" />
+              </button>
               <textarea
                 ref={textareaRef}
                 value={input}
@@ -1100,7 +1104,7 @@ export default function ChatPage() {
                 placeholder={compareMode ? t("comparePlaceholder") : t("typeMessage")}
                 rows={1}
                 disabled={isStreaming}
-                className="w-full resize-none overflow-y-hidden rounded-xl border bg-[hsl(var(--card))] py-3 pl-12 pr-12 text-sm shadow-sm transition-colors placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] disabled:opacity-50"
+                className="scrollbar-hidden w-full resize-none overflow-y-hidden rounded-xl border bg-[hsl(var(--card))] py-3 pl-12 pr-12 text-sm shadow-sm transition-colors placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] disabled:opacity-50"
               />
               {isStreaming ? (
                 <button

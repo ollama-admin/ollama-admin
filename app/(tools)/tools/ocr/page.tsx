@@ -3,8 +3,8 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback, useRef } from "react";
 import type { OllamaModel } from "@/lib/ollama";
-import { isVisionModel } from "@/lib/model-utils";
-import { Wrench, Upload, X, ImageIcon, AlertTriangle, Square } from "lucide-react";
+import { isVisionModel, loadCatalogCapabilities } from "@/lib/model-utils";
+import { Wrench, Upload, X, ImageIcon, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,6 +20,28 @@ interface Server {
 }
 
 const MAX_IMAGE_SIZE = 20 * 1024 * 1024;
+const MAX_IMAGE_DIMENSION = 2048;
+
+function resizeImage(dataUrl: string): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const { width, height } = img;
+      if (width <= MAX_IMAGE_DIMENSION && height <= MAX_IMAGE_DIMENSION) {
+        resolve(dataUrl);
+        return;
+      }
+      const scale = Math.min(MAX_IMAGE_DIMENSION / width, MAX_IMAGE_DIMENSION / height);
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(width * scale);
+      canvas.height = Math.round(height * scale);
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/jpeg", 0.9));
+    };
+    img.src = dataUrl;
+  });
+}
 
 export default function OcrPage() {
   const t = useTranslations("tools.ocr");
@@ -63,6 +85,7 @@ export default function OcrPage() {
         return;
       }
       const data = await res.json();
+      await loadCatalogCapabilities();
       const vision = (data.models || []).filter(isVisionModel);
       setVisionModels(vision);
       if (vision.length > 0) setSelectedModel(vision[0].name);
@@ -79,15 +102,16 @@ export default function OcrPage() {
     fetchModels();
   }, [fetchModels]);
 
-  const handleFileChange = (file: File | null) => {
+  const handleFileChange = async (file: File | null) => {
     if (!file) return;
     if (file.size > MAX_IMAGE_SIZE) {
       toast(t("imageTooLarge"), "error");
       return;
     }
     const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
+    reader.onload = async () => {
+      const rawDataUrl = reader.result as string;
+      const dataUrl = await resizeImage(rawDataUrl);
       setImagePreview(dataUrl);
       setImageBase64(dataUrl.replace(/^data:[^;]+;base64,/, ""));
       setResult(null);
@@ -298,7 +322,8 @@ export default function OcrPage() {
             ))}
           </Select>
           <Button variant="secondary" size="sm" onClick={handleUnload} title={tc("unload")} disabled={!selectedModel}>
-            <Square className="h-4 w-4" />
+            <Upload className="h-4 w-4" />
+            {tc("unload")}
           </Button>
         </div>
       </div>

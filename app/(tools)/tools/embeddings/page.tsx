@@ -3,8 +3,8 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback } from "react";
 import type { OllamaModel } from "@/lib/ollama";
-import { isEmbeddingModel } from "@/lib/model-utils";
-import { Binary, AlertTriangle, Square } from "lucide-react";
+import { isEmbeddingModel, loadCatalogCapabilities } from "@/lib/model-utils";
+import { Binary, AlertTriangle, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -71,6 +71,7 @@ export default function EmbeddingsPage() {
         return;
       }
       const data = await res.json();
+      await loadCatalogCapabilities();
       const embedding = (data.models || []).filter(isEmbeddingModel);
       setEmbeddingModels(embedding);
       if (embedding.length > 0) setSelectedModel(embedding[0].name);
@@ -238,7 +239,8 @@ export default function EmbeddingsPage() {
             ))}
           </Select>
           <Button variant="secondary" size="sm" onClick={handleUnload} title={tc("unload")} disabled={!selectedModel}>
-            <Square className="h-4 w-4" />
+            <Upload className="h-4 w-4" />
+            {tc("unload")}
           </Button>
         </div>
       </div>
