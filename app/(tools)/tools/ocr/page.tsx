@@ -108,8 +108,13 @@ export default function OcrPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const abortRef = useRef<AbortController | null>(null);
+
   const handleAnalyze = async () => {
     if (!imageBase64 || !selectedModel || !selectedServer) return;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setAnalyzing(true);
     setResult(null);
     try {
@@ -129,6 +134,7 @@ export default function OcrPage() {
             ],
             stream: false,
           }),
+          signal: controller.signal,
         }
       );
       if (!res.ok) {
@@ -138,13 +144,20 @@ export default function OcrPage() {
       const data = await res.json();
       setResult(data.message?.content || "");
     } catch (err) {
+      if (controller.signal.aborted) return;
       toast(
         `${t("error")}: ${err instanceof Error ? err.message : "Unknown error"}`,
         "error"
       );
     } finally {
-      setAnalyzing(false);
+      if (!controller.signal.aborted) setAnalyzing(false);
     }
+  };
+
+  const handleCancel = () => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setAnalyzing(false);
   };
 
   if (loadingModels && visionModels.length === 0) {
@@ -295,13 +308,23 @@ export default function OcrPage() {
             />
           </div>
 
-          <Button
-            className="mt-4 w-full"
-            onClick={handleAnalyze}
-            disabled={!imageBase64 || !selectedModel || analyzing}
-          >
-            {analyzing ? t("analyzing") : t("analyze")}
-          </Button>
+          {analyzing ? (
+            <Button
+              className="mt-4 w-full"
+              variant="destructive"
+              onClick={handleCancel}
+            >
+              {tc("cancel")}
+            </Button>
+          ) : (
+            <Button
+              className="mt-4 w-full"
+              onClick={handleAnalyze}
+              disabled={!imageBase64 || !selectedModel}
+            >
+              {t("analyze")}
+            </Button>
+          )}
         </Card>
 
         {/* Right: Result */}
