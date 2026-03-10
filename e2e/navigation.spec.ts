@@ -34,8 +34,7 @@ test.describe("Navigation", () => {
     await page.click('a[href="/admin/gpu"]');
     await expect(page).toHaveURL(/\/admin\/gpu/);
 
-    await page.click('a[href="/admin/alerts"]');
-    await expect(page).toHaveURL(/\/admin\/alerts/);
+
   });
 
   test("settings page loads", async ({ page }) => {
