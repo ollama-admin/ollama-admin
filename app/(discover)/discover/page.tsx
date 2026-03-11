@@ -108,7 +108,7 @@ export default function DiscoverPage() {
               const msg = job.error
                 ? `${t("pullError", { name: ref })}: ${job.error}`
                 : t("pullError", { name: ref });
-              toast(msg, "error");
+              toast(msg, "error", 15000);
               setDownloadingRefs((prev) => {
                 const next = new Set(prev);
                 next.delete(ref);

@@ -35,7 +35,6 @@
     "logs": "Registres",
     "metrics": "Mètriques",
     "gpu": "GPU",
-    "alerts": "Alertes",
     "users": "Usuaris",
     "tools": "Eines",
     "settings": "Configuració"
@@ -93,7 +92,12 @@
       "keepAlive": "Mantenir actiu",
       "systemPrompt": "Prompt del sistema",
       "systemPromptPlaceholder": "Instruccions personalitzades pel model...",
-      "reset": "Restablir"
+      "reset": "Restablir",
+      "done": "Fet",
+      "precise": "Precís",
+      "creative": "Creatiu",
+      "focused": "Enfocat",
+      "diverse": "Divers"
     },
     "presets": {
       "save": "Desar preset",
@@ -244,30 +248,6 @@
       "utilization": "Utilització GPU",
       "emptyTitle": "No hi ha servidors configurats",
       "emptyDescription": "Afegeix un servidor Ollama per monitoritzar l'ús de GPU."
-    },
-    "alerts": {
-      "title": "Alertes",
-      "activeAlerts": "Alertes actives",
-      "allClear": "Tot correcte — cap llindar superat.",
-      "createAlert": "Crear alerta",
-      "configuredAlerts": "Alertes configurades",
-      "alertType": "Tipus d'alerta",
-      "thresholdPlaceholder": "Llindar",
-      "threshold": "Llindar",
-      "add": "Afegir",
-      "created": "Alerta creada",
-      "deleted": "Alerta eliminada",
-      "enabled": "Activada",
-      "disabled": "Desactivada",
-      "enable": "Activar",
-      "disable": "Desactivar",
-      "deleteAlert": "Eliminar alerta",
-      "gpu_temperature": "Temperatura GPU",
-      "gpu_vram": "Ús de VRAM GPU",
-      "error_rate": "Taxa d'error",
-      "latency": "Latència mitjana",
-      "emptyTitle": "No hi ha alertes configurades",
-      "emptyDescription": "Crea alertes per monitoritzar la temperatura GPU, ús de VRAM, taxes d'error i latència."
     },
     "users": {
       "title": "Usuaris",

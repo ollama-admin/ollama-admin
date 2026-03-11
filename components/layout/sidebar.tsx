@@ -14,7 +14,7 @@ import {
   ClipboardList,
   BarChart3,
   Zap,
-  Bell,
+
   Users,
   Wrench,
   Settings,
@@ -57,7 +57,6 @@ const navGroups: NavGroup[] = [
       { href: "/admin/logs", label: "logs", icon: ClipboardList },
       { href: "/admin/metrics", label: "metrics", icon: BarChart3 },
       { href: "/admin/gpu", label: "gpu", icon: Zap },
-      { href: "/admin/alerts", label: "alerts", icon: Bell },
       { href: "/admin/users", label: "users", icon: Users },
     ],
   },

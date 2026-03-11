@@ -35,7 +35,6 @@
     "logs": "Registros",
     "metrics": "Métricas",
     "gpu": "GPU",
-    "alerts": "Alertas",
     "users": "Usuarios",
     "tools": "Herramientas",
     "settings": "Ajustes"
@@ -94,7 +93,12 @@
       "keepAlive": "Mantener activo",
       "systemPrompt": "Prompt del sistema",
       "systemPromptPlaceholder": "Instrucciones personalizadas para el modelo...",
-      "reset": "Restablecer"
+      "reset": "Restablecer",
+      "done": "Hecho",
+      "precise": "Preciso",
+      "creative": "Creativo",
+      "focused": "Enfocado",
+      "diverse": "Diverso"
     },
     "presets": {
       "save": "Guardar preset",
@@ -243,30 +247,6 @@
       "utilization": "Utilización GPU",
       "emptyTitle": "No hay servidores configurados",
       "emptyDescription": "Añade un servidor Ollama para monitorizar el uso de GPU."
-    },
-    "alerts": {
-      "title": "Alertas",
-      "activeAlerts": "Alertas activas",
-      "allClear": "Todo en orden — ningún umbral superado.",
-      "createAlert": "Crear alerta",
-      "configuredAlerts": "Alertas configuradas",
-      "alertType": "Tipo de alerta",
-      "thresholdPlaceholder": "Umbral",
-      "threshold": "Umbral",
-      "add": "Añadir",
-      "created": "Alerta creada",
-      "deleted": "Alerta eliminada",
-      "enabled": "Activa",
-      "disabled": "Desactivada",
-      "enable": "Activar",
-      "disable": "Desactivar",
-      "deleteAlert": "Eliminar alerta",
-      "gpu_temperature": "Temperatura GPU",
-      "gpu_vram": "Uso de VRAM GPU",
-      "error_rate": "Tasa de error",
-      "latency": "Latencia media",
-      "emptyTitle": "Sin alertas configuradas",
-      "emptyDescription": "Crea alertas para monitorizar temperatura GPU, uso de VRAM, tasas de error y latencia."
     },
     "users": {
       "title": "Usuarios",

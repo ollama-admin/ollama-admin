@@ -77,7 +77,7 @@ function ToastProvider({ children }: { children: ReactNode }) {
             <div
               key={t.id}
               className={cn(
-                "flex items-center gap-3 rounded-lg border px-4 py-3 shadow-md animate-in slide-in-from-right",
+                "flex max-w-sm items-center gap-3 rounded-lg border px-4 py-3 shadow-md animate-in slide-in-from-right",
                 variantStyles[t.variant]
               )}
             >

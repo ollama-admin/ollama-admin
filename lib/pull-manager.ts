@@ -62,7 +62,7 @@ class PullManager {
         let detail = `${res.status} ${res.statusText}`;
         try {
           const body = await res.json();
-          if (body?.error) detail = body.error;
+          if (body?.error) detail = body.error.replace(/[\n\t]+/g, " ").trim();
         } catch {
           // use status text as fallback
         }
@@ -91,7 +91,7 @@ class PullManager {
             const data = JSON.parse(line);
             if (data.error) {
               job.status = "error";
-              job.error = data.error;
+              job.error = data.error.replace(/[\n\t]+/g, " ").trim();
               logger.error("Pull error from Ollama", { model: modelRef, error: data.error });
               this.scheduleCleanup(job.id);
               return;

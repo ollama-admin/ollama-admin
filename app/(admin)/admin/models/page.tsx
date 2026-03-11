@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback } from "react";
 import type { OllamaModel, OllamaRunningModel, OllamaShowResponse } from "@/lib/ollama";
-import { Package, Search, Cpu, Eye, Trash2, AlertTriangle, Square } from "lucide-react";
+import { Package, Search, Cpu, Eye, Trash2, AlertTriangle, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -290,7 +290,8 @@ export default function ModelsPage() {
                 <div className="flex shrink-0 gap-1.5">
                   {isRunning(model.name) && (
                     <Button variant="secondary" size="sm" onClick={() => handleUnload(model.name)} title={t("unload")}>
-                      <Square className="h-4 w-4" />
+                      <Upload className="h-4 w-4" />
+                      {t("unload")}
                     </Button>
                   )}
                   <Button variant="secondary" size="sm" onClick={() => handleInspect(model.name)} title={t("inspect")}>
