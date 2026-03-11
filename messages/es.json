@@ -193,6 +193,7 @@
     },
     "servers": {
       "title": "Servidores",
+      "subtitle": "Gestiona las conexiones de tus servidores Ollama",
       "addServer": "Añadir servidor",
       "editServer": "Editar servidor",
       "testConnection": "Probar conexión",
