@@ -41,14 +41,14 @@ TableRow.displayName = "TableRow";
 
 const TableHead = forwardRef<HTMLTableCellElement, ThHTMLAttributes<HTMLTableCellElement>>(
   ({ className, ...props }, ref) => (
-    <th ref={ref} scope="col" className={cn("pb-2 font-medium", className)} {...props} />
+    <th ref={ref} scope="col" className={cn("px-3 pb-2 font-medium", className)} {...props} />
   )
 );
 TableHead.displayName = "TableHead";
 
 const TableCell = forwardRef<HTMLTableCellElement, TdHTMLAttributes<HTMLTableCellElement>>(
   ({ className, ...props }, ref) => (
-    <td ref={ref} className={cn("py-2.5", className)} {...props} />
+    <td ref={ref} className={cn("px-3 py-2.5", className)} {...props} />
   )
 );
 TableCell.displayName = "TableCell";
