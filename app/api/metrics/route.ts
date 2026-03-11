@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
   });
 
   const requestsByDay: Record<string, number> = {};
+  const tokensByDay: Record<string, number> = {};
   const tokensByModel: Record<string, number> = {};
   const latencyByModel: Record<string, { total: number; count: number }> = {};
   const modelUsage: Record<string, number> = {};
@@ -24,6 +25,7 @@ export async function GET(req: NextRequest) {
     requestsByDay[day] = (requestsByDay[day] || 0) + 1;
 
     const totalTokens = (log.promptTokens || 0) + (log.completionTokens || 0);
+    tokensByDay[day] = (tokensByDay[day] || 0) + totalTokens;
     tokensByModel[log.model] = (tokensByModel[log.model] || 0) + totalTokens;
 
     if (!latencyByModel[log.model]) {
@@ -52,6 +54,7 @@ export async function GET(req: NextRequest) {
     errorCount,
     errorRate: logs.length > 0 ? ((errorCount / logs.length) * 100).toFixed(1) : "0",
     requestsByDay,
+    tokensByDay,
     tokensByModel,
     avgLatencyByModel,
     topModels,
