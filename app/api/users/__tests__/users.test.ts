@@ -165,7 +165,7 @@ describe("PUT /api/users/[id]", () => {
       method: "PUT",
       body: JSON.stringify({ role: "admin" }),
     });
-    const res = await PUT(req as any, { params: { id: "u1" } });
+    const res = await PUT(req as any, { params: Promise.resolve({ id: "u1" }) });
 
     expect(res.status).toBe(200);
     const data = await res.json();
@@ -180,7 +180,7 @@ describe("PUT /api/users/[id]", () => {
       method: "PUT",
       body: JSON.stringify({ role: "admin" }),
     });
-    const res = await PUT(req as any, { params: { id: "u1" } });
+    const res = await PUT(req as any, { params: Promise.resolve({ id: "u1" }) });
 
     expect(res.status).toBe(403);
   });
@@ -197,7 +197,7 @@ describe("DELETE /api/users/[id]", () => {
 
     const { DELETE } = await import("@/app/api/users/[id]/route");
     const req = new Request("http://localhost/api/users/u1", { method: "DELETE" });
-    const res = await DELETE(req as any, { params: { id: "u1" } });
+    const res = await DELETE(req as any, { params: Promise.resolve({ id: "u1" }) });
 
     expect(res.status).toBe(200);
   });
@@ -207,7 +207,7 @@ describe("DELETE /api/users/[id]", () => {
 
     const { DELETE } = await import("@/app/api/users/[id]/route");
     const req = new Request("http://localhost/api/users/u1", { method: "DELETE" });
-    const res = await DELETE(req as any, { params: { id: "u1" } });
+    const res = await DELETE(req as any, { params: Promise.resolve({ id: "u1" }) });
 
     expect(res.status).toBe(403);
   });
@@ -217,7 +217,7 @@ describe("DELETE /api/users/[id]", () => {
 
     const { DELETE } = await import("@/app/api/users/[id]/route");
     const req = new Request("http://localhost/api/users/admin1", { method: "DELETE" });
-    const res = await DELETE(req as any, { params: { id: "admin1" } });
+    const res = await DELETE(req as any, { params: Promise.resolve({ id: "admin1" }) });
 
     expect(res.status).toBe(400);
     const data = await res.json();
@@ -234,7 +234,7 @@ describe("DELETE /api/users/[id]", () => {
 
     const { DELETE } = await import("@/app/api/users/[id]/route");
     const req = new Request("http://localhost/api/users/u2", { method: "DELETE" });
-    const res = await DELETE(req as any, { params: { id: "u2" } });
+    const res = await DELETE(req as any, { params: Promise.resolve({ id: "u2" }) });
 
     expect(res.status).toBe(400);
     const data = await res.json();
