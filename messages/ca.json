@@ -74,6 +74,11 @@
     "regenerate": "Regenerar resposta",
     "exportMarkdown": "Exportar com a Markdown",
     "exportJson": "Exportar com a JSON",
+    "confirmDelete": "Estàs segur que vols eliminar aquesta conversa?",
+    "createError": "Error en crear la conversa",
+    "deleteSuccess": "Conversa eliminada",
+    "deleteError": "Error en eliminar la conversa",
+    "deleteConversation": "Eliminar conversa",
     "attachImage": "Adjuntar imatge",
     "compareMode": "Comparar",
     "comparePlaceholder": "Escriu un prompt per comparar models...",
@@ -175,7 +180,14 @@
       "unload": "Descarregar",
       "unloadConfirm": "Descarregar \"{model}\" de la memòria? Això aturarà qualsevol inferència en curs i alliberarà VRAM.",
       "unloadSuccess": "Model \"{model}\" descarregat",
-      "unloadError": "Error en descarregar el model"
+      "unloadError": "Error en descarregar el model",
+      "loaded": "carregat",
+      "deleteTitle": "Eliminar model",
+      "deleteDescription": "Estàs segur que vols eliminar \"{model}\"? Aquesta acció no es pot desfer.",
+      "deleteSuccess": "Model \"{model}\" eliminat",
+      "deleteError": "Error en eliminar el model",
+      "copyCode": "Copiar codi",
+      "copied": "Copiat"
     },
     "servers": {
       "title": "Servidors",
