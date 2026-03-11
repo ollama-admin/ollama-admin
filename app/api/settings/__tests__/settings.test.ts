@@ -9,10 +9,18 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
+vi.mock("@/lib/require-admin", () => ({
+  requireAdmin: vi.fn(),
+}));
+
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/require-admin";
+
+const mockSession = { user: { id: "admin_1", name: "admin", role: "admin" } };
 
 beforeEach(() => {
   vi.clearAllMocks();
+  (requireAdmin as ReturnType<typeof vi.fn>).mockResolvedValue(mockSession);
 });
 
 describe("GET /api/settings", () => {
@@ -67,5 +75,18 @@ describe("PUT /api/settings", () => {
       update: { value: "30" },
       create: { key: "logRetentionDays", value: "30" },
     });
+  });
+
+  it("returns 403 when not admin", async () => {
+    (requireAdmin as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+
+    const { PUT } = await import("@/app/api/settings/route");
+    const req = new Request("http://localhost/api/settings", {
+      method: "PUT",
+      body: JSON.stringify({ logRetentionDays: "30" }),
+    });
+    const res = await PUT(req as any);
+
+    expect(res.status).toBe(403);
   });
 });

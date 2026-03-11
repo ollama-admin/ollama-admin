@@ -25,6 +25,7 @@ interface MetricsData {
   tokensByModel: Record<string, number>;
   avgLatencyByModel: Record<string, number>;
   topModels: Array<{ model: string; count: number }>;
+  apiKeyUsage?: Array<{ id: string; name: string; requests: number; tokens: number }>;
 }
 
 /* ── Sparkline mini chart for stat cards ── */
@@ -584,6 +585,25 @@ export default function MetricsPage() {
           />
         </CardContent>
       </Card>
+
+      {/* API Key usage */}
+      {data.apiKeyUsage && data.apiKeyUsage.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">{t("apiKeyUsage")}</CardTitle>
+          </CardHeader>
+          <CardContent className="pb-3">
+            <RankedBarChart
+              data={data.apiKeyUsage.map((k) => ({
+                label: k.name,
+                value: k.requests,
+              }))}
+              label={t("apiKeyUsage")}
+              color="hsl(45 90% 50%)"
+            />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

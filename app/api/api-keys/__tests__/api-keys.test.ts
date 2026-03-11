@@ -12,7 +12,14 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
+vi.mock("@/lib/require-admin", () => ({
+  requireAdmin: vi.fn(),
+}));
+
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/require-admin";
+
+const mockSession = { user: { id: "admin_1", name: "admin", role: "admin" } };
 
 const mockApiKey = {
   id: "key_1",
@@ -25,6 +32,7 @@ const mockApiKey = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  (requireAdmin as ReturnType<typeof vi.fn>).mockResolvedValue(mockSession);
 });
 
 describe("GET /api/api-keys", () => {
@@ -50,6 +58,15 @@ describe("GET /api/api-keys", () => {
     const data = await res.json();
 
     expect(data).toHaveLength(0);
+  });
+
+  it("returns 403 when not admin", async () => {
+    (requireAdmin as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+
+    const { GET } = await import("@/app/api/api-keys/route");
+    const res = await GET();
+
+    expect(res.status).toBe(403);
   });
 });
 
@@ -96,6 +113,19 @@ describe("POST /api/api-keys", () => {
 
     expect(res.status).toBe(400);
   });
+
+  it("returns 403 when not admin", async () => {
+    (requireAdmin as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+
+    const { POST } = await import("@/app/api/api-keys/route");
+    const req = new Request("http://localhost/api/api-keys", {
+      method: "POST",
+      body: JSON.stringify({ name: "Test" }),
+    });
+    const res = await POST(req as any);
+
+    expect(res.status).toBe(403);
+  });
 });
 
 describe("PUT /api/api-keys/[id]", () => {
@@ -131,6 +161,19 @@ describe("PUT /api/api-keys/[id]", () => {
 
     expect(res.status).toBe(404);
   });
+
+  it("returns 403 when not admin", async () => {
+    (requireAdmin as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+
+    const { PUT } = await import("@/app/api/api-keys/[id]/route");
+    const req = new Request("http://localhost/api/api-keys/key_1", {
+      method: "PUT",
+      body: JSON.stringify({ active: false }),
+    });
+    const res = await PUT(req as any, { params: Promise.resolve({ id: "key_1" }) });
+
+    expect(res.status).toBe(403);
+  });
 });
 
 describe("DELETE /api/api-keys/[id]", () => {
@@ -160,5 +203,17 @@ describe("DELETE /api/api-keys/[id]", () => {
     const res = await DELETE(req as any, { params: Promise.resolve({ id: "nope" }) });
 
     expect(res.status).toBe(404);
+  });
+
+  it("returns 403 when not admin", async () => {
+    (requireAdmin as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+
+    const { DELETE } = await import("@/app/api/api-keys/[id]/route");
+    const req = new Request("http://localhost/api/api-keys/key_1", {
+      method: "DELETE",
+    });
+    const res = await DELETE(req as any, { params: Promise.resolve({ id: "key_1" }) });
+
+    expect(res.status).toBe(403);
   });
 });

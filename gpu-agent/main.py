@@ -42,7 +42,7 @@ def query_nvidia() -> list[dict]:
     result = subprocess.run(
         [
             "nvidia-smi",
-            "--query-gpu=name,memory.total,memory.used,memory.free,temperature.gpu,utilization.gpu",
+            "--query-gpu=name,memory.total,memory.used,memory.free,temperature.gpu,utilization.gpu,power.draw",
             "--format=csv,noheader,nounits",
         ],
         capture_output=True,
@@ -55,7 +55,7 @@ def query_nvidia() -> list[dict]:
     gpus = []
     for line in result.stdout.strip().splitlines():
         parts = [p.strip() for p in line.split(",")]
-        if len(parts) != 6:
+        if len(parts) < 6:
             continue
         gpus.append(
             {
@@ -65,6 +65,7 @@ def query_nvidia() -> list[dict]:
                 "memoryFree": int(float(parts[3])) * MIB_TO_BYTES,
                 "temperature": int(float(parts[4])),
                 "utilization": int(float(parts[5])),
+                "powerDraw": round(float(parts[6]), 1) if len(parts) > 6 else None,
             }
         )
     return gpus

@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/require-admin";
 import { randomBytes, createHash } from "crypto";
 
 function generateKey(): { raw: string; hash: string } {
@@ -10,6 +11,11 @@ function generateKey(): { raw: string; hash: string } {
 }
 
 export async function GET() {
+  const session = await requireAdmin();
+  if (!session) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const keys = await prisma.apiKey.findMany({
     orderBy: { createdAt: "desc" },
     select: {
@@ -31,6 +37,11 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const session = await requireAdmin();
+  if (!session) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const { name } = await req.json();
 
   if (!name?.trim()) {

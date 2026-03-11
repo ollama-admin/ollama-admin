@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useSession, signOut } from "next-auth/react";
 import { useEffect, useState, useCallback } from "react";
 import {
   LayoutDashboard,
@@ -14,14 +15,15 @@ import {
   ClipboardList,
   BarChart3,
   Zap,
-
   Users,
   Wrench,
+  Key,
   Settings,
   PanelLeftClose,
   PanelLeftOpen,
   Menu,
   X,
+  LogOut,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
@@ -39,7 +41,11 @@ interface NavGroup {
   items: NavItem[];
 }
 
-const navGroups: NavGroup[] = [
+interface NavGroupDef extends NavGroup {
+  adminOnly?: boolean;
+}
+
+const navGroupsDef: NavGroupDef[] = [
   {
     title: "main",
     items: [
@@ -47,21 +53,24 @@ const navGroups: NavGroup[] = [
       { href: "/chat", label: "chat", icon: MessageSquare },
       { href: "/tools", label: "tools", icon: Wrench },
       { href: "/discover", label: "discover", icon: Search },
+      { href: "/gpu", label: "gpu", icon: Zap },
     ],
   },
   {
     title: "admin",
+    adminOnly: true,
     items: [
       { href: "/admin/models", label: "models", icon: Package },
       { href: "/admin/servers", label: "servers", icon: Server },
       { href: "/admin/logs", label: "logs", icon: ClipboardList },
       { href: "/admin/metrics", label: "metrics", icon: BarChart3 },
-      { href: "/admin/gpu", label: "gpu", icon: Zap },
       { href: "/admin/users", label: "users", icon: Users },
+      { href: "/admin/api-keys", label: "apiKeys", icon: Key },
     ],
   },
   {
     title: "system",
+    adminOnly: true,
     items: [
       { href: "/settings", label: "settings", icon: Settings },
     ],
@@ -75,6 +84,7 @@ const HIDDEN_ROUTES = ["/setup", "/auth/signin"];
 export function Sidebar() {
   const pathname = usePathname();
   const t = useTranslations("sidebar");
+  const { data: session } = useSession();
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem(COLLAPSED_KEY) === "true";
@@ -102,6 +112,9 @@ export function Sidebar() {
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
   }, [mobileOpen]);
+
+  const isAdmin = session?.user?.role === "admin";
+  const navGroups = navGroupsDef.filter((g) => !g.adminOnly || isAdmin);
 
   if (HIDDEN_ROUTES.some((route) => pathname.startsWith(route))) {
     return null;
@@ -189,6 +202,42 @@ export function Sidebar() {
       <div className="border-t p-3">
         {collapsed ? null : <ThemeToggle />}
       </div>
+
+      {session?.user && (
+        <div className={cn("border-t p-3", collapsed && "px-2")}>
+          {collapsed ? (
+            <Tooltip content={t("logout")} side="right">
+              <button
+                onClick={() => signOut({ callbackUrl: "/auth/signin" })}
+                className="flex w-full items-center justify-center rounded-md p-2 text-sm transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))]"
+                aria-label={t("logout")}
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </Tooltip>
+          ) : (
+            <div className="flex items-center gap-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--primary)/0.15)] text-xs font-semibold text-[hsl(var(--primary))]">
+                {session.user.name?.slice(0, 2).toUpperCase()}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{session.user.name}</p>
+                <p className="truncate text-xs text-[hsl(var(--muted-foreground))]">
+                  {session.user.role === "admin" ? "Admin" : "User"}
+                </p>
+              </div>
+              <button
+                onClick={() => signOut({ callbackUrl: "/auth/signin" })}
+                className="shrink-0 rounded-md p-1.5 text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))]"
+                aria-label={t("logout")}
+                title={t("logout")}
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </>
   );
 
@@ -274,6 +323,29 @@ export function Sidebar() {
             <div className="border-t p-3">
               <ThemeToggle />
             </div>
+            {session?.user && (
+              <div className="border-t p-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--primary)/0.15)] text-xs font-semibold text-[hsl(var(--primary))]">
+                    {session.user.name?.slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{session.user.name}</p>
+                    <p className="truncate text-xs text-[hsl(var(--muted-foreground))]">
+                      {session.user.role === "admin" ? "Admin" : "User"}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => signOut({ callbackUrl: "/auth/signin" })}
+                    className="shrink-0 rounded-md p-1.5 text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))]"
+                    aria-label={t("logout")}
+                    title={t("logout")}
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            )}
           </aside>
         </div>
       )}

@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/require-admin";
 
 export async function GET() {
   const settings = await prisma.settings.findMany();
@@ -12,6 +13,11 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
+  const session = await requireAdmin();
+  if (!session) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const data = await req.json();
 
   for (const [key, value] of Object.entries(data)) {

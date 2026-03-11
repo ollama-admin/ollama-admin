@@ -17,6 +17,7 @@ interface GpuInfo {
   memoryFree: number;
   temperature: number;
   utilization: number;
+  powerDraw: number | null;
 }
 
 interface ServerGpuData {
@@ -25,6 +26,41 @@ interface ServerGpuData {
   runningModels: RunningModel[];
   gpuInfo: GpuInfo[] | null;
   error?: string;
+}
+
+function generateDummyGpuData(): GpuInfo[] {
+  const baseUtil = 35 + Math.random() * 30;
+  const baseMem = 4 * 1024 * 1024 * 1024 + Math.random() * 4 * 1024 * 1024 * 1024;
+  const totalMem = 12 * 1024 * 1024 * 1024;
+  return [
+    {
+      name: "NVIDIA GeForce RTX 4090",
+      memoryTotal: totalMem,
+      memoryUsed: Math.round(baseMem),
+      memoryFree: Math.round(totalMem - baseMem),
+      temperature: Math.round(45 + Math.random() * 25),
+      utilization: Math.round(baseUtil),
+      powerDraw: Math.round((120 + Math.random() * 180) * 10) / 10,
+    },
+  ];
+}
+
+function generateDummyModels(): RunningModel[] {
+  const now = new Date();
+  return [
+    {
+      name: "llama3.1:8b",
+      size: 4.7 * 1024 * 1024 * 1024,
+      size_vram: 4.7 * 1024 * 1024 * 1024,
+      expires_at: new Date(now.getTime() + 5 * 60 * 1000).toISOString(),
+    },
+    {
+      name: "codellama:13b",
+      size: 7.4 * 1024 * 1024 * 1024,
+      size_vram: 7.4 * 1024 * 1024 * 1024,
+      expires_at: new Date(now.getTime() + 3 * 60 * 1000).toISOString(),
+    },
+  ];
 }
 
 export async function GET() {
@@ -64,6 +100,14 @@ export async function GET() {
           }
         } catch {
           // GPU agent not available
+        }
+      }
+
+      // In development, provide dummy data when no GPU agent is configured
+      if (process.env.NODE_ENV === "development" && !result.gpuInfo) {
+        result.gpuInfo = generateDummyGpuData();
+        if (result.runningModels.length === 0 && !result.error) {
+          result.runningModels = generateDummyModels();
         }
       }
 
