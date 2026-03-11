@@ -13,6 +13,7 @@ interface ScrapedModel {
 }
 
 const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+const MAX_PAGES = 3;
 let cache: { data: ScrapedModel[]; timestamp: number } | null = null;
 
 const KNOWN_CAPABILITIES = ["tools", "vision", "embedding", "thinking", "cloud"];
@@ -65,13 +66,17 @@ async function fetchPage(url: string): Promise<string> {
   return res.text();
 }
 
-async function scrapeAllPages(
-  baseUrl: string,
-  modelMap: Map<string, ScrapedModel>
-): Promise<void> {
-  for (let page = 1; page <= 50; page++) {
-    const separator = baseUrl.includes("?") ? "&" : "?";
-    const url = page === 1 ? baseUrl : `${baseUrl}${separator}page=${page}`;
+async function scrapeAllModels(): Promise<ScrapedModel[]> {
+  if (cache && Date.now() - cache.timestamp < CACHE_TTL) {
+    return cache.data;
+  }
+
+  const modelMap = new Map<string, ScrapedModel>();
+
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    const url = page === 1
+      ? "https://ollama.com/search"
+      : `https://ollama.com/search?page=${page}`;
     try {
       const html = await fetchPage(url);
       const models = parseModelsFromHtml(html);
@@ -85,38 +90,16 @@ async function scrapeAllPages(
       break;
     }
   }
-}
 
-async function scrapeAllModels(): Promise<ScrapedModel[]> {
-  if (cache && Date.now() - cache.timestamp < CACHE_TTL) {
-    return cache.data;
-  }
-
-  const modelMap = new Map<string, ScrapedModel>();
-
-  // Scrape main listing (all pages)
-  await scrapeAllPages("https://ollama.com/search", modelMap);
-
-  // Scrape each capability category (all pages)
-  for (const cap of KNOWN_CAPABILITIES) {
-    await scrapeAllPages(`https://ollama.com/search?c=${cap}`, modelMap);
-  }
-
-  // Filter out cloud-only models (no sizes, only cloud capability)
   const models = Array.from(modelMap.values()).filter((m) => {
-    const isCloudOnly =
-      m.capabilities.length === 0 ||
-      (m.capabilities.length === 1 && m.capabilities[0] === "cloud");
-    // Keep if it has sizes or non-cloud capabilities
-    return m.sizes.length > 0 || !isCloudOnly;
+    if (m.capabilities.length === 1 && m.capabilities[0] === "cloud") return false;
+    return m.sizes.length > 0 || m.capabilities.length > 0;
   });
 
-  // Remove 'cloud' from capabilities
   for (const model of models) {
     model.capabilities = model.capabilities.filter((c) => c !== "cloud");
   }
 
-  // Sort by pulls (approximate numeric sort)
   models.sort((a, b) => {
     const parseCount = (s: string) => {
       if (!s) return 0;
