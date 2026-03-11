@@ -3,13 +3,14 @@ import { prisma } from "@/lib/prisma";
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const { active } = await req.json();
 
   try {
     const key = await prisma.apiKey.update({
-      where: { id: params.id },
+      where: { id: id },
       data: { active },
     });
     return NextResponse.json({ id: key.id, active: key.active });
@@ -20,10 +21,11 @@ export async function PUT(
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
-    await prisma.apiKey.delete({ where: { id: params.id } });
+    await prisma.apiKey.delete({ where: { id: id } });
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: "API key not found" }, { status: 404 });

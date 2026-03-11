@@ -5,8 +5,9 @@ import { requireAdmin } from "@/lib/require-admin";
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const session = await requireAdmin();
   if (!session) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -23,7 +24,7 @@ export async function PUT(
   }
 
   const user = await prisma.user.update({
-    where: { id: params.id },
+    where: { id: id },
     data,
     select: {
       id: true,
@@ -40,15 +41,16 @@ export async function PUT(
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const session = await requireAdmin();
   if (!session) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   // Cannot delete yourself
-  if (session.user.id === params.id) {
+  if (session.user.id === id) {
     return NextResponse.json(
       { error: "Cannot delete your own account" },
       { status: 400 }
@@ -56,7 +58,7 @@ export async function DELETE(
   }
 
   // Cannot delete last admin
-  const target = await prisma.user.findUnique({ where: { id: params.id } });
+  const target = await prisma.user.findUnique({ where: { id: id } });
   if (target?.role === "admin") {
     const adminCount = await prisma.user.count({ where: { role: "admin" } });
     if (adminCount <= 1) {
@@ -67,6 +69,6 @@ export async function DELETE(
     }
   }
 
-  await prisma.user.delete({ where: { id: params.id } });
+  await prisma.user.delete({ where: { id: id } });
   return NextResponse.json({ ok: true });
 }

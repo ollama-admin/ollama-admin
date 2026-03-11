@@ -4,12 +4,13 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const format = req.nextUrl.searchParams.get("format") || "json";
 
   const chat = await prisma.chat.findUnique({
-    where: { id: params.id },
+    where: { id: id },
     include: {
       messages: { orderBy: { createdAt: "asc" } },
       server: { select: { name: true } },

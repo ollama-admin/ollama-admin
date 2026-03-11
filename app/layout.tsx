@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { NextIntlClientProvider } from "next-intl";
-import { getLocale, getMessages } from "next-intl/server";
+import { getLocale } from "next-intl/server";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { DensityProvider } from "@/components/providers/density-provider";
 import { ToastProvider } from "@/components/ui/toast";
@@ -23,7 +23,6 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const locale = await getLocale();
-  const messages = await getMessages();
 
   return (
     <html lang={locale} suppressHydrationWarning>
@@ -31,7 +30,7 @@ export default async function RootLayout({
         <a href="#main-content" className="skip-nav">
           Skip to main content
         </a>
-        <NextIntlClientProvider messages={messages}>
+        <NextIntlClientProvider>
           <ThemeProvider>
             <DensityProvider>
             <ToastProvider>
