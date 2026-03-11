@@ -193,6 +193,7 @@
     },
     "servers": {
       "title": "Servers",
+      "subtitle": "Manage your Ollama server connections",
       "addServer": "Add Server",
       "editServer": "Edit Server",
       "testConnection": "Test Connection",

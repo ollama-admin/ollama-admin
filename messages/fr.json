@@ -195,6 +195,7 @@
     },
     "servers": {
       "title": "Serveurs",
+      "subtitle": "Gérez les connexions de vos serveurs Ollama",
       "addServer": "Ajouter un serveur",
       "editServer": "Modifier le serveur",
       "testConnection": "Tester la connexion",

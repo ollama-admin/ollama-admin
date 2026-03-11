@@ -17,6 +17,9 @@ export async function DELETE(req: NextRequest) {
   if (!server) {
     return NextResponse.json({ error: "Server not found" }, { status: 404 });
   }
+  if (!server.active) {
+    return NextResponse.json({ error: "Server is inactive" }, { status: 403 });
+  }
 
   try {
     await deleteModel(server.url, name);

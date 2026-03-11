@@ -58,7 +58,7 @@ export async function POST(
 
   const serverIds = Array.from(new Set(targets.map((t) => t.serverId)));
   const servers = await prisma.server.findMany({
-    where: { id: { in: serverIds } },
+    where: { id: { in: serverIds }, active: true },
   });
   const serverMap = new Map(servers.map((s) => [s.id, s]));
 
