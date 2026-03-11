@@ -40,6 +40,14 @@ async function proxyToOllama(req: NextRequest) {
     });
   }
 
+  if (!server.active) {
+    logger.warn("Proxy request to inactive server", { serverId, name: server.name });
+    return new Response(JSON.stringify({ error: "Server is inactive" }), {
+      status: 403,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   const startTime = Date.now();
   let body: string | null = null;
   let model = "unknown";

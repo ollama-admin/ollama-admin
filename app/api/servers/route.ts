@@ -3,8 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const all = req.nextUrl.searchParams.get("all") === "true";
   const servers = await prisma.server.findMany({
+    ...(!all && { where: { active: true } }),
     orderBy: { createdAt: "asc" },
   });
   return NextResponse.json(servers);

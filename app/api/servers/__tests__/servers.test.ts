@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { NextRequest } from "next/server";
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
@@ -28,17 +29,42 @@ beforeEach(() => {
 });
 
 describe("GET /api/servers", () => {
-  it("returns all servers", async () => {
+  it("returns only active servers by default", async () => {
     (prisma.server.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
       mockServer,
     ]);
 
     const { GET } = await import("@/app/api/servers/route");
-    const res = await GET();
+    const req = new NextRequest("http://localhost/api/servers");
+    const res = await GET(req);
     const data = await res.json();
 
     expect(data).toHaveLength(1);
     expect(data[0].name).toBe("Local Ollama");
+    expect(prisma.server.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { active: true },
+      })
+    );
+  });
+
+  it("returns all servers when all=true", async () => {
+    (prisma.server.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
+      mockServer,
+      { ...mockServer, id: "srv_2", name: "Inactive", active: false },
+    ]);
+
+    const { GET } = await import("@/app/api/servers/route");
+    const req = new NextRequest("http://localhost/api/servers?all=true");
+    const res = await GET(req);
+    const data = await res.json();
+
+    expect(data).toHaveLength(2);
+    expect(prisma.server.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: { createdAt: "asc" },
+      })
+    );
   });
 });
 
