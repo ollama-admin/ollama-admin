@@ -65,8 +65,13 @@ export function ChatParametersModal({
   }, []);
 
   useEffect(() => {
-    if (open) fetchPresets();
-  }, [open, fetchPresets]);
+    if (!open) return;
+    const loadPresets = async () => {
+      const res = await fetch("/api/presets");
+      setPresets(await res.json());
+    };
+    void loadPresets();
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;

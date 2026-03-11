@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import { Sun, Moon, Monitor, Database, Shield, Trash2, Gauge, Key, Plus, Copy, X, Globe } from "lucide-react";
@@ -32,19 +32,31 @@ export default function SettingsPage() {
   }>>([]);
   const [newKeyName, setNewKeyName] = useState("");
   const [newKeyValue, setNewKeyValue] = useState("");
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+
+  const fetchApiKeys = async () => {
+    const res = await fetch("/api/api-keys");
+    setApiKeys(await res.json());
+  };
 
   useEffect(() => {
-    setMounted(true);
-    fetch("/api/settings")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.logRetentionDays) setLogRetentionDays(data.logRetentionDays);
-        if (data.logStorePrompts) setLogStorePrompts(data.logStorePrompts);
-        if (data.rateLimitMax) setRateLimitMax(data.rateLimitMax);
-        if (data.rateLimitWindow) setRateLimitWindow(data.rateLimitWindow);
-      });
-    fetchApiKeys();
+    const init = async () => {
+      const [settingsRes, keysRes] = await Promise.all([
+        fetch("/api/settings"),
+        fetch("/api/api-keys"),
+      ]);
+      const settings = await settingsRes.json();
+      if (settings.logRetentionDays) setLogRetentionDays(settings.logRetentionDays);
+      if (settings.logStorePrompts) setLogStorePrompts(settings.logStorePrompts);
+      if (settings.rateLimitMax) setRateLimitMax(settings.rateLimitMax);
+      if (settings.rateLimitWindow) setRateLimitWindow(settings.rateLimitWindow);
+      setApiKeys(await keysRes.json());
+    };
+    void init();
   }, []);
 
   const saveSettings = async () => {
@@ -54,11 +66,6 @@ export default function SettingsPage() {
       body: JSON.stringify({ logRetentionDays, logStorePrompts, rateLimitMax, rateLimitWindow }),
     });
     toast(t("saved"), "success");
-  };
-
-  const fetchApiKeys = async () => {
-    const res = await fetch("/api/api-keys");
-    setApiKeys(await res.json());
   };
 
   const createApiKey = async () => {

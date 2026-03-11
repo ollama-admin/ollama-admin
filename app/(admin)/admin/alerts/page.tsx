@@ -62,9 +62,17 @@ export default function AlertsPage() {
   };
 
   useEffect(() => {
-    fetchAlerts();
-    fetchChecks();
-    const interval = setInterval(fetchChecks, 30000);
+    const init = async () => {
+      const [alertsRes, checksRes] = await Promise.all([
+        fetch("/api/alerts"),
+        fetch("/api/alerts/check"),
+      ]);
+      setAlerts(await alertsRes.json());
+      setChecks(await checksRes.json());
+      setLoading(false);
+    };
+    void init();
+    const interval = setInterval(() => void fetchChecks(), 30000);
     return () => clearInterval(interval);
   }, []);
 

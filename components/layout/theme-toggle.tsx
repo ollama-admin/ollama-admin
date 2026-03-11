@@ -1,9 +1,13 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { Sun, Moon, Monitor } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+
+const emptySubscribe = () => () => {};
+const returnTrue = () => true;
+const returnFalse = () => false;
 
 const modes: { key: string; label: string; icon: LucideIcon }[] = [
   { key: "light", label: "Light", icon: Sun },
@@ -13,9 +17,7 @@ const modes: { key: string; label: string; icon: LucideIcon }[] = [
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
+  const mounted = useSyncExternalStore(emptySubscribe, returnTrue, returnFalse);
 
   if (!mounted) return null;
 

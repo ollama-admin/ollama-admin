@@ -42,8 +42,11 @@ export default function DiscoverPage() {
   const [downloadedModels, setDownloadedModels] = useState<Set<string>>(new Set());
   const [downloadingRefs, setDownloadingRefs] = useState<Set<string>>(new Set());
   const downloadingRefsRef = useRef(downloadingRefs);
-  downloadingRefsRef.current = downloadingRefs;
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    downloadingRefsRef.current = downloadingRefs;
+  }, [downloadingRefs]);
 
   useEffect(() => {
     fetch("/api/auth/session")
@@ -165,23 +168,19 @@ export default function DiscoverPage() {
     };
   }, [downloadingRefs.size, selectedServer, t, toast]);
 
-  const fetchCatalog = useCallback(() => {
-    const params = new URLSearchParams();
-    if (search) params.set("q", search);
-    if (selectedCaps.length > 0) params.set("c", selectedCaps.join(","));
-
-    setLoading(true);
-    fetch(`/api/catalog?${params}`)
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data)) setModels(data);
-      })
-      .finally(() => setLoading(false));
-  }, [search, selectedCaps]);
-
   useEffect(() => {
-    fetchCatalog();
-  }, [fetchCatalog]);
+    const loadCatalog = async () => {
+      const params = new URLSearchParams();
+      if (search) params.set("q", search);
+      if (selectedCaps.length > 0) params.set("c", selectedCaps.join(","));
+
+      const r = await fetch(`/api/catalog?${params}`);
+      const data = await r.json();
+      if (Array.isArray(data)) setModels(data);
+      setLoading(false);
+    };
+    void loadCatalog();
+  }, [search, selectedCaps]);
 
   const toggleCap = (cap: string) => {
     setSelectedCaps((prev) =>

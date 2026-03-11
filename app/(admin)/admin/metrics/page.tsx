@@ -149,14 +149,23 @@ export default function MetricsPage() {
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState("7");
 
-  useEffect(() => {
+  const changeDays = (newDays: string) => {
     setLoading(true);
-    fetch(`/api/metrics?days=${days}`)
-      .then((r) => r.json())
-      .then((d) => {
+    setDays(newDays);
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchMetrics = async () => {
+      const r = await fetch(`/api/metrics?days=${days}`);
+      const d = await r.json();
+      if (!cancelled) {
         setData(d);
         setLoading(false);
-      });
+      }
+    };
+    void fetchMetrics();
+    return () => { cancelled = true; };
   }, [days]);
 
   if (loading) {
@@ -207,7 +216,7 @@ export default function MetricsPage() {
         <h1 className="text-2xl font-bold">{t("title")}</h1>
         <Select
           value={days}
-          onChange={(e) => setDays(e.target.value)}
+          onChange={(e) => changeDays(e.target.value)}
           className="w-auto"
           aria-label={t("dateRange")}
         >
