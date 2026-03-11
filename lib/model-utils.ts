@@ -6,8 +6,7 @@ const VISION_NAME_HINTS = ["vision", "ocr", "llava", "llava-phi", "bakllava", "m
 const EMBEDDING_NAME_HINTS = ["embed", "embedding"];
 
 export function isChatModel(model: OllamaModel): boolean {
-  if (isEmbeddingModel(model)) return false;
-  return true;
+  return !isEmbeddingModel(model);
 }
 
 export function isVisionModel(model: OllamaModel): boolean {

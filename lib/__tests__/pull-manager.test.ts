@@ -103,7 +103,8 @@ describe("PullManager", () => {
 
     const pm = await loadPullManager();
     const job = pm.startPull("srv1", "http://localhost:11434", "llama3:8b");
-    await pm.waitFor(job.id);
+    // Wait for the internal pull promise to settle
+    await new Promise((r) => setTimeout(r, 50));
 
     expect(job.status).toBe("error");
     expect(job.error).toContain("500");
@@ -124,7 +125,8 @@ describe("PullManager", () => {
 
     const pm = await loadPullManager();
     const job = pm.startPull("srv1", "http://localhost:11434", "llama3:8b");
-    await pm.waitFor(job.id);
+    // Wait for the internal pull promise to settle
+    await new Promise((r) => setTimeout(r, 50));
 
     expect(job.status).toBe("done");
     expect(job.progress).toBe(100);
