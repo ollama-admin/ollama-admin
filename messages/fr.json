@@ -35,7 +35,6 @@
     "logs": "Journaux",
     "metrics": "Métriques",
     "gpu": "GPU",
-    "alerts": "Alertes",
     "users": "Utilisateurs",
     "tools": "Outils",
     "settings": "Paramètres"
@@ -98,7 +97,12 @@
       "keepAlive": "Maintenir actif",
       "systemPrompt": "Prompt système",
       "systemPromptPlaceholder": "Instructions personnalisées pour le modèle...",
-      "reset": "Réinitialiser"
+      "reset": "Réinitialiser",
+      "done": "Terminé",
+      "precise": "Précis",
+      "creative": "Créatif",
+      "focused": "Focalisé",
+      "diverse": "Divers"
     },
     "presets": {
       "save": "Enregistrer le preset",
@@ -256,30 +260,6 @@
       "utilization": "Utilisation GPU",
       "emptyTitle": "Aucun serveur configuré",
       "emptyDescription": "Ajoutez un serveur Ollama pour surveiller l'utilisation GPU."
-    },
-    "alerts": {
-      "title": "Alertes",
-      "activeAlerts": "Alertes actives",
-      "allClear": "Tout est normal — aucun seuil dépassé.",
-      "createAlert": "Créer une alerte",
-      "configuredAlerts": "Alertes configurées",
-      "alertType": "Type d'alerte",
-      "thresholdPlaceholder": "Seuil",
-      "threshold": "Seuil",
-      "add": "Ajouter",
-      "created": "Alerte créée",
-      "deleted": "Alerte supprimée",
-      "enabled": "Activée",
-      "disabled": "Désactivée",
-      "enable": "Activer",
-      "disable": "Désactiver",
-      "deleteAlert": "Supprimer l'alerte",
-      "gpu_temperature": "Température GPU",
-      "gpu_vram": "Utilisation VRAM GPU",
-      "error_rate": "Taux d'erreur",
-      "latency": "Latence moyenne",
-      "emptyTitle": "Aucune alerte configurée",
-      "emptyDescription": "Créez des alertes pour surveiller la température GPU, l'utilisation VRAM, les taux d'erreur et la latence."
     },
     "users": {
       "title": "Utilisateurs",

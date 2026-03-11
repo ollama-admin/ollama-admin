@@ -56,7 +56,8 @@ async function proxyToOllama(req: NextRequest) {
   }
 
   const ollamaUrl = `${server.url}${path}`;
-  logger.info("Proxy forwarding", { method: req.method, ollamaUrl, model, server: server.name });
+  const bodySize = body ? body.length : 0;
+  logger.info("Proxy forwarding", { method: req.method, ollamaUrl, model, server: server.name, bodyBytes: bodySize });
 
   try {
     const ollamaRes = await fetch(ollamaUrl, {

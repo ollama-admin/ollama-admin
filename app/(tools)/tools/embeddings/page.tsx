@@ -3,8 +3,9 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback } from "react";
 import type { OllamaModel } from "@/lib/ollama";
-import { isEmbeddingModel } from "@/lib/model-utils";
-import { Binary, AlertTriangle, Square } from "lucide-react";
+import { isEmbeddingModel, loadCatalogCapabilities } from "@/lib/model-utils";
+import { Binary, AlertTriangle, Upload } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -59,6 +60,7 @@ export default function EmbeddingsPage() {
         return;
       }
       const data = await res.json();
+      await loadCatalogCapabilities();
       const embedding = (data.models || []).filter(isEmbeddingModel);
       setEmbeddingModels(embedding);
       setSelectedModel(embedding.length > 0 ? embedding[0].name : "");
@@ -162,7 +164,8 @@ export default function EmbeddingsPage() {
             {embeddingModels.map((m) => <option key={m.name} value={m.name}>{m.name}</option>)}
           </Select>
           <Button variant="secondary" size="sm" onClick={() => unloadModel(selectedModel, selectedServer)} title={tc("unload")} disabled={!selectedModel}>
-            <Square className="h-4 w-4" />
+            <Upload className="h-4 w-4" />
+            {tc("unload")}
           </Button>
         </div>
       </div>

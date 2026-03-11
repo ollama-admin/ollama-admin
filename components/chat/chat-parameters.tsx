@@ -2,14 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Settings2,
-  RotateCcw,
-  Save,
-  BookOpen,
-  Trash2,
-  X,
-} from "lucide-react";
+import { RotateCcw, Save, BookOpen, Trash2 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -126,99 +120,104 @@ export function ChatParametersModal({
     }
   };
 
-  return (
-    <Modal open={open} onClose={onClose} title={t("title")} className="max-w-3xl">
-      {/* Presets */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <BookOpen className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
-        {presets.map((preset) => (
-          <span key={preset.id} className="flex items-center gap-1">
-            <button
-              onClick={() => loadPreset(preset)}
-              className="rounded-full border px-2.5 py-0.5 text-xs transition-colors hover:bg-[hsl(var(--accent))]"
-            >
-              {preset.name}
-            </button>
-            <button
-              onClick={() => deletePreset(preset.id)}
-              className="rounded p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))]"
-              aria-label={tPresets("deletePreset", { name: preset.name })}
-            >
-              <Trash2 className="h-3 w-3" />
-            </button>
-          </span>
-        ))}
-        {showSavePreset ? (
-          <span className="flex items-center gap-1">
-            <input
-              type="text"
-              value={presetName}
-              onChange={(e) => setPresetName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && savePreset()}
-              placeholder={tPresets("namePlaceholder")}
-              className="h-6 w-28 rounded border bg-transparent px-2 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]"
-              autoFocus
-            />
-            <Button variant="ghost" size="sm" onClick={savePreset} className="h-6 px-2" aria-label="Save preset">
-              <Save className="h-3 w-3" />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => setShowSavePreset(false)} className="h-6 px-2" aria-label="Cancel">
-              <X className="h-3 w-3" />
-            </Button>
-          </span>
-        ) : (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowSavePreset(true)}
-            className="h-6 px-2 text-xs"
-          >
-            <Save className="mr-1 h-3 w-3" />
-            {tPresets("save")}
-          </Button>
-        )}
-      </div>
+  const tempValue = parameters.temperature ?? DEFAULTS.temperature!;
+  const topPValue = parameters.topP ?? DEFAULTS.topP!;
 
-      {/* Two-column layout */}
-      <div className="grid grid-cols-2 gap-6">
-        {/* Left: sliders and inputs */}
-        <div className="space-y-4">
+  return (
+    <Modal open={open} onClose={onClose} title={t("title")} className="max-w-2xl">
+      {/* Presets */}
+      {(presets.length > 0 || showSavePreset) && (
+        <div className="mb-6 flex flex-wrap items-center gap-2">
+          <BookOpen className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
+          {presets.map((preset) => (
+            <span key={preset.id} className="flex items-center gap-1">
+              <button
+                onClick={() => loadPreset(preset)}
+                className="rounded-full border px-2.5 py-0.5 text-xs transition-colors hover:bg-[hsl(var(--accent))]"
+              >
+                {preset.name}
+              </button>
+              <button
+                onClick={() => deletePreset(preset.id)}
+                className="rounded p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))]"
+                aria-label={tPresets("deletePreset", { name: preset.name })}
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+          {showSavePreset && (
+            <span className="flex items-center gap-1">
+              <input
+                type="text"
+                value={presetName}
+                onChange={(e) => setPresetName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && savePreset()}
+                placeholder={tPresets("namePlaceholder")}
+                className="h-7 w-32 rounded-md border bg-transparent px-2 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]"
+                autoFocus
+              />
+              <Button variant="ghost" size="sm" onClick={savePreset} className="h-7 px-2">
+                <Save className="h-3.5 w-3.5" />
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setShowSavePreset(false)} className="h-7 px-2">
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </span>
+          )}
+        </div>
+      )}
+
+      <div className="grid gap-6 sm:grid-cols-2">
+        {/* Left: Parameters */}
+        <div className="space-y-5">
+          {/* Temperature */}
           <div>
-            <label className="mb-1 block text-xs font-medium">
-              {t("temperature")}
-            </label>
+            <div className="mb-2 flex items-center justify-between">
+              <label className="text-sm font-medium">{t("temperature")}</label>
+              <span className="rounded-md bg-[hsl(var(--muted))] px-2 py-0.5 text-xs font-mono tabular-nums">
+                {tempValue.toFixed(1)}
+              </span>
+            </div>
             <input
               type="range"
               min="0"
               max="2"
               step="0.1"
-              value={parameters.temperature ?? DEFAULTS.temperature}
+              value={tempValue}
               onChange={(e) => update("temperature", parseFloat(e.target.value))}
               className="w-full accent-[hsl(var(--primary))]"
             />
-            <span className="text-xs text-[hsl(var(--muted-foreground))]">
-              {parameters.temperature ?? DEFAULTS.temperature}
-            </span>
+            <div className="mt-1 flex justify-between text-[10px] text-[hsl(var(--muted-foreground))]">
+              <span>{t("precise")}</span>
+              <span>{t("creative")}</span>
+            </div>
           </div>
 
+          {/* Top P */}
           <div>
-            <label className="mb-1 block text-xs font-medium">
-              {t("topP")}
-            </label>
+            <div className="mb-2 flex items-center justify-between">
+              <label className="text-sm font-medium">{t("topP")}</label>
+              <span className="rounded-md bg-[hsl(var(--muted))] px-2 py-0.5 text-xs font-mono tabular-nums">
+                {topPValue.toFixed(2)}
+              </span>
+            </div>
             <input
               type="range"
               min="0"
               max="1"
               step="0.05"
-              value={parameters.topP ?? DEFAULTS.topP}
+              value={topPValue}
               onChange={(e) => update("topP", parseFloat(e.target.value))}
               className="w-full accent-[hsl(var(--primary))]"
             />
-            <span className="text-xs text-[hsl(var(--muted-foreground))]">
-              {parameters.topP ?? DEFAULTS.topP}
-            </span>
+            <div className="mt-1 flex justify-between text-[10px] text-[hsl(var(--muted-foreground))]">
+              <span>{t("focused")}</span>
+              <span>{t("diverse")}</span>
+            </div>
           </div>
 
+          {/* Top K */}
           <Input
             label={t("topK")}
             type="number"
@@ -228,30 +227,39 @@ export function ChatParametersModal({
             onChange={(e) =>
               update("topK", e.target.value ? parseInt(e.target.value) : undefined)
             }
-            className="h-8 text-xs"
+            className="text-sm"
           />
         </div>
 
-        {/* Right: system prompt */}
+        {/* Right: System prompt */}
         <div className="flex flex-col">
           <Textarea
             label={t("systemPrompt")}
             value={parameters.systemPrompt ?? ""}
             onChange={(e) => update("systemPrompt", e.target.value || undefined)}
             placeholder={t("systemPromptPlaceholder")}
-            rows={8}
-            className="flex-1 text-xs"
+            rows={9}
+            className="flex-1 text-sm"
           />
         </div>
       </div>
 
-      <div className="mt-4 flex justify-between">
-        <Button variant="ghost" size="sm" onClick={reset}>
-          <RotateCcw className="mr-1 h-3 w-3" />
-          {t("reset")}
-        </Button>
+      {/* Footer */}
+      <div className="mt-6 flex items-center justify-between border-t pt-4">
+        <div className="flex gap-2">
+          <Button variant="ghost" size="sm" onClick={reset}>
+            <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+            {t("reset")}
+          </Button>
+          {!showSavePreset && (
+            <Button variant="ghost" size="sm" onClick={() => setShowSavePreset(true)}>
+              <Save className="mr-1.5 h-3.5 w-3.5" />
+              {tPresets("save")}
+            </Button>
+          )}
+        </div>
         <Button size="sm" onClick={onClose}>
-          OK
+          {t("done")}
         </Button>
       </div>
     </Modal>

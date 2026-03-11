@@ -11,6 +11,7 @@ import {
   Plus,
   Send,
   Square,
+  Upload,
   Search,
   ChevronDown,
   GitCompareArrows,
@@ -33,7 +34,7 @@ import { cn } from "@/lib/cn";
 import { useServers } from "@/lib/hooks/use-servers";
 import { useUnloadModel } from "@/lib/hooks/use-unload-model";
 import type { OllamaModel } from "@/lib/ollama";
-import { isChatModel } from "@/lib/model-utils";
+import { isChatModel, loadCatalogCapabilities } from "@/lib/model-utils";
 
 interface ChatSummary {
   id: string;
@@ -123,6 +124,7 @@ export default function ChatPage() {
         return;
       }
       const data = await res.json();
+      await loadCatalogCapabilities();
       const m = (data.models || []).filter(isChatModel);
       setModels(m);
       if (m.length > 0 && !selectedModel) setSelectedModel(m[0].name);
@@ -143,6 +145,7 @@ export default function ChatPage() {
     try {
       const res = await fetch(`/api/admin/models?serverId=${serverId}`);
       const data = await res.json();
+      await loadCatalogCapabilities();
       const m = (data.models || []).filter(isChatModel);
       setServerModelsCache((prev) => ({ ...prev, [serverId]: m }));
     } catch {
@@ -685,9 +688,14 @@ export default function ChatPage() {
             </select>
             <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[hsl(var(--muted-foreground))]" />
           </div>
-          <button onClick={() => unloadModel(selectedModel, selectedServer)} disabled={!selectedModel || isStreaming} title={tc("unload")}
-            className="flex h-8 w-8 items-center justify-center rounded-md border text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))] disabled:opacity-50">
-            <Square className="h-3.5 w-3.5" />
+          <button
+            onClick={() => unloadModel(selectedModel, selectedServer)}
+            disabled={!selectedModel || isStreaming}
+            title={tc("unload")}
+            className="flex h-8 items-center gap-1.5 rounded-md border px-2 text-xs text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))] disabled:opacity-50"
+          >
+            <Upload className="h-3.5 w-3.5" />
+            {tc("unload")}
           </button>
 
           <button onClick={toggleCompareMode} disabled={isStreaming}
@@ -748,13 +756,12 @@ export default function ChatPage() {
           </div>
         )}
 
-        <div className="flex justify-end px-4">
-          <button onClick={() => setShowParameters(true)}
-            className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))]">
-            <Settings2 className="h-3.5 w-3.5" />
-          </button>
-        </div>
-        <ChatParametersModal open={showParameters} onClose={() => setShowParameters(false)} parameters={chatParameters} onChange={currentChatId ? updateParameters : setChatParameters} />
+        <ChatParametersModal
+          open={showParameters}
+          onClose={() => setShowParameters(false)}
+          parameters={chatParameters}
+          onChange={currentChatId ? updateParameters : setChatParameters}
+        />
 
         {/* Messages area */}
         {connectionError && !currentChatId && messages.length === 0 ? (
@@ -823,11 +830,31 @@ export default function ChatPage() {
         <div className="bg-[hsl(var(--background))] px-4 py-3">
           <div className="mx-auto flex max-w-5xl items-end gap-2">
             <div className="relative flex-1">
-              <textarea ref={textareaRef} value={input}
-                onChange={(e) => { setInput(e.target.value); autoResizeTextarea(); }}
-                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-                placeholder={compareMode ? t("comparePlaceholder") : t("typeMessage")} rows={1} disabled={isStreaming}
-                className="w-full resize-none overflow-y-hidden rounded-xl border bg-[hsl(var(--card))] py-3 pl-12 pr-12 text-sm shadow-sm transition-colors placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] disabled:opacity-50" />
+              <button
+                onClick={() => setShowParameters(true)}
+                className="absolute left-0 top-0 ml-[7px] mt-[7px] rounded-lg bg-[hsl(var(--muted))] p-1.5 text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))]"
+                aria-label={t("parametersButton")}
+              >
+                <Settings2 className="h-4 w-4" />
+              </button>
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => {
+                  setInput(e.target.value);
+                  autoResizeTextarea();
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                  }
+                }}
+                placeholder={compareMode ? t("comparePlaceholder") : t("typeMessage")}
+                rows={1}
+                disabled={isStreaming}
+                className="scrollbar-hidden w-full resize-none overflow-y-hidden rounded-xl border bg-[hsl(var(--card))] py-3 pl-12 pr-12 text-sm shadow-sm transition-colors placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] disabled:opacity-50"
+              />
               {isStreaming ? (
                 <button onClick={stopGeneration}
                   className="absolute right-0 top-0 mr-[7px] mt-[7px] rounded-lg bg-[hsl(var(--destructive))] p-1.5 text-[hsl(var(--destructive-foreground))] transition-colors hover:opacity-90"
