@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/components/ui/toast";
 
 export interface ChatParameters {
@@ -66,21 +67,13 @@ export function ChatParametersModal({
 
   useEffect(() => {
     if (!open) return;
-    const loadPresets = async () => {
+    let cancelled = false;
+    (async () => {
       const res = await fetch("/api/presets");
-      setPresets(await res.json());
-    };
-    void loadPresets();
+      if (!cancelled) setPresets(await res.json());
+    })();
+    return () => { cancelled = true; };
   }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [open, onClose]);
 
   const update = (key: keyof ChatParameters, value: unknown) => {
     onChange({ ...parameters, [key]: value || undefined });
@@ -133,157 +126,134 @@ export function ChatParametersModal({
     }
   };
 
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div
-        className="absolute inset-0 bg-black/50"
-        onClick={onClose}
-        aria-hidden
-      />
-      <div className="relative w-full max-w-3xl rounded-xl border bg-[hsl(var(--background))] p-6 shadow-lg">
-        <div className="mb-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Settings2 className="h-5 w-5 text-[hsl(var(--muted-foreground))]" />
-            <h2 className="text-sm font-semibold">{t("title")}</h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="rounded-md p-1 text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))]"
-            aria-label="Close"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        {/* Presets */}
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <BookOpen className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
-          {presets.map((preset) => (
-            <span key={preset.id} className="flex items-center gap-1">
-              <button
-                onClick={() => loadPreset(preset)}
-                className="rounded-full border px-2.5 py-0.5 text-xs transition-colors hover:bg-[hsl(var(--accent))]"
-              >
-                {preset.name}
-              </button>
-              <button
-                onClick={() => deletePreset(preset.id)}
-                className="rounded p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))]"
-                aria-label={tPresets("deletePreset", { name: preset.name })}
-              >
-                <Trash2 className="h-3 w-3" />
-              </button>
-            </span>
-          ))}
-          {showSavePreset ? (
-            <span className="flex items-center gap-1">
-              <input
-                type="text"
-                value={presetName}
-                onChange={(e) => setPresetName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && savePreset()}
-                placeholder={tPresets("namePlaceholder")}
-                className="h-6 w-28 rounded border bg-transparent px-2 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]"
-                autoFocus
-              />
-              <Button variant="ghost" size="sm" onClick={savePreset} className="h-6 px-2" aria-label="Save preset">
-                <Save className="h-3 w-3" />
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => setShowSavePreset(false)} className="h-6 px-2" aria-label="Cancel">
-                ✕
-              </Button>
-            </span>
-          ) : (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowSavePreset(true)}
-              className="h-6 px-2 text-xs"
+    <Modal open={open} onClose={onClose} title={t("title")} className="max-w-3xl">
+      {/* Presets */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <BookOpen className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
+        {presets.map((preset) => (
+          <span key={preset.id} className="flex items-center gap-1">
+            <button
+              onClick={() => loadPreset(preset)}
+              className="rounded-full border px-2.5 py-0.5 text-xs transition-colors hover:bg-[hsl(var(--accent))]"
             >
-              <Save className="mr-1 h-3 w-3" />
-              {tPresets("save")}
+              {preset.name}
+            </button>
+            <button
+              onClick={() => deletePreset(preset.id)}
+              className="rounded p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))]"
+              aria-label={tPresets("deletePreset", { name: preset.name })}
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          </span>
+        ))}
+        {showSavePreset ? (
+          <span className="flex items-center gap-1">
+            <input
+              type="text"
+              value={presetName}
+              onChange={(e) => setPresetName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && savePreset()}
+              placeholder={tPresets("namePlaceholder")}
+              className="h-6 w-28 rounded border bg-transparent px-2 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]"
+              autoFocus
+            />
+            <Button variant="ghost" size="sm" onClick={savePreset} className="h-6 px-2" aria-label="Save preset">
+              <Save className="h-3 w-3" />
             </Button>
-          )}
-        </div>
+            <Button variant="ghost" size="sm" onClick={() => setShowSavePreset(false)} className="h-6 px-2" aria-label="Cancel">
+              <X className="h-3 w-3" />
+            </Button>
+          </span>
+        ) : (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowSavePreset(true)}
+            className="h-6 px-2 text-xs"
+          >
+            <Save className="mr-1 h-3 w-3" />
+            {tPresets("save")}
+          </Button>
+        )}
+      </div>
 
-        {/* Two-column layout */}
-        <div className="grid grid-cols-2 gap-6">
-          {/* Left: sliders and inputs */}
-          <div className="space-y-4">
-            <div>
-              <label className="mb-1 block text-xs font-medium">
-                {t("temperature")}
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="2"
-                step="0.1"
-                value={parameters.temperature ?? DEFAULTS.temperature}
-                onChange={(e) => update("temperature", parseFloat(e.target.value))}
-                className="w-full accent-[hsl(var(--primary))]"
-              />
-              <span className="text-xs text-[hsl(var(--muted-foreground))]">
-                {parameters.temperature ?? DEFAULTS.temperature}
-              </span>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-xs font-medium">
-                {t("topP")}
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.05"
-                value={parameters.topP ?? DEFAULTS.topP}
-                onChange={(e) => update("topP", parseFloat(e.target.value))}
-                className="w-full accent-[hsl(var(--primary))]"
-              />
-              <span className="text-xs text-[hsl(var(--muted-foreground))]">
-                {parameters.topP ?? DEFAULTS.topP}
-              </span>
-            </div>
-
-            <Input
-              label={t("topK")}
-              type="number"
-              min={0}
-              max={100}
-              value={parameters.topK ?? ""}
-              onChange={(e) =>
-                update("topK", e.target.value ? parseInt(e.target.value) : undefined)
-              }
-              className="h-8 text-xs"
+      {/* Two-column layout */}
+      <div className="grid grid-cols-2 gap-6">
+        {/* Left: sliders and inputs */}
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1 block text-xs font-medium">
+              {t("temperature")}
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="2"
+              step="0.1"
+              value={parameters.temperature ?? DEFAULTS.temperature}
+              onChange={(e) => update("temperature", parseFloat(e.target.value))}
+              className="w-full accent-[hsl(var(--primary))]"
             />
+            <span className="text-xs text-[hsl(var(--muted-foreground))]">
+              {parameters.temperature ?? DEFAULTS.temperature}
+            </span>
           </div>
 
-          {/* Right: system prompt */}
-          <div className="flex flex-col">
-            <Textarea
-              label={t("systemPrompt")}
-              value={parameters.systemPrompt ?? ""}
-              onChange={(e) => update("systemPrompt", e.target.value || undefined)}
-              placeholder={t("systemPromptPlaceholder")}
-              rows={8}
-              className="flex-1 text-xs"
+          <div>
+            <label className="mb-1 block text-xs font-medium">
+              {t("topP")}
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={parameters.topP ?? DEFAULTS.topP}
+              onChange={(e) => update("topP", parseFloat(e.target.value))}
+              className="w-full accent-[hsl(var(--primary))]"
             />
+            <span className="text-xs text-[hsl(var(--muted-foreground))]">
+              {parameters.topP ?? DEFAULTS.topP}
+            </span>
           </div>
+
+          <Input
+            label={t("topK")}
+            type="number"
+            min={0}
+            max={100}
+            value={parameters.topK ?? ""}
+            onChange={(e) =>
+              update("topK", e.target.value ? parseInt(e.target.value) : undefined)
+            }
+            className="h-8 text-xs"
+          />
         </div>
 
-        <div className="mt-4 flex justify-between">
-          <Button variant="ghost" size="sm" onClick={reset}>
-            <RotateCcw className="mr-1 h-3 w-3" />
-            {t("reset")}
-          </Button>
-          <Button size="sm" onClick={onClose}>
-            OK
-          </Button>
+        {/* Right: system prompt */}
+        <div className="flex flex-col">
+          <Textarea
+            label={t("systemPrompt")}
+            value={parameters.systemPrompt ?? ""}
+            onChange={(e) => update("systemPrompt", e.target.value || undefined)}
+            placeholder={t("systemPromptPlaceholder")}
+            rows={8}
+            className="flex-1 text-xs"
+          />
         </div>
       </div>
-    </div>
+
+      <div className="mt-4 flex justify-between">
+        <Button variant="ghost" size="sm" onClick={reset}>
+          <RotateCcw className="mr-1 h-3 w-3" />
+          {t("reset")}
+        </Button>
+        <Button size="sm" onClick={onClose}>
+          OK
+        </Button>
+      </div>
+    </Modal>
   );
 }
