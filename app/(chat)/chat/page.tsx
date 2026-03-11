@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import {
   MessageSquare,
   X,
@@ -30,6 +30,10 @@ import {
 import { MessageContent } from "@/components/chat/message-content";
 import { type CompareResult } from "@/components/chat/compare-view";
 import { cn } from "@/lib/cn";
+import { useServers } from "@/lib/hooks/use-servers";
+import { useUnloadModel } from "@/lib/hooks/use-unload-model";
+import type { OllamaModel } from "@/lib/ollama";
+import { isChatModel } from "@/lib/model-utils";
 
 interface ChatSummary {
   id: string;
@@ -52,14 +56,6 @@ interface Message {
   latencyMs?: number;
 }
 
-interface Server {
-  id: string;
-  name: string;
-}
-
-import type { OllamaModel } from "@/lib/ollama";
-import { isChatModel } from "@/lib/model-utils";
-
 interface CompareTarget {
   serverId: string;
   model: string;
@@ -76,10 +72,10 @@ export default function ChatPage() {
   const t = useTranslations("chat");
   const tc = useTranslations("common");
   const { toast } = useToast();
+  const { servers, selectedServer, setSelectedServer } = useServers();
+  const unloadModel = useUnloadModel(tc);
   const [chats, setChats] = useState<ChatSummary[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [servers, setServers] = useState<Server[]>([]);
-  const [selectedServer, setSelectedServer] = useState("");
   const [models, setModels] = useState<OllamaModel[]>([]);
   const [connectionError, setConnectionError] = useState(false);
   const [selectedModel, setSelectedModel] = useState("");
@@ -93,14 +89,11 @@ export default function ChatPage() {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
 
-
-  // Compare mode state
   const [compareMode, setCompareMode] = useState(false);
   const [compareTargets, setCompareTargets] = useState<CompareTarget[]>([]);
   const [compareResults, setCompareResults] = useState<CompareResult[]>([]);
   const [compareStreaming, setCompareStreaming] = useState(false);
 
-  // Models cache per server for compare selectors
   const [serverModelsCache, setServerModelsCache] = useState<Record<string, OllamaModel[]>>({});
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -119,48 +112,42 @@ export default function ChatPage() {
     fetchChats();
   }, [fetchChats]);
 
-  useEffect(() => {
-    fetch("/api/servers")
-      .then((r) => r.json())
-      .then((data: Server[]) => {
-        setServers(data);
-        if (data.length > 0) setSelectedServer(data[0].id);
-      });
-  }, []);
-
-  useEffect(() => {
+  const fetchModelsForCurrentServer = useCallback(async () => {
     if (!selectedServer) return;
     setConnectionError(false);
-    fetch(`/api/admin/models?serverId=${selectedServer}`)
-      .then((r) => {
-        if (!r.ok) {
-          setConnectionError(true);
-          setModels([]);
-          return null;
-        }
-        return r.json();
-      })
-      .then((data) => {
-        if (!data) return;
-        const m = (data.models || []).filter(isChatModel);
-        setModels(m);
-        if (m.length > 0 && !selectedModel) setSelectedModel(m[0].name);
-        setServerModelsCache((prev) => ({ ...prev, [selectedServer]: m }));
-      })
-      .catch(() => {
+    try {
+      const res = await fetch(`/api/admin/models?serverId=${selectedServer}`);
+      if (!res.ok) {
         setConnectionError(true);
         setModels([]);
-      });
+        return;
+      }
+      const data = await res.json();
+      const m = (data.models || []).filter(isChatModel);
+      setModels(m);
+      if (m.length > 0 && !selectedModel) setSelectedModel(m[0].name);
+      setServerModelsCache((prev) => ({ ...prev, [selectedServer]: m }));
+    } catch {
+      setConnectionError(true);
+      setModels([]);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedServer]);
 
-  // Fetch models for compare target servers
+  useEffect(() => {
+    fetchModelsForCurrentServer();
+  }, [fetchModelsForCurrentServer]);
+
   const fetchModelsForServer = useCallback(async (serverId: string) => {
     if (serverModelsCache[serverId]) return;
-    const res = await fetch(`/api/admin/models?serverId=${serverId}`);
-    const data = await res.json();
-    const m = (data.models || []).filter(isChatModel);
-    setServerModelsCache((prev) => ({ ...prev, [serverId]: m }));
+    try {
+      const res = await fetch(`/api/admin/models?serverId=${serverId}`);
+      const data = await res.json();
+      const m = (data.models || []).filter(isChatModel);
+      setServerModelsCache((prev) => ({ ...prev, [serverId]: m }));
+    } catch {
+      // ignore
+    }
   }, [serverModelsCache]);
 
   const shouldAutoScroll = useRef(false);
@@ -171,7 +158,6 @@ export default function ChatPage() {
     shouldAutoScroll.current = false;
   }, [messages]);
 
-  // Auto-scroll during compare streaming
   useEffect(() => {
     if (compareStreaming) {
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -220,21 +206,6 @@ export default function ChatPage() {
     }
   };
 
-  const handleUnloadModel = async () => {
-    if (!selectedModel || !selectedServer) return;
-    try {
-      const res = await fetch(`/api/proxy/api/generate?serverId=${selectedServer}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: selectedModel, keep_alive: 0 }),
-      });
-      if (!res.ok) throw new Error();
-      toast(tc("unloadSuccess", { model: selectedModel }), "success");
-    } catch {
-      toast(tc("unloadError"), "error");
-    }
-  };
-
   const loadChat = async (id: string) => {
     const res = await fetch(`/api/chats/${id}`);
     const data = await res.json();
@@ -264,7 +235,7 @@ export default function ChatPage() {
       fetchChats();
       setTimeout(() => textareaRef.current?.focus(), 100);
     } catch {
-      toast("Error creating conversation", "error");
+      toast(t("createError"), "error");
     }
   };
 
@@ -279,10 +250,8 @@ export default function ChatPage() {
     }
   };
 
-  // Toggle compare mode
   const toggleCompareMode = () => {
     if (!compareMode) {
-      // Initialize with 2 targets using current server/model
       setCompareTargets([
         { serverId: selectedServer, model: selectedModel },
         { serverId: selectedServer, model: models.length > 1 ? models[1].name : models[0]?.name || "" },
@@ -314,16 +283,10 @@ export default function ChatPage() {
       updated[idx] = { ...updated[idx], [field]: value };
       return updated;
     });
-    if (field === "serverId") {
-      fetchModelsForServer(value);
-    }
+    if (field === "serverId") fetchModelsForServer(value);
   };
 
-  // Regular single-model streaming
-  const handleStream = async (
-    chatId: string,
-    body: Record<string, unknown>
-  ) => {
+  const handleStream = async (chatId: string, body: Record<string, unknown>) => {
     setStreaming(true);
     setStreamingContent("");
     abortRef.current = new AbortController();
@@ -347,11 +310,9 @@ export default function ChatPage() {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
         buffer = lines.pop() || "";
-
         for (const line of lines) {
           if (!line.startsWith("data: ")) continue;
           try {
@@ -365,40 +326,23 @@ export default function ChatPage() {
               }
             }
             if (json.done && json.promptTokens !== undefined) {
-              meta = {
-                promptTokens: json.promptTokens,
-                completionTokens: json.completionTokens,
-                latencyMs: json.latencyMs,
-              };
+              meta = { promptTokens: json.promptTokens, completionTokens: json.completionTokens, latencyMs: json.latencyMs };
             }
-          } catch {
-            // skip
-          }
+          } catch { /* skip */ }
         }
       }
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `assistant-${Date.now()}`,
-          role: "assistant",
-          content: fullContent,
-          ...meta,
-        },
-      ]);
+      setMessages((prev) => [...prev, { id: `assistant-${Date.now()}`, role: "assistant", content: fullContent, ...meta }]);
       setStreamingContent("");
       fetchChats();
     } catch (err) {
-      if (err instanceof DOMException && err.name === "AbortError") {
-        setStreamingContent("");
-      }
+      if (err instanceof DOMException && err.name === "AbortError") setStreamingContent("");
     } finally {
       setStreaming(false);
       abortRef.current = null;
     }
   };
 
-  // Compare mode streaming
   const handleCompareStream = async (chatId: string, content: string) => {
     setCompareStreaming(true);
     setCompareResults(compareTargets.map((t) => emptyResult(t.model)));
@@ -421,52 +365,26 @@ export default function ChatPage() {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n");
         buffer = lines.pop() || "";
-
         for (const line of lines) {
           if (!line.startsWith("data: ")) continue;
           try {
             const json = JSON.parse(line.slice(6));
             if (json.allDone) continue;
-
             const sideIdx = parseInt(json.side);
-
             if (json.error) {
-              setCompareResults((prev) => {
-                const updated = [...prev];
-                updated[sideIdx] = { ...updated[sideIdx], error: json.error, streaming: false, done: true };
-                return updated;
-              });
+              setCompareResults((prev) => { const u = [...prev]; u[sideIdx] = { ...u[sideIdx], error: json.error, streaming: false, done: true }; return u; });
             } else if (json.token) {
-              setCompareResults((prev) => {
-                const updated = [...prev];
-                updated[sideIdx] = { ...updated[sideIdx], content: updated[sideIdx].content + json.token };
-                return updated;
-              });
+              setCompareResults((prev) => { const u = [...prev]; u[sideIdx] = { ...u[sideIdx], content: u[sideIdx].content + json.token }; return u; });
             } else if (json.done) {
-              setCompareResults((prev) => {
-                const updated = [...prev];
-                updated[sideIdx] = {
-                  ...updated[sideIdx],
-                  streaming: false,
-                  done: true,
-                  promptTokens: json.promptTokens,
-                  completionTokens: json.completionTokens,
-                  latencyMs: json.latencyMs,
-                };
-                return updated;
-              });
+              setCompareResults((prev) => { const u = [...prev]; u[sideIdx] = { ...u[sideIdx], streaming: false, done: true, promptTokens: json.promptTokens, completionTokens: json.completionTokens, latencyMs: json.latencyMs }; return u; });
             }
-          } catch {
-            // skip
-          }
+          } catch { /* skip */ }
         }
       }
 
-      // Reload messages from server (they were persisted by the API)
       const chatRes = await fetch(`/api/chats/${chatId}`);
       const chatData = await chatRes.json();
       setMessages(chatData.messages || []);
@@ -518,18 +436,13 @@ export default function ChatPage() {
           shouldAutoScroll.current = true;
           await handleCompareStream(chat.id, msgContent);
         } else {
-          const userMessage: Message = {
-            id: `temp-${Date.now()}`,
-            role: "user",
-            content: msgContent,
-          };
           shouldAutoScroll.current = true;
-          setMessages([userMessage]);
+          setMessages([{ id: `temp-${Date.now()}`, role: "user", content: msgContent }]);
           await handleStream(chat.id, { content: msgContent });
         }
         return;
       } catch {
-        toast("Error creating conversation", "error");
+        toast(t("createError"), "error");
         return;
       }
     }
@@ -542,53 +455,33 @@ export default function ChatPage() {
       shouldAutoScroll.current = true;
       await handleCompareStream(currentChatId, msgContent);
     } else {
-      const userMessage: Message = {
-        id: `temp-${Date.now()}`,
-        role: "user",
-        content: msgContent,
-      };
       shouldAutoScroll.current = true;
-      setMessages((prev) => [...prev, userMessage]);
+      setMessages((prev) => [...prev, { id: `temp-${Date.now()}`, role: "user", content: msgContent }]);
       await handleStream(currentChatId, { content: msgContent });
     }
   };
 
   const regenerateResponse = async () => {
     if (!currentChatId || streaming) return;
-
-    const lastAssistantIdx = [...messages]
-      .reverse()
-      .findIndex((m) => m.role === "assistant");
+    const lastAssistantIdx = [...messages].reverse().findIndex((m) => m.role === "assistant");
     if (lastAssistantIdx < 0) return;
-
     const idx = messages.length - 1 - lastAssistantIdx;
     setMessages((prev) => prev.filter((_, i) => i !== idx));
-
     await handleStream(currentChatId, { regenerate: true });
   };
 
   const editMessage = async (messageId: string) => {
     if (!currentChatId || streaming || !editContent.trim()) return;
-
     const editIdx = messages.findIndex((m) => m.id === messageId);
     if (editIdx < 0) return;
-
-    const userMessage: Message = {
-      id: `temp-${Date.now()}`,
-      role: "user",
-      content: editContent,
-    };
-    setMessages(messages.slice(0, editIdx).concat(userMessage));
+    setMessages(messages.slice(0, editIdx).concat({ id: `temp-${Date.now()}`, role: "user", content: editContent }));
     setEditingMessageId(null);
     const content = editContent;
     setEditContent("");
-
     await handleStream(currentChatId, { content, editMessageId: messageId });
   };
 
-  const stopGeneration = () => {
-    abortRef.current?.abort();
-  };
+  const stopGeneration = () => abortRef.current?.abort();
 
   const deleteChat = async (id: string) => {
     if (!window.confirm(t("confirmDelete"))) return;
@@ -600,9 +493,9 @@ export default function ChatPage() {
         setCompareResults([]);
       }
       fetchChats();
-      toast("Conversation deleted", "success");
+      toast(t("deleteSuccess"), "success");
     } catch {
-      toast("Error deleting conversation", "error");
+      toast(t("deleteError"), "error");
     }
   };
 
@@ -614,20 +507,15 @@ export default function ChatPage() {
   const isStreaming = streaming || compareStreaming;
   const canSend = input.trim().length > 0 && !isStreaming && (!!currentChatId || (!!selectedServer && !!selectedModel));
 
-  // Group messages by compareGroup for rendering
-  const groupedMessages = (() => {
+  const groupedMessages = useMemo(() => {
     const groups: Array<{ type: "single"; message: Message } | { type: "compare"; userMessage: Message; responses: Message[] }> = [];
     const processedIds = new Set<string>();
 
-    for (let i = 0; i < messages.length; i++) {
-      const msg = messages[i];
+    for (const msg of messages) {
       if (processedIds.has(msg.id)) continue;
 
       if (msg.compareGroup && msg.role === "user") {
-        // Find ALL assistant messages with same compareGroup (may not be consecutive)
-        const responses = messages.filter(
-          (m) => m.compareGroup === msg.compareGroup && m.role === "assistant"
-        );
+        const responses = messages.filter((m) => m.compareGroup === msg.compareGroup && m.role === "assistant");
         responses.forEach((r) => processedIds.add(r.id));
         processedIds.add(msg.id);
         groups.push({ type: "compare", userMessage: msg, responses });
@@ -637,13 +525,9 @@ export default function ChatPage() {
       }
     }
     return groups;
-  })();
+  }, [messages]);
 
-  // Render a single message group (user or assistant bubble)
-  const renderMessageGroup = (
-    group: (typeof groupedMessages)[number],
-    groupIdx: number
-  ) => {
+  const renderMessageGroup = (group: (typeof groupedMessages)[number], groupIdx: number) => {
     if (group.type === "compare") {
       const cols = group.responses.length === 1 ? "grid-cols-1" : group.responses.length === 2 ? "grid-cols-2" : "grid-cols-3";
       return (
@@ -684,48 +568,25 @@ export default function ChatPage() {
           <div className="flex justify-end">
             <div className="flex items-start gap-1">
               {!isStreaming && editingMessageId !== msg.id && (
-                <button
-                  onClick={() => {
-                    setEditingMessageId(msg.id);
-                    setEditContent(msg.content);
-                  }}
+                <button onClick={() => { setEditingMessageId(msg.id); setEditContent(msg.content); }}
                   className="mt-2 rounded p-1 text-[hsl(var(--muted-foreground))] opacity-0 transition-opacity hover:bg-[hsl(var(--accent))] group-hover:opacity-100"
-                  aria-label={t("editMessage")}
-                >
+                  aria-label={t("editMessage")}>
                   <Pencil className="h-3.5 w-3.5" />
                 </button>
               )}
               <div className="max-w-[85%] rounded-2xl bg-[hsl(var(--primary))] px-5 py-3.5 text-[hsl(var(--primary-foreground))]">
                 {editingMessageId === msg.id ? (
                   <div className="space-y-2">
-                    <textarea
-                      value={editContent}
-                      onChange={(e) => setEditContent(e.target.value)}
-                      className="w-full rounded-lg border-none bg-[hsl(var(--background))] p-2 text-sm text-[hsl(var(--foreground))] focus:outline-none"
-                      rows={3}
-                      autoFocus
-                    />
+                    <textarea value={editContent} onChange={(e) => setEditContent(e.target.value)}
+                      className="w-full rounded-lg border-none bg-[hsl(var(--background))] p-2 text-sm text-[hsl(var(--foreground))] focus:outline-none" rows={3} autoFocus />
                     <div className="flex gap-1">
-                      <Button
-                        size="sm"
-                        onClick={() => editMessage(msg.id)}
-                      >
-                        {t("editSend")}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setEditingMessageId(null)}
-                        className="text-[hsl(var(--primary-foreground))] hover:text-[hsl(var(--primary-foreground))]"
-                      >
-                        {t("editCancel")}
-                      </Button>
+                      <Button size="sm" onClick={() => editMessage(msg.id)}>{t("editSend")}</Button>
+                      <Button variant="ghost" size="sm" onClick={() => setEditingMessageId(null)}
+                        className="text-[hsl(var(--primary-foreground))] hover:text-[hsl(var(--primary-foreground))]">{t("editCancel")}</Button>
                     </div>
                   </div>
                 ) : (
-                  <div className="whitespace-pre-wrap text-sm">
-                    {msg.content}
-                  </div>
+                  <div className="whitespace-pre-wrap text-sm">{msg.content}</div>
                 )}
               </div>
             </div>
@@ -737,17 +598,14 @@ export default function ChatPage() {
                 <MessageContent content={msg.content} />
                 {msg.latencyMs && (
                   <div className="mt-2 text-[11px] text-[hsl(var(--muted-foreground))]">
-                    {(msg.promptTokens || 0) + (msg.completionTokens || 0)}{" "}
-                    {t("tokens")} · {msg.latencyMs}ms
+                    {(msg.promptTokens || 0) + (msg.completionTokens || 0)} {t("tokens")} · {msg.latencyMs}ms
                   </div>
                 )}
               </div>
               {!isStreaming && (
-                <button
-                  onClick={regenerateResponse}
+                <button onClick={regenerateResponse}
                   className="mt-2 rounded p-1 text-[hsl(var(--muted-foreground))] opacity-0 transition-opacity hover:bg-[hsl(var(--accent))] group-hover:opacity-100"
-                  aria-label={t("regenerate")}
-                >
+                  aria-label={t("regenerate")}>
                   <RefreshCw className="h-3.5 w-3.5" />
                 </button>
               )}
@@ -763,58 +621,48 @@ export default function ChatPage() {
       {/* Chat sidebar */}
       <div className="flex w-64 flex-col border-r bg-[hsl(var(--sidebar))] text-[hsl(var(--sidebar-foreground))]">
         <div className="p-3">
-          <button
-            onClick={createNewChat}
-            disabled={!selectedServer || !selectedModel}
-            className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-[hsl(var(--border))] px-3 py-2.5 text-sm font-medium transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] disabled:pointer-events-none disabled:opacity-50"
-          >
-            <Plus className="h-4 w-4" />
-            {t("newConversation")}
+          <button onClick={createNewChat} disabled={!selectedServer || !selectedModel}
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-[hsl(var(--border))] px-3 py-2.5 text-sm font-medium transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))] disabled:pointer-events-none disabled:opacity-50">
+            <Plus className="h-4 w-4" />{t("newConversation")}
           </button>
         </div>
         <div className="px-3 pb-2">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[hsl(var(--muted-foreground))]" />
-            <input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t("searchConversations")}
-              className="h-8 w-full rounded-md border bg-transparent pl-8 pr-3 text-xs transition-colors placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]"
-            />
+            <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t("searchConversations")}
+              className="h-8 w-full rounded-md border bg-transparent pl-8 pr-3 text-xs transition-colors placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]" />
           </div>
         </div>
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto" role="list">
           {chats.map((chat) => (
-            <div
+            <button
               key={chat.id}
+              type="button"
               onClick={() => loadChat(chat.id)}
               className={cn(
-                "group flex cursor-pointer items-center justify-between px-3 py-2.5 text-sm transition-colors hover:bg-[hsl(var(--accent))]",
+                "group flex w-full cursor-pointer items-center justify-between px-3 py-2.5 text-left text-sm transition-colors hover:bg-[hsl(var(--accent))]",
                 currentChatId === chat.id && "bg-[hsl(var(--accent))]"
               )}
+              role="listitem"
             >
               <div className="min-w-0 flex-1">
                 <div className="truncate font-medium">{chat.title}</div>
-                <div className="truncate text-xs text-[hsl(var(--muted-foreground))]">
-                  {chat.model}
-                </div>
+                <div className="truncate text-xs text-[hsl(var(--muted-foreground))]">{chat.model}</div>
               </div>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  deleteChat(chat.id);
-                }}
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => { e.stopPropagation(); deleteChat(chat.id); }}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); deleteChat(chat.id); } }}
                 className="ml-2 hidden rounded p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))] group-hover:block"
-                aria-label="Delete conversation"
+                aria-label={t("deleteConversation")}
               >
                 <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
+              </span>
+            </button>
           ))}
           {chats.length === 0 && (
-            <div className="p-4 text-center text-xs text-[hsl(var(--muted-foreground))]">
-              {t("emptyTitle")}
-            </div>
+            <div className="p-4 text-center text-xs text-[hsl(var(--muted-foreground))]">{t("emptyTitle")}</div>
           )}
         </div>
       </div>
@@ -824,80 +672,38 @@ export default function ChatPage() {
         {/* Top bar */}
         <div className="flex items-center gap-3 border-b px-4 py-2">
           <div className="relative">
-            <select
-              value={selectedServer}
-              onChange={(e) => handleServerChange(e.target.value)}
-              aria-label={t("selectServer")}
-              className="h-8 appearance-none rounded-md border bg-transparent pl-3 pr-8 text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]"
-            >
-              {servers.map((s) => (
-                <option key={s.id} value={s.id} className="bg-[hsl(var(--background))] text-[hsl(var(--foreground))]">
-                  {s.name}
-                </option>
-              ))}
+            <select value={selectedServer} onChange={(e) => handleServerChange(e.target.value)} aria-label={t("selectServer")}
+              className="h-8 appearance-none rounded-md border bg-transparent pl-3 pr-8 text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]">
+              {servers.map((s) => <option key={s.id} value={s.id} className="bg-[hsl(var(--background))] text-[hsl(var(--foreground))]">{s.name}</option>)}
             </select>
             <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[hsl(var(--muted-foreground))]" />
           </div>
           <div className="relative">
-            <select
-              value={selectedModel}
-              onChange={(e) => handleModelChange(e.target.value)}
-              aria-label={t("selectModel")}
-              className="h-8 appearance-none rounded-md border bg-transparent pl-3 pr-8 text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]"
-            >
-              {models.map((m) => (
-                <option key={m.name} value={m.name} className="bg-[hsl(var(--background))] text-[hsl(var(--foreground))]">
-                  {m.name}
-                </option>
-              ))}
+            <select value={selectedModel} onChange={(e) => handleModelChange(e.target.value)} aria-label={t("selectModel")}
+              className="h-8 appearance-none rounded-md border bg-transparent pl-3 pr-8 text-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]">
+              {models.map((m) => <option key={m.name} value={m.name} className="bg-[hsl(var(--background))] text-[hsl(var(--foreground))]">{m.name}</option>)}
             </select>
             <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[hsl(var(--muted-foreground))]" />
           </div>
-          <button
-            onClick={handleUnloadModel}
-            disabled={!selectedModel || isStreaming}
-            title={tc("unload")}
-            className="flex h-8 w-8 items-center justify-center rounded-md border text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))] disabled:opacity-50"
-          >
+          <button onClick={() => unloadModel(selectedModel, selectedServer)} disabled={!selectedModel || isStreaming} title={tc("unload")}
+            className="flex h-8 w-8 items-center justify-center rounded-md border text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))] disabled:opacity-50">
             <Square className="h-3.5 w-3.5" />
           </button>
 
-          {/* Compare mode toggle */}
-          <button
-            onClick={toggleCompareMode}
-            disabled={isStreaming}
-            className={cn(
-              "flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors",
-              compareMode
-                ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]"
-                : "hover:bg-[hsl(var(--accent))]",
-              isStreaming && "opacity-50"
-            )}
-            title={t("compareMode")}
-          >
-            <GitCompareArrows className="h-3.5 w-3.5" />
-            {t("compareMode")}
+          <button onClick={toggleCompareMode} disabled={isStreaming}
+            className={cn("flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors",
+              compareMode ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]" : "hover:bg-[hsl(var(--accent))]",
+              isStreaming && "opacity-50")} title={t("compareMode")}>
+            <GitCompareArrows className="h-3.5 w-3.5" />{t("compareMode")}
           </button>
 
           {currentChatId && !compareMode && (
             <div className="ml-auto flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => exportChat("markdown")}
-                title={t("exportMarkdown")}
-              >
-                <Download className="h-4 w-4" />
-                <span className="ml-1 text-xs">MD</span>
+              <Button variant="ghost" size="sm" onClick={() => exportChat("markdown")} title={t("exportMarkdown")}>
+                <Download className="h-4 w-4" /><span className="ml-1 text-xs">MD</span>
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => exportChat("json")}
-                title={t("exportJson")}
-              >
-                <Download className="h-4 w-4" />
-                <span className="ml-1 text-xs">JSON</span>
+              <Button variant="ghost" size="sm" onClick={() => exportChat("json")} title={t("exportJson")}>
+                <Download className="h-4 w-4" /><span className="ml-1 text-xs">JSON</span>
               </Button>
             </div>
           )}
@@ -910,42 +716,23 @@ export default function ChatPage() {
               const targetModels = serverModelsCache[target.serverId] || models;
               return (
                 <div key={idx} className="flex items-center gap-1.5">
-                  <span className="text-xs font-medium text-[hsl(var(--muted-foreground))]">
-                    {idx + 1}.
-                  </span>
+                  <span className="text-xs font-medium text-[hsl(var(--muted-foreground))]">{idx + 1}.</span>
                   <div className="relative">
-                    <select
-                      value={target.serverId}
-                      onChange={(e) => updateCompareTarget(idx, "serverId", e.target.value)}
-                      className="h-7 appearance-none rounded border bg-transparent pl-2 pr-6 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]"
-                    >
-                      {servers.map((s) => (
-                        <option key={s.id} value={s.id} className="bg-[hsl(var(--background))]">
-                          {s.name}
-                        </option>
-                      ))}
+                    <select value={target.serverId} onChange={(e) => updateCompareTarget(idx, "serverId", e.target.value)}
+                      className="h-7 appearance-none rounded border bg-transparent pl-2 pr-6 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]">
+                      {servers.map((s) => <option key={s.id} value={s.id} className="bg-[hsl(var(--background))]">{s.name}</option>)}
                     </select>
                     <ChevronDown className="pointer-events-none absolute right-1 top-1/2 h-3 w-3 -translate-y-1/2 text-[hsl(var(--muted-foreground))]" />
                   </div>
                   <div className="relative">
-                    <select
-                      value={target.model}
-                      onChange={(e) => updateCompareTarget(idx, "model", e.target.value)}
-                      className="h-7 appearance-none rounded border bg-transparent pl-2 pr-6 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]"
-                    >
-                      {targetModels.map((m) => (
-                        <option key={m.name} value={m.name} className="bg-[hsl(var(--background))]">
-                          {m.name}
-                        </option>
-                      ))}
+                    <select value={target.model} onChange={(e) => updateCompareTarget(idx, "model", e.target.value)}
+                      className="h-7 appearance-none rounded border bg-transparent pl-2 pr-6 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]">
+                      {targetModels.map((m) => <option key={m.name} value={m.name} className="bg-[hsl(var(--background))]">{m.name}</option>)}
                     </select>
                     <ChevronDown className="pointer-events-none absolute right-1 top-1/2 h-3 w-3 -translate-y-1/2 text-[hsl(var(--muted-foreground))]" />
                   </div>
                   {compareTargets.length > 2 && (
-                    <button
-                      onClick={() => removeCompareTarget(idx)}
-                      className="rounded p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))]"
-                    >
+                    <button onClick={() => removeCompareTarget(idx)} className="rounded p-0.5 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--destructive))]">
                       <MinusCircle className="h-3.5 w-3.5" />
                     </button>
                   )}
@@ -953,79 +740,37 @@ export default function ChatPage() {
               );
             })}
             {compareTargets.length < 3 && (
-              <button
-                onClick={addCompareTarget}
-                className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))]"
-              >
-                <PlusCircle className="h-3.5 w-3.5" />
-                {t("addModel")}
+              <button onClick={addCompareTarget}
+                className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))]">
+                <PlusCircle className="h-3.5 w-3.5" />{t("addModel")}
               </button>
             )}
           </div>
         )}
 
         <div className="flex justify-end px-4">
-          <button
-            onClick={() => setShowParameters(true)}
-            className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))]"
-          >
+          <button onClick={() => setShowParameters(true)}
+            className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--foreground))]">
             <Settings2 className="h-3.5 w-3.5" />
           </button>
         </div>
-        <ChatParametersModal
-          open={showParameters}
-          onClose={() => setShowParameters(false)}
-          parameters={chatParameters}
-          onChange={currentChatId ? updateParameters : setChatParameters}
-        />
+        <ChatParametersModal open={showParameters} onClose={() => setShowParameters(false)} parameters={chatParameters} onChange={currentChatId ? updateParameters : setChatParameters} />
 
         {/* Messages area */}
         {connectionError && !currentChatId && messages.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 p-4">
-            <EmptyState
-              icon={AlertTriangle}
-              title={tc("connectionError")}
-              description={tc("connectionErrorDescription")}
-              action={
-                <Button onClick={() => {
-                  setConnectionError(false);
-                  fetch(`/api/admin/models?serverId=${selectedServer}`)
-                    .then((r) => {
-                      if (!r.ok) { setConnectionError(true); setModels([]); return null; }
-                      return r.json();
-                    })
-                    .then((data) => {
-                      if (!data) return;
-                      const m = (data.models || []).filter(isChatModel);
-                      setModels(m);
-                      if (m.length > 0) setSelectedModel(m[0].name);
-                    })
-                    .catch(() => { setConnectionError(true); setModels([]); });
-                }}>{tc("retry")}</Button>
-              }
-            />
+            <EmptyState icon={AlertTriangle} title={tc("connectionError")} description={tc("connectionErrorDescription")}
+              action={<Button onClick={fetchModelsForCurrentServer}>{tc("retry")}</Button>} />
           </div>
         ) : !currentChatId && messages.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 p-4">
-            <EmptyState
-              icon={MessageSquare}
-              title={t("emptyTitle")}
-              description={t("emptyDescription")}
-            />
+            <EmptyState icon={MessageSquare} title={t("emptyTitle")} description={t("emptyDescription")} />
           </div>
         ) : (
-          <div
-            ref={messagesContainerRef}
-            className="flex-1 overflow-auto p-4"
-            aria-live="polite"
-            aria-relevant="additions"
-          >
+          <div ref={messagesContainerRef} className="flex-1 overflow-auto p-4" aria-live="polite" aria-relevant="additions">
             <div className="mx-auto max-w-5xl space-y-6">
-              {groupedMessages.map((group, groupIdx) =>
-                renderMessageGroup(group, groupIdx)
-              )}
+              {groupedMessages.map((group, groupIdx) => renderMessageGroup(group, groupIdx))}
 
-              {/* Live compare streaming inline */}
               {compareResults.length > 0 && (
                 <div className="space-y-3">
                   <div className="flex justify-end">
@@ -1061,17 +806,11 @@ export default function ChatPage() {
               )}
 
               {streaming && !streamingContent && (
-                <div className="flex justify-start">
-                  <div className="rounded-2xl bg-[hsl(var(--muted))] px-4 py-3">
-                    <TypingIndicator />
-                  </div>
-                </div>
+                <div className="flex justify-start"><div className="rounded-2xl bg-[hsl(var(--muted))] px-4 py-3"><TypingIndicator /></div></div>
               )}
               {streamingContent && (
                 <div className="flex justify-start">
-                  <div className="max-w-[80%] rounded-2xl bg-[hsl(var(--muted))] px-4 py-2.5">
-                    <MessageContent content={streamingContent} />
-                  </div>
+                  <div className="max-w-[80%] rounded-2xl bg-[hsl(var(--muted))] px-4 py-2.5"><MessageContent content={streamingContent} /></div>
                 </div>
               )}
 
@@ -1084,44 +823,22 @@ export default function ChatPage() {
         <div className="bg-[hsl(var(--background))] px-4 py-3">
           <div className="mx-auto flex max-w-5xl items-end gap-2">
             <div className="relative flex-1">
-              <textarea
-                ref={textareaRef}
-                value={input}
-                onChange={(e) => {
-                  setInput(e.target.value);
-                  autoResizeTextarea();
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                  }
-                }}
-                placeholder={compareMode ? t("comparePlaceholder") : t("typeMessage")}
-                rows={1}
-                disabled={isStreaming}
-                className="w-full resize-none overflow-y-hidden rounded-xl border bg-[hsl(var(--card))] py-3 pl-12 pr-12 text-sm shadow-sm transition-colors placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] disabled:opacity-50"
-              />
+              <textarea ref={textareaRef} value={input}
+                onChange={(e) => { setInput(e.target.value); autoResizeTextarea(); }}
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+                placeholder={compareMode ? t("comparePlaceholder") : t("typeMessage")} rows={1} disabled={isStreaming}
+                className="w-full resize-none overflow-y-hidden rounded-xl border bg-[hsl(var(--card))] py-3 pl-12 pr-12 text-sm shadow-sm transition-colors placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] disabled:opacity-50" />
               {isStreaming ? (
-                <button
-                  onClick={stopGeneration}
+                <button onClick={stopGeneration}
                   className="absolute right-0 top-0 mr-[7px] mt-[7px] rounded-lg bg-[hsl(var(--destructive))] p-1.5 text-[hsl(var(--destructive-foreground))] transition-colors hover:opacity-90"
-                  aria-label={t("stopGeneration")}
-                >
+                  aria-label={t("stopGeneration")}>
                   <Square className="h-4 w-4" />
                 </button>
               ) : (
-                <button
-                  onClick={sendMessage}
-                  disabled={!canSend}
+                <button onClick={sendMessage} disabled={!canSend}
                   className="absolute right-0 top-0 mr-[7px] mt-[7px] rounded-lg bg-[hsl(var(--primary))] p-1.5 text-[hsl(var(--primary-foreground))] transition-colors hover:opacity-90 disabled:opacity-30"
-                  aria-label={compareMode ? t("compareMode") : t("sendMessage")}
-                >
-                  {compareMode ? (
-                    <GitCompareArrows className="h-4 w-4" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
+                  aria-label={compareMode ? t("compareMode") : t("sendMessage")}>
+                  {compareMode ? <GitCompareArrows className="h-4 w-4" /> : <Send className="h-4 w-4" />}
                 </button>
               )}
             </div>
