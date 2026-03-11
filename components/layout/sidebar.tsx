@@ -75,13 +75,13 @@ const HIDDEN_ROUTES = ["/setup", "/auth/signin"];
 export function Sidebar() {
   const pathname = usePathname();
   const t = useTranslations("sidebar");
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem(COLLAPSED_KEY) === "true";
+    }
+    return false;
+  });
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  useEffect(() => {
-    const stored = localStorage.getItem(COLLAPSED_KEY);
-    if (stored === "true") setCollapsed(true);
-  }, []);
 
   const toggleCollapsed = useCallback(() => {
     setCollapsed((prev) => {
@@ -91,7 +91,7 @@ export function Sidebar() {
   }, []);
 
   useEffect(() => {
-    setMobileOpen(false);
+    queueMicrotask(() => setMobileOpen(false));
   }, [pathname]);
 
   useEffect(() => {

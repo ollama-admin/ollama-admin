@@ -74,6 +74,10 @@
     "exportMarkdown": "Exportar como Markdown",
     "exportJson": "Exportar como JSON",
     "confirmDelete": "¿Estás seguro de que quieres eliminar esta conversación?",
+    "createError": "Error al crear conversación",
+    "deleteSuccess": "Conversación eliminada",
+    "deleteError": "Error al eliminar conversación",
+    "deleteConversation": "Eliminar conversación",
     "attachImage": "Adjuntar imagen",
     "compareMode": "Comparar",
     "comparePlaceholder": "Escribe un prompt para comparar modelos...",
@@ -178,7 +182,14 @@
       "unload": "Descargar",
       "unloadConfirm": "¿Descargar \"{model}\" de la memoria? Esto detendrá cualquier inferencia en curso y liberará VRAM.",
       "unloadSuccess": "Modelo \"{model}\" descargado",
-      "unloadError": "Error al descargar el modelo"
+      "unloadError": "Error al descargar el modelo",
+      "loaded": "cargado",
+      "deleteTitle": "Eliminar modelo",
+      "deleteDescription": "¿Estás seguro de que quieres eliminar \"{model}\"? Esta acción no se puede deshacer.",
+      "deleteSuccess": "Modelo \"{model}\" eliminado",
+      "deleteError": "Error al eliminar modelo",
+      "copyCode": "Copiar código",
+      "copied": "Copiado"
     },
     "servers": {
       "title": "Servidores",

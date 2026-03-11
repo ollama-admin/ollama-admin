@@ -57,7 +57,7 @@ describe("GET /api/chats/[id]/export", () => {
     const req = new NextRequest(
       "http://localhost/api/chats/chat_1/export?format=json"
     );
-    const res = await GET(req, { params: { id: "chat_1" } });
+    const res = await GET(req, { params: Promise.resolve({ id: "chat_1" }) });
 
     expect(res.headers.get("Content-Type")).toContain("application/json");
     expect(res.headers.get("Content-Disposition")).toContain("attachment");
@@ -78,7 +78,7 @@ describe("GET /api/chats/[id]/export", () => {
     const req = new NextRequest(
       "http://localhost/api/chats/chat_1/export?format=markdown"
     );
-    const res = await GET(req, { params: { id: "chat_1" } });
+    const res = await GET(req, { params: Promise.resolve({ id: "chat_1" }) });
 
     expect(res.headers.get("Content-Type")).toContain("text/markdown");
     const text = await res.text();
@@ -99,7 +99,7 @@ describe("GET /api/chats/[id]/export", () => {
     const req = new NextRequest(
       "http://localhost/api/chats/nope/export?format=json"
     );
-    const res = await GET(req, { params: { id: "nope" } });
+    const res = await GET(req, { params: Promise.resolve({ id: "nope" }) });
 
     expect(res.status).toBe(404);
   });
@@ -111,7 +111,7 @@ describe("GET /api/chats/[id]/export", () => {
 
     const { GET } = await import("@/app/api/chats/[id]/export/route");
     const req = new NextRequest("http://localhost/api/chats/chat_1/export");
-    const res = await GET(req, { params: { id: "chat_1" } });
+    const res = await GET(req, { params: Promise.resolve({ id: "chat_1" }) });
 
     expect(res.headers.get("Content-Type")).toContain("application/json");
   });

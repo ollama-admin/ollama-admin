@@ -109,7 +109,7 @@ describe("DELETE /api/servers/[id]", () => {
     const req = new Request("http://localhost/api/servers/srv_1", {
       method: "DELETE",
     });
-    const res = await DELETE(req as any, { params: { id: "srv_1" } });
+    const res = await DELETE(req as any, { params: Promise.resolve({ id: "srv_1" }) });
 
     expect(res.status).toBe(200);
   });
@@ -123,7 +123,7 @@ describe("DELETE /api/servers/[id]", () => {
     const req = new Request("http://localhost/api/servers/nope", {
       method: "DELETE",
     });
-    const res = await DELETE(req as any, { params: { id: "nope" } });
+    const res = await DELETE(req as any, { params: Promise.resolve({ id: "nope" }) });
 
     expect(res.status).toBe(404);
   });

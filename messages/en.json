@@ -74,6 +74,10 @@
     "exportMarkdown": "Export as Markdown",
     "exportJson": "Export as JSON",
     "confirmDelete": "Are you sure you want to delete this conversation?",
+    "createError": "Error creating conversation",
+    "deleteSuccess": "Conversation deleted",
+    "deleteError": "Error deleting conversation",
+    "deleteConversation": "Delete conversation",
     "attachImage": "Attach image",
     "compareMode": "Compare",
     "comparePlaceholder": "Type a prompt to compare models...",
@@ -178,7 +182,14 @@
       "unload": "Unload",
       "unloadConfirm": "Unload \"{model}\" from memory? This will stop any running inference and free VRAM.",
       "unloadSuccess": "Model \"{model}\" unloaded",
-      "unloadError": "Failed to unload model"
+      "unloadError": "Failed to unload model",
+      "loaded": "loaded",
+      "deleteTitle": "Delete model",
+      "deleteDescription": "Are you sure you want to delete \"{model}\"? This action cannot be undone.",
+      "deleteSuccess": "Model \"{model}\" deleted",
+      "deleteError": "Error deleting model",
+      "copyCode": "Copy code",
+      "copied": "Copied"
     },
     "servers": {
       "title": "Servers",

@@ -107,7 +107,7 @@ describe("PUT /api/presets/[id]", () => {
       method: "PUT",
       body: JSON.stringify({ name: "Creative", temperature: 0.5 }),
     });
-    const res = await PUT(req as any, { params: { id: "preset_1" } });
+    const res = await PUT(req as any, { params: Promise.resolve({ id: "preset_1" }) });
 
     expect(res.status).toBe(200);
     const data = await res.json();
@@ -124,7 +124,7 @@ describe("PUT /api/presets/[id]", () => {
       method: "PUT",
       body: JSON.stringify({ name: "X" }),
     });
-    const res = await PUT(req as any, { params: { id: "nope" } });
+    const res = await PUT(req as any, { params: Promise.resolve({ id: "nope" }) });
 
     expect(res.status).toBe(404);
   });
@@ -140,7 +140,7 @@ describe("DELETE /api/presets/[id]", () => {
     const req = new Request("http://localhost/api/presets/preset_1", {
       method: "DELETE",
     });
-    const res = await DELETE(req as any, { params: { id: "preset_1" } });
+    const res = await DELETE(req as any, { params: Promise.resolve({ id: "preset_1" }) });
 
     expect(res.status).toBe(200);
   });
@@ -154,7 +154,7 @@ describe("DELETE /api/presets/[id]", () => {
     const req = new Request("http://localhost/api/presets/nope", {
       method: "DELETE",
     });
-    const res = await DELETE(req as any, { params: { id: "nope" } });
+    const res = await DELETE(req as any, { params: Promise.resolve({ id: "nope" }) });
 
     expect(res.status).toBe(404);
   });

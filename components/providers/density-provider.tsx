@@ -54,14 +54,13 @@ const DENSITY_VARS: Record<Density, Record<string, string>> = {
 };
 
 export function DensityProvider({ children }: { children: React.ReactNode }) {
-  const [density, setDensityState] = useState<Density>("normal");
-
-  useEffect(() => {
-    const stored = localStorage.getItem(DENSITY_KEY) as Density | null;
-    if (stored && DENSITY_VARS[stored]) {
-      setDensityState(stored);
+  const [density, setDensityState] = useState<Density>(() => {
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem(DENSITY_KEY) as Density | null;
+      if (stored && DENSITY_VARS[stored]) return stored;
     }
-  }, []);
+    return "normal";
+  });
 
   useEffect(() => {
     const vars = DENSITY_VARS[density];

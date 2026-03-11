@@ -3,10 +3,11 @@ import { prisma } from "@/lib/prisma";
 
 export async function DELETE(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
-    await prisma.preset.delete({ where: { id: params.id } });
+    await prisma.preset.delete({ where: { id: id } });
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ error: "Preset not found" }, { status: 404 });
@@ -15,13 +16,14 @@ export async function DELETE(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const data = await req.json();
 
   try {
     const preset = await prisma.preset.update({
-      where: { id: params.id },
+      where: { id: id },
       data: {
         name: data.name?.trim(),
         temperature: data.temperature ?? null,

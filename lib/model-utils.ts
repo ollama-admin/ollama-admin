@@ -49,9 +49,7 @@ function hasCatalogCapability(name: string, cap: "vision" | "embedding"): boolea
 }
 
 export function isChatModel(model: OllamaModel): boolean {
-  if (isEmbeddingModel(model)) return false;
-  if (isOcrModel(model)) return false;
-  return true;
+  return !isEmbeddingModel(model) && !isOcrModel(model);
 }
 
 export function isOcrModel(model: OllamaModel): boolean {

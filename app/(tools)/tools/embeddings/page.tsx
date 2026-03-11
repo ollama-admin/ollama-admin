@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback } from "react";
 import type { OllamaModel } from "@/lib/ollama";
 import { isEmbeddingModel, loadCatalogCapabilities } from "@/lib/model-utils";
 import { Binary, AlertTriangle, Upload } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,11 +13,8 @@ import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
-
-interface Server {
-  id: string;
-  name: string;
-}
+import { useServers } from "@/lib/hooks/use-servers";
+import { useUnloadModel } from "@/lib/hooks/use-unload-model";
 
 function cosineSimilarity(a: number[], b: number[]): number {
   let dot = 0;
@@ -34,9 +32,9 @@ export default function EmbeddingsPage() {
   const t = useTranslations("tools.embeddings");
   const tc = useTranslations("common");
   const { toast } = useToast();
+  const { servers, selectedServer, setSelectedServer } = useServers();
+  const unloadModel = useUnloadModel(tc);
 
-  const [servers, setServers] = useState<Server[]>([]);
-  const [selectedServer, setSelectedServer] = useState("");
   const [embeddingModels, setEmbeddingModels] = useState<OllamaModel[]>([]);
   const [selectedModel, setSelectedModel] = useState("");
   const [loadingModels, setLoadingModels] = useState(true);
@@ -48,15 +46,6 @@ export default function EmbeddingsPage() {
   const [embeddingB, setEmbeddingB] = useState<number[] | null>(null);
   const [similarity, setSimilarity] = useState<number | null>(null);
   const [generating, setGenerating] = useState(false);
-
-  useEffect(() => {
-    fetch("/api/servers")
-      .then((r) => r.json())
-      .then((data: Server[]) => {
-        setServers(data);
-        if (data.length > 0) setSelectedServer(data[0].id);
-      });
-  }, []);
 
   const fetchModels = useCallback(async () => {
     if (!selectedServer) return;
@@ -74,8 +63,7 @@ export default function EmbeddingsPage() {
       await loadCatalogCapabilities();
       const embedding = (data.models || []).filter(isEmbeddingModel);
       setEmbeddingModels(embedding);
-      if (embedding.length > 0) setSelectedModel(embedding[0].name);
-      else setSelectedModel("");
+      setSelectedModel(embedding.length > 0 ? embedding[0].name : "");
     } catch {
       setConnectionError(true);
       setEmbeddingModels([]);
@@ -99,14 +87,11 @@ export default function EmbeddingsPage() {
       const inputs = [textA.trim()];
       if (textB.trim()) inputs.push(textB.trim());
 
-      const res = await fetch(
-        `/api/proxy/api/embed?serverId=${selectedServer}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ model: selectedModel, input: inputs }),
-        }
-      );
+      const res = await fetch(`/api/proxy/api/embed?serverId=${selectedServer}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: selectedModel, input: inputs }),
+      });
 
       if (!res.ok) {
         const err = await res.json().catch(() => null);
@@ -122,27 +107,9 @@ export default function EmbeddingsPage() {
         setSimilarity(cosineSimilarity(embeddings[0], embeddings[1]));
       }
     } catch (err) {
-      toast(
-        `${t("error")}: ${err instanceof Error ? err.message : "Unknown error"}`,
-        "error"
-      );
+      toast(`${t("error")}: ${err instanceof Error ? err.message : "Unknown error"}`, "error");
     } finally {
       setGenerating(false);
-    }
-  };
-
-  const handleUnload = async () => {
-    if (!selectedModel || !selectedServer) return;
-    try {
-      const res = await fetch(`/api/proxy/api/generate?serverId=${selectedServer}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: selectedModel, keep_alive: 0 }),
-      });
-      if (!res.ok) throw new Error();
-      toast(tc("unloadSuccess", { model: selectedModel }), "success");
-    } catch {
-      toast(tc("unloadError"), "error");
     }
   };
 
@@ -150,10 +117,7 @@ export default function EmbeddingsPage() {
     return (
       <div className="p-6">
         <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <div className="mt-6 grid gap-6 lg:grid-cols-2">
-          <Skeleton variant="card" />
-          <Skeleton variant="card" />
-        </div>
+        <div className="mt-6 grid gap-6 lg:grid-cols-2"><Skeleton variant="card" /><Skeleton variant="card" /></div>
       </div>
     );
   }
@@ -163,22 +127,11 @@ export default function EmbeddingsPage() {
       <div className="p-6">
         <h1 className="text-2xl font-bold">{t("title")}</h1>
         {servers.length > 1 && (
-          <Select
-            value={selectedServer}
-            onChange={(e) => setSelectedServer(e.target.value)}
-            className="mt-4 w-auto"
-          >
-            {servers.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
+          <Select value={selectedServer} onChange={(e) => setSelectedServer(e.target.value)} className="mt-4 w-auto">
+            {servers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </Select>
         )}
-        <EmptyState
-          icon={AlertTriangle}
-          title={tc("connectionError")}
-          description={tc("connectionErrorDescription")}
-          action={<Button onClick={fetchModels}>{tc("retry")}</Button>}
-        />
+        <EmptyState icon={AlertTriangle} title={tc("connectionError")} description={tc("connectionErrorDescription")} action={<Button onClick={fetchModels}>{tc("retry")}</Button>} />
       </div>
     );
   }
@@ -188,23 +141,11 @@ export default function EmbeddingsPage() {
       <div className="p-6">
         <h1 className="text-2xl font-bold">{t("title")}</h1>
         {servers.length > 1 && (
-          <Select
-            value={selectedServer}
-            onChange={(e) => setSelectedServer(e.target.value)}
-            className="mt-4 w-auto"
-          >
-            {servers.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
+          <Select value={selectedServer} onChange={(e) => setSelectedServer(e.target.value)} className="mt-4 w-auto">
+            {servers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </Select>
         )}
-        <EmptyState
-          icon={Binary}
-          title={t("noModels")}
-          description={t("noModelsDescription")}
-        />
+        <EmptyState icon={Binary} title={t("noModels")} description={t("noModelsDescription")} />
       </div>
     );
   }
@@ -215,30 +156,14 @@ export default function EmbeddingsPage() {
         <h1 className="text-2xl font-bold">{t("title")}</h1>
         <div className="flex items-center gap-3">
           {servers.length > 1 && (
-            <Select
-              value={selectedServer}
-              onChange={(e) => setSelectedServer(e.target.value)}
-              className="w-auto"
-            >
-              {servers.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
+            <Select value={selectedServer} onChange={(e) => setSelectedServer(e.target.value)} className="w-auto">
+              {servers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </Select>
           )}
-          <Select
-            value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
-            className="w-auto"
-          >
-            {embeddingModels.map((m) => (
-              <option key={m.name} value={m.name}>
-                {m.name}
-              </option>
-            ))}
+          <Select value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)} className="w-auto">
+            {embeddingModels.map((m) => <option key={m.name} value={m.name}>{m.name}</option>)}
           </Select>
-          <Button variant="secondary" size="sm" onClick={handleUnload} title={tc("unload")} disabled={!selectedModel}>
+          <Button variant="secondary" size="sm" onClick={() => unloadModel(selectedModel, selectedServer)} title={tc("unload")} disabled={!selectedModel}>
             <Upload className="h-4 w-4" />
             {tc("unload")}
           </Button>
@@ -246,80 +171,41 @@ export default function EmbeddingsPage() {
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        {/* Left: Inputs */}
         <Card>
           <h2 className="mb-4 text-sm font-semibold">{t("inputText")}</h2>
-          <Textarea
-            label={t("textA")}
-            value={textA}
-            onChange={(e) => setTextA(e.target.value)}
-            placeholder={t("textAPlaceholder")}
-            rows={4}
-            className="text-sm"
-          />
+          <Textarea label={t("textA")} value={textA} onChange={(e) => setTextA(e.target.value)} placeholder={t("textAPlaceholder")} rows={4} className="text-sm" />
           <div className="mt-4">
-            <Textarea
-              label={t("textB")}
-              value={textB}
-              onChange={(e) => setTextB(e.target.value)}
-              placeholder={t("textBPlaceholder")}
-              rows={4}
-              className="text-sm"
-            />
-            <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">
-              {t("textBHint")}
-            </p>
+            <Textarea label={t("textB")} value={textB} onChange={(e) => setTextB(e.target.value)} placeholder={t("textBPlaceholder")} rows={4} className="text-sm" />
+            <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">{t("textBHint")}</p>
           </div>
-          <Button
-            className="mt-4 w-full"
-            onClick={generateEmbeddings}
-            disabled={!textA.trim() || !selectedModel || generating}
-          >
+          <Button className="mt-4 w-full" onClick={generateEmbeddings} disabled={!textA.trim() || !selectedModel || generating}>
             {generating ? t("generating") : t("generate")}
           </Button>
         </Card>
 
-        {/* Right: Results */}
         <Card>
           <h2 className="mb-4 text-sm font-semibold">{t("result")}</h2>
-
           {generating ? (
-            <div className="space-y-3">
-              <Skeleton />
-              <Skeleton />
-              <Skeleton />
-            </div>
+            <div className="space-y-3"><Skeleton /><Skeleton /><Skeleton /></div>
           ) : embeddingA ? (
             <div className="space-y-4">
               {similarity !== null && (
                 <div className="rounded-lg border bg-[hsl(var(--muted))] p-4 text-center">
-                  <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                    {t("cosineSimilarity")}
-                  </p>
-                  <p className="text-3xl font-bold">
-                    {(similarity * 100).toFixed(1)}%
-                  </p>
+                  <p className="text-xs text-[hsl(var(--muted-foreground))]">{t("cosineSimilarity")}</p>
+                  <p className="text-3xl font-bold">{(similarity * 100).toFixed(1)}%</p>
                 </div>
               )}
-
               <div>
-                <p className="mb-1 text-xs font-medium text-[hsl(var(--muted-foreground))]">
-                  {t("embeddingA")} ({embeddingA.length} {t("dimensions")})
-                </p>
+                <p className="mb-1 text-xs font-medium text-[hsl(var(--muted-foreground))]">{t("embeddingA")} ({embeddingA.length} {t("dimensions")})</p>
                 <pre className="max-h-32 overflow-auto rounded-md bg-[hsl(var(--muted))] p-3 text-xs">
-                  [{embeddingA.slice(0, 20).map((v) => v.toFixed(6)).join(", ")}
-                  {embeddingA.length > 20 && `, ... (${embeddingA.length - 20} more)`}]
+                  [{embeddingA.slice(0, 20).map((v) => v.toFixed(6)).join(", ")}{embeddingA.length > 20 && `, ... (${embeddingA.length - 20} more)`}]
                 </pre>
               </div>
-
               {embeddingB && (
                 <div>
-                  <p className="mb-1 text-xs font-medium text-[hsl(var(--muted-foreground))]">
-                    {t("embeddingB")} ({embeddingB.length} {t("dimensions")})
-                  </p>
+                  <p className="mb-1 text-xs font-medium text-[hsl(var(--muted-foreground))]">{t("embeddingB")} ({embeddingB.length} {t("dimensions")})</p>
                   <pre className="max-h-32 overflow-auto rounded-md bg-[hsl(var(--muted))] p-3 text-xs">
-                    [{embeddingB.slice(0, 20).map((v) => v.toFixed(6)).join(", ")}
-                    {embeddingB.length > 20 && `, ... (${embeddingB.length - 20} more)`}]
+                    [{embeddingB.slice(0, 20).map((v) => v.toFixed(6)).join(", ")}{embeddingB.length > 20 && `, ... (${embeddingB.length - 20} more)`}]
                   </pre>
                 </div>
               )}

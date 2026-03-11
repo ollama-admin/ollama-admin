@@ -110,7 +110,7 @@ describe("PUT /api/api-keys/[id]", () => {
       method: "PUT",
       body: JSON.stringify({ active: false }),
     });
-    const res = await PUT(req as any, { params: { id: "key_1" } });
+    const res = await PUT(req as any, { params: Promise.resolve({ id: "key_1" }) });
 
     expect(res.status).toBe(200);
     const data = await res.json();
@@ -127,7 +127,7 @@ describe("PUT /api/api-keys/[id]", () => {
       method: "PUT",
       body: JSON.stringify({ active: true }),
     });
-    const res = await PUT(req as any, { params: { id: "nope" } });
+    const res = await PUT(req as any, { params: Promise.resolve({ id: "nope" }) });
 
     expect(res.status).toBe(404);
   });
@@ -143,7 +143,7 @@ describe("DELETE /api/api-keys/[id]", () => {
     const req = new Request("http://localhost/api/api-keys/key_1", {
       method: "DELETE",
     });
-    const res = await DELETE(req as any, { params: { id: "key_1" } });
+    const res = await DELETE(req as any, { params: Promise.resolve({ id: "key_1" }) });
 
     expect(res.status).toBe(200);
   });
@@ -157,7 +157,7 @@ describe("DELETE /api/api-keys/[id]", () => {
     const req = new Request("http://localhost/api/api-keys/nope", {
       method: "DELETE",
     });
-    const res = await DELETE(req as any, { params: { id: "nope" } });
+    const res = await DELETE(req as any, { params: Promise.resolve({ id: "nope" }) });
 
     expect(res.status).toBe(404);
   });

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { RotateCcw, Save, BookOpen, Trash2 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -59,8 +60,14 @@ export function ChatParametersModal({
   }, []);
 
   useEffect(() => {
-    if (open) fetchPresets();
-  }, [open, fetchPresets]);
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      const res = await fetch("/api/presets");
+      if (!cancelled) setPresets(await res.json());
+    })();
+    return () => { cancelled = true; };
+  }, [open]);
 
   const update = (key: keyof ChatParameters, value: unknown) => {
     onChange({ ...parameters, [key]: value || undefined });

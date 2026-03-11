@@ -14,12 +14,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
-
-interface Server {
-  id: string;
-  name: string;
-  url: string;
-}
+import { useServers } from "@/lib/hooks/use-servers";
+import { useUnloadModel } from "@/lib/hooks/use-unload-model";
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(0)} KB`;
@@ -31,8 +27,8 @@ export default function ModelsPage() {
   const t = useTranslations("admin.models");
   const tc = useTranslations("common");
   const { toast } = useToast();
-  const [servers, setServers] = useState<Server[]>([]);
-  const [selectedServer, setSelectedServer] = useState<string>("");
+  const { servers, selectedServer, setSelectedServer } = useServers();
+  const unloadModel = useUnloadModel(tc);
   const [models, setModels] = useState<OllamaModel[]>([]);
   const [running, setRunning] = useState<OllamaRunningModel[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,15 +37,6 @@ export default function ModelsPage() {
   const [inspecting, setInspecting] = useState<OllamaShowResponse | null>(null);
   const [inspectName, setInspectName] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetch("/api/servers")
-      .then((r) => r.json())
-      .then((data: Server[]) => {
-        setServers(data);
-        if (data.length > 0) setSelectedServer(data[0].id);
-      });
-  }, []);
 
   const fetchModels = useCallback(async () => {
     if (!selectedServer) return;
@@ -99,10 +86,10 @@ export default function ModelsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ serverId: selectedServer, name: deleteTarget }),
       });
-      toast(`Model '${deleteTarget}' deleted`, "success");
+      toast(t("deleteSuccess", { model: deleteTarget }), "success");
       fetchModels();
     } catch {
-      toast("Error deleting model", "error");
+      toast(t("deleteError"), "error");
     }
     setDeleteTarget(null);
   };
@@ -119,18 +106,8 @@ export default function ModelsPage() {
   };
 
   const handleUnload = async (name: string) => {
-    try {
-      const res = await fetch(`/api/proxy/api/generate?serverId=${selectedServer}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ model: name, keep_alive: 0 }),
-      });
-      if (!res.ok) throw new Error();
-      toast(t("unloadSuccess", { model: name }), "success");
-      fetchModels();
-    } catch {
-      toast(t("unloadError"), "error");
-    }
+    await unloadModel(name, selectedServer);
+    fetchModels();
   };
 
   const isRunning = (name: string) =>
@@ -163,14 +140,8 @@ export default function ModelsPage() {
       <div className="p-6">
         <h1 className="text-2xl font-bold">{t("title")}</h1>
         {servers.length > 1 && (
-          <Select
-            value={selectedServer}
-            onChange={(e) => setSelectedServer(e.target.value)}
-            className="mt-4 w-auto"
-          >
-            {servers.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
+          <Select value={selectedServer} onChange={(e) => setSelectedServer(e.target.value)} className="mt-4 w-auto">
+            {servers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </Select>
         )}
         <EmptyState
@@ -188,25 +159,15 @@ export default function ModelsPage() {
       <div className="p-6">
         <h1 className="text-2xl font-bold">{t("title")}</h1>
         {servers.length > 1 && (
-          <Select
-            value={selectedServer}
-            onChange={(e) => setSelectedServer(e.target.value)}
-            className="mt-4 w-auto"
-          >
-            {servers.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
+          <Select value={selectedServer} onChange={(e) => setSelectedServer(e.target.value)} className="mt-4 w-auto">
+            {servers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </Select>
         )}
         <EmptyState
           icon={Package}
           title={t("emptyTitle")}
           description={t("emptyDescription")}
-          action={
-            <a href="/discover">
-              <Button>{t("emptyAction")}</Button>
-            </a>
-          }
+          action={<a href="/discover"><Button>{t("emptyAction")}</Button></a>}
         />
       </div>
     );
@@ -217,32 +178,18 @@ export default function ModelsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">{t("title")}</h1>
         {servers.length > 1 && (
-          <Select
-            value={selectedServer}
-            onChange={(e) => setSelectedServer(e.target.value)}
-            className="w-auto"
-          >
-            {servers.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
+          <Select value={selectedServer} onChange={(e) => setSelectedServer(e.target.value)} className="w-auto">
+            {servers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </Select>
         )}
       </div>
 
       <div className="mt-4">
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={t("searchPlaceholder")}
-        />
+        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("searchPlaceholder")} />
       </div>
 
       {filtered.length === 0 ? (
-        <EmptyState
-          icon={Search}
-          title={t("noResults")}
-          description={t("noResultsDescription")}
-        />
+        <EmptyState icon={Search} title={t("noResults")} description={t("noResultsDescription")} />
       ) : (
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((model) => (
@@ -250,43 +197,24 @@ export default function ModelsPage() {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <h3 className="truncate font-medium" title={model.name}>
-                      {model.name}
-                    </h3>
+                    <h3 className="truncate font-medium" title={model.name}>{model.name}</h3>
                     {isRunning(model.name) && (
                       <Badge variant="success" className="shrink-0">
                         <Cpu className="mr-1 h-3 w-3" />
-                        loaded {getVram(model.name) && `· ${getVram(model.name)}`}
+                        {t("loaded")} {getVram(model.name) && `· ${getVram(model.name)}`}
                       </Badge>
                     )}
                   </div>
-                  <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">
-                    {formatBytes(model.size)}
-                  </p>
-
+                  <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">{formatBytes(model.size)}</p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
-                    {model.details?.family && (
-                      <Badge variant="muted" className="text-[10px]">
-                        {model.details.family}
-                      </Badge>
-                    )}
-                    {model.details?.parameter_size && (
-                      <Badge variant="muted" className="text-[10px]">
-                        {model.details.parameter_size}
-                      </Badge>
-                    )}
-                    {model.details?.quantization_level && (
-                      <Badge variant="muted" className="text-[10px]">
-                        {model.details.quantization_level}
-                      </Badge>
-                    )}
+                    {model.details?.family && <Badge variant="muted" className="text-[10px]">{model.details.family}</Badge>}
+                    {model.details?.parameter_size && <Badge variant="muted" className="text-[10px]">{model.details.parameter_size}</Badge>}
+                    {model.details?.quantization_level && <Badge variant="muted" className="text-[10px]">{model.details.quantization_level}</Badge>}
                   </div>
-
                   <p className="mt-2 text-xs text-[hsl(var(--muted-foreground))]">
                     {t("modified")}: {new Date(model.modified_at).toLocaleDateString()}
                   </p>
                 </div>
-
                 <div className="flex shrink-0 gap-1.5">
                   {isRunning(model.name) && (
                     <Button variant="secondary" size="sm" onClick={() => handleUnload(model.name)} title={t("unload")}>
@@ -310,36 +238,20 @@ export default function ModelsPage() {
       <Modal open={!!inspecting} onClose={() => setInspecting(null)} title={inspectName}>
         {inspecting && (
           <div className="space-y-3 text-sm">
-            <div>
-              <span className="font-medium">Family:</span>{" "}
-              {inspecting.details?.family || "—"}
-            </div>
-            <div>
-              <span className="font-medium">Parameters:</span>{" "}
-              {inspecting.details?.parameter_size || "—"}
-            </div>
-            <div>
-              <span className="font-medium">Quantization:</span>{" "}
-              {inspecting.details?.quantization_level || "—"}
-            </div>
-            <div>
-              <span className="font-medium">Format:</span>{" "}
-              {inspecting.details?.format || "—"}
-            </div>
+            <div><span className="font-medium">Family:</span> {inspecting.details?.family || "—"}</div>
+            <div><span className="font-medium">Parameters:</span> {inspecting.details?.parameter_size || "—"}</div>
+            <div><span className="font-medium">Quantization:</span> {inspecting.details?.quantization_level || "—"}</div>
+            <div><span className="font-medium">Format:</span> {inspecting.details?.format || "—"}</div>
             {inspecting.parameters && (
               <div>
                 <span className="font-medium">Parameters:</span>
-                <pre className="mt-1 overflow-auto rounded-md bg-[hsl(var(--muted))] p-3 text-xs">
-                  {inspecting.parameters}
-                </pre>
+                <pre className="mt-1 overflow-auto rounded-md bg-[hsl(var(--muted))] p-3 text-xs">{inspecting.parameters}</pre>
               </div>
             )}
             {inspecting.template && (
               <div>
                 <span className="font-medium">Template:</span>
-                <pre className="mt-1 overflow-auto rounded-md bg-[hsl(var(--muted))] p-3 text-xs">
-                  {inspecting.template}
-                </pre>
+                <pre className="mt-1 overflow-auto rounded-md bg-[hsl(var(--muted))] p-3 text-xs">{inspecting.template}</pre>
               </div>
             )}
           </div>
@@ -348,8 +260,8 @@ export default function ModelsPage() {
 
       <ConfirmDialog
         open={!!deleteTarget}
-        title="Delete model"
-        description={`Are you sure you want to delete "${deleteTarget}"? This action cannot be undone.`}
+        title={t("deleteTitle")}
+        description={t("deleteDescription", { model: deleteTarget || "" })}
         confirmLabel={tc("delete")}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}

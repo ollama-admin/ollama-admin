@@ -19,7 +19,7 @@ echo "Version: $MAIN_VERSION -> $CURRENT_VERSION"
 
 # Full lint
 echo "Running lint..."
-npx next lint || exit 1
+npx eslint . || exit 1
 
 # Ruff check (Python)
 if command -v ruff &> /dev/null; then

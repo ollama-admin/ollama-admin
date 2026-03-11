@@ -134,8 +134,9 @@ function createSSEStream(
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const rlKey = getRateLimitKey(req);
   const rl = checkRateLimit(rlKey);
   if (!rl.allowed) {
@@ -154,7 +155,7 @@ export async function POST(
   const { content, images, regenerate, editMessageId } = await req.json();
 
   const chat = await prisma.chat.findUnique({
-    where: { id: params.id },
+    where: { id: id },
     include: {
       messages: { orderBy: { createdAt: "asc" } },
       server: true,

@@ -37,10 +37,6 @@ class PullManager {
     return job;
   }
 
-  async waitFor(id: string): Promise<void> {
-    await this._pending.get(id);
-  }
-
   getStatus(serverId?: string): PullJob[] {
     const jobs = Array.from(this.jobs.values());
     if (serverId) return jobs.filter((j) => j.serverId === serverId);

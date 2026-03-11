@@ -4,10 +4,11 @@ import { getVersion } from "@/lib/ollama";
 
 export async function POST(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const server = await prisma.server.findUnique({
-    where: { id: params.id },
+    where: { id: id },
   });
 
   if (!server) {
