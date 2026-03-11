@@ -37,7 +37,9 @@
     "gpu": "GPU",
     "users": "Usuaris",
     "tools": "Eines",
-    "settings": "Configuració"
+    "apiKeys": "Claus API",
+    "settings": "Configuració",
+    "logout": "Tancar sessió"
   },
   "dashboard": {
     "title": "Tauler",
@@ -269,7 +271,39 @@
       "fastest": "Més ràpid",
       "errors": "errors",
       "emptyTitle": "Encara no hi ha mètriques",
-      "emptyDescription": "Les mètriques apareixeran a mesura que les peticions passin pel gateway."
+      "emptyDescription": "Les mètriques apareixeran a mesura que les peticions passin pel gateway.",
+      "apiKeyUsage": "Ús per clau API"
+    },
+    "apiKeys": {
+      "title": "Claus API",
+      "subtitle": "{count, plural, one {# clau} other {# claus}}",
+      "createKey": "Crear clau",
+      "nameLabel": "Nom de la clau",
+      "namePlaceholder": "P. ex. CI/CD, la-meva-app...",
+      "keyCreated": "Clau API creada",
+      "keyDeleted": "Clau API eliminada",
+      "keyCopied": "Copiat al porta-retalls",
+      "keyCopy": "Copiar clau API",
+      "keyNewWarning": "Copia aquesta clau ara — no es mostrarà de nou.",
+      "active": "Activa",
+      "revoked": "Revocada",
+      "revoke": "Revocar",
+      "activate": "Activar",
+      "deleteKey": "Eliminar clau API",
+      "lastUsed": "Darrer ús",
+      "createdAt": "Creada",
+      "name": "Nom",
+      "key": "Clau",
+      "status": "Estat",
+      "actions": "Accions",
+      "never": "Mai",
+      "emptyTitle": "Sense claus API",
+      "emptyDescription": "Crea una clau API per a accés programàtic al proxy d'Ollama.",
+      "deleteTitle": "Eliminar clau API",
+      "deleteDescription": "Vols eliminar \"{name}\"? Les integracions que facin servir aquesta clau deixaran de funcionar.",
+      "createError": "Error en crear la clau API",
+      "toggleError": "Error en actualitzar la clau API",
+      "deleteError": "Error en eliminar la clau API"
     },
     "gpu": {
       "title": "Monitorització GPU",

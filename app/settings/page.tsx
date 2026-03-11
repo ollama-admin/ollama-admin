@@ -3,13 +3,16 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
-import { Sun, Moon, Monitor, Database, Shield, Trash2, Gauge, Key, Plus, Copy, X, Globe } from "lucide-react";
+import {
+  Sun, Moon, Monitor, Database, Shield, Trash2, Gauge, Globe, Palette,
+} from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useDensity } from "@/components/providers/density-provider";
 
 export default function SettingsPage() {
@@ -22,106 +25,82 @@ export default function SettingsPage() {
   const [logStorePrompts, setLogStorePrompts] = useState("true");
   const [rateLimitMax, setRateLimitMax] = useState("60");
   const [rateLimitWindow, setRateLimitWindow] = useState("60");
-  const [apiKeys, setApiKeys] = useState<Array<{
-    id: string;
-    name: string;
-    key: string;
-    active: boolean;
-    lastUsed: string | null;
-    createdAt: string;
-  }>>([]);
-  const [newKeyName, setNewKeyName] = useState("");
-  const [newKeyValue, setNewKeyValue] = useState("");
+
+  const [saving, setSaving] = useState(false);
+  const [purging, setPurging] = useState(false);
+  const [confirmPurge, setConfirmPurge] = useState(false);
+
   const mounted = useSyncExternalStore(
     () => () => {},
     () => true,
     () => false,
   );
 
-  const fetchApiKeys = async () => {
-    const res = await fetch("/api/api-keys");
-    setApiKeys(await res.json());
-  };
-
   useEffect(() => {
     const init = async () => {
-      const [settingsRes, keysRes] = await Promise.all([
-        fetch("/api/settings"),
-        fetch("/api/api-keys"),
-      ]);
-      const settings = await settingsRes.json();
+      const res = await fetch("/api/settings");
+      const settings = await res.json();
       if (settings.logRetentionDays) setLogRetentionDays(settings.logRetentionDays);
       if (settings.logStorePrompts) setLogStorePrompts(settings.logStorePrompts);
       if (settings.rateLimitMax) setRateLimitMax(settings.rateLimitMax);
       if (settings.rateLimitWindow) setRateLimitWindow(settings.rateLimitWindow);
-      setApiKeys(await keysRes.json());
     };
     void init();
   }, []);
 
   const saveSettings = async () => {
-    await fetch("/api/settings", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ logRetentionDays, logStorePrompts, rateLimitMax, rateLimitWindow }),
-    });
-    toast(t("saved"), "success");
-  };
-
-  const createApiKey = async () => {
-    if (!newKeyName.trim()) return;
-    const res = await fetch("/api/api-keys", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newKeyName.trim() }),
-    });
-    const data = await res.json();
-    setNewKeyValue(data.key);
-    setNewKeyName("");
-    fetchApiKeys();
-    toast(t("apiKeyCreated"), "success");
-  };
-
-  const toggleApiKey = async (id: string, active: boolean) => {
-    await fetch(`/api/api-keys/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ active }),
-    });
-    fetchApiKeys();
-  };
-
-  const deleteApiKey = async (id: string) => {
-    await fetch(`/api/api-keys/${id}`, { method: "DELETE" });
-    fetchApiKeys();
-    toast(t("apiKeyDeleted"), "success");
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast(t("apiKeyCopied"), "success");
+    setSaving(true);
+    try {
+      const res = await fetch("/api/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ logRetentionDays, logStorePrompts, rateLimitMax, rateLimitWindow }),
+      });
+      if (!res.ok) throw new Error();
+      toast(t("saved"), "success");
+    } catch {
+      toast(t("saveError"), "error");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const purgeOldLogs = async () => {
-    const days = parseInt(logRetentionDays, 10);
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - days);
-
-    await fetch(`/api/logs?purge=true&before=${cutoff.toISOString()}`, {
-      method: "DELETE",
-    });
-    toast(t("logsPurged"), "success");
+    setPurging(true);
+    try {
+      const days = parseInt(logRetentionDays, 10);
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - days);
+      const res = await fetch(`/api/logs?purge=true&before=${cutoff.toISOString()}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error();
+      toast(t("logsPurged"), "success");
+    } catch {
+      toast(t("purgeError"), "error");
+    } finally {
+      setPurging(false);
+    }
   };
 
   if (!mounted) return null;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 p-6">
+    <div className="mx-auto max-w-5xl space-y-6 p-6">
       <h1 className="text-2xl font-bold">{t("title")}</h1>
 
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+
+      {/* Left column */}
+      <div className="space-y-6">
+
+      {/* Appearance */}
       <Card>
         <CardHeader>
-          <CardTitle>{t("appearance")}</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Palette className="h-5 w-5" />
+            {t("appearance")}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
@@ -200,6 +179,7 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Logging & Privacy */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -224,99 +204,15 @@ export default function SettingsPage() {
             <option value="true">{t("storePromptsYes")}</option>
             <option value="false">{t("storePromptsNo")}</option>
           </Select>
-
-          <div className="flex gap-2">
-            <Button onClick={saveSettings}>{t("saveChanges")}</Button>
-            <Button variant="destructive" onClick={purgeOldLogs}>
-              <Trash2 className="mr-1 h-4 w-4" />
-              {t("purgeLogs")}
-            </Button>
-          </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Key className="h-5 w-5" />
-            {t("apiKeys")}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {newKeyValue && (
-            <div className="rounded-md border border-[hsl(var(--success))] bg-[hsl(var(--success)/0.1)] p-3">
-              <p className="mb-1 text-sm font-medium">{t("apiKeyNewWarning")}</p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 truncate rounded bg-[hsl(var(--muted))] px-2 py-1 text-xs">
-                  {newKeyValue}
-                </code>
-                <button
-                  onClick={() => copyToClipboard(newKeyValue)}
-                  className="rounded p-1 hover:bg-[hsl(var(--accent))]"
-                  aria-label={t("apiKeyCopy")}
-                >
-                  <Copy className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          )}
+      </div>
 
-          <div className="flex gap-2">
-            <Input
-              value={newKeyName}
-              onChange={(e) => setNewKeyName(e.target.value)}
-              placeholder={t("apiKeyNamePlaceholder")}
-              className="flex-1"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") createApiKey();
-              }}
-            />
-            <Button onClick={createApiKey} disabled={!newKeyName.trim()}>
-              <Plus className="mr-1 h-4 w-4" />
-              {t("apiKeyCreate")}
-            </Button>
-          </div>
+      {/* Right column */}
+      <div className="space-y-6">
 
-          {apiKeys.length > 0 && (
-            <div className="divide-y rounded-md border">
-              {apiKeys.map((k) => (
-                <div key={k.id} className="flex items-center gap-3 px-3 py-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium">{k.name}</span>
-                      <Badge variant={k.active ? "success" : "muted"}>
-                        {k.active ? t("apiKeyActive") : t("apiKeyRevoked")}
-                      </Badge>
-                    </div>
-                    <div className="text-xs text-[hsl(var(--muted-foreground))]">
-                      <code>{k.key}</code>
-                      {k.lastUsed && (
-                        <span className="ml-2">
-                          {t("apiKeyLastUsed")}: {new Date(k.lastUsed).toLocaleDateString()}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => toggleApiKey(k.id, !k.active)}
-                    className="text-xs text-[hsl(var(--primary))] hover:underline"
-                  >
-                    {k.active ? t("apiKeyRevoke") : t("apiKeyActivate")}
-                  </button>
-                  <button
-                    onClick={() => deleteApiKey(k.id)}
-                    className="rounded p-1 text-[hsl(var(--destructive))] hover:bg-[hsl(var(--accent))]"
-                    aria-label={t("apiKeyDelete")}
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
+      {/* Rate Limiting */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -345,6 +241,7 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Database */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -361,6 +258,40 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      </div>
+
+      </div>
+
+      {/* Global Save */}
+      <div className="flex items-center justify-between rounded-lg border bg-[hsl(var(--card))] px-4 py-3">
+        <Button onClick={saveSettings} loading={saving}>
+          {t("saveChanges")}
+        </Button>
+        <Button
+          variant="destructive"
+          onClick={() => setConfirmPurge(true)}
+          loading={purging}
+        >
+          <Trash2 className="mr-1 h-4 w-4" />
+          {t("purgeLogs")}
+        </Button>
+      </div>
+
+      {/* Confirm Purge Dialog */}
+      <ConfirmDialog
+        open={confirmPurge}
+        title={t("confirmPurgeTitle")}
+        description={t("confirmPurgeDescription", { days: logRetentionDays })}
+        confirmLabel={t("confirm")}
+        cancelLabel={t("cancel")}
+        variant="destructive"
+        onConfirm={() => {
+          setConfirmPurge(false);
+          purgeOldLogs();
+        }}
+        onCancel={() => setConfirmPurge(false)}
+      />
     </div>
   );
 }

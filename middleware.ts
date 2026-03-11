@@ -69,11 +69,15 @@ export async function middleware(req: NextRequest) {
   }
 
   // Admin-only routes
-  if (path.startsWith("/admin/users") || path.startsWith("/api/users") || path.startsWith("/discover") || path.startsWith("/api/catalog")) {
-    if (token.role !== "admin") {
-      logRequest(method, path, 403, Date.now() - start, "forbidden");
-      return NextResponse.redirect(new URL("/", req.url));
-    }
+  const isAdminOnly =
+    path.startsWith("/admin/") ||
+    path.startsWith("/api/admin/") ||
+    path.startsWith("/api/users") ||
+    path.startsWith("/api/api-keys") ||
+    path.startsWith("/settings");
+  if (isAdminOnly && token.role !== "admin") {
+    logRequest(method, path, 403, Date.now() - start, "forbidden");
+    return NextResponse.redirect(new URL("/", req.url));
   }
 
   const res = withNoCache(NextResponse.next(), path);

@@ -2,8 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { pullManager } from "@/lib/pull-manager";
 import { logger } from "@/lib/logger";
+import { requireAdmin } from "@/lib/require-admin";
 
 export async function POST(req: NextRequest) {
+  const session = await requireAdmin();
+  if (!session) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const { serverId, name, stream } = await req.json();
 
   if (!serverId || !name) {

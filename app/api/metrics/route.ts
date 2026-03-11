@@ -10,7 +10,10 @@ export async function GET(req: NextRequest) {
   const logs = await prisma.log.findMany({
     where: { createdAt: { gte: since } },
     orderBy: { createdAt: "asc" },
-    include: { server: { select: { name: true } } },
+    include: {
+      server: { select: { name: true } },
+      apiKey: { select: { id: true, name: true } },
+    },
   });
 
   const requestsByDay: Record<string, number> = {};
@@ -18,6 +21,7 @@ export async function GET(req: NextRequest) {
   const tokensByModel: Record<string, number> = {};
   const latencyByModel: Record<string, { total: number; count: number }> = {};
   const modelUsage: Record<string, number> = {};
+  const apiKeyUsageMap: Record<string, { name: string; requests: number; tokens: number }> = {};
   let errorCount = 0;
 
   for (const log of logs) {
@@ -36,6 +40,14 @@ export async function GET(req: NextRequest) {
 
     modelUsage[log.model] = (modelUsage[log.model] || 0) + 1;
 
+    if (log.apiKeyId && log.apiKey) {
+      if (!apiKeyUsageMap[log.apiKeyId]) {
+        apiKeyUsageMap[log.apiKeyId] = { name: log.apiKey.name, requests: 0, tokens: 0 };
+      }
+      apiKeyUsageMap[log.apiKeyId].requests += 1;
+      apiKeyUsageMap[log.apiKeyId].tokens += totalTokens;
+    }
+
     if (log.statusCode >= 400) errorCount++;
   }
 
@@ -49,6 +61,10 @@ export async function GET(req: NextRequest) {
     .slice(0, 10)
     .map(([model, count]) => ({ model, count }));
 
+  const apiKeyUsage = Object.entries(apiKeyUsageMap)
+    .map(([id, data]) => ({ id, ...data }))
+    .sort((a, b) => b.requests - a.requests);
+
   return NextResponse.json({
     totalRequests: logs.length,
     errorCount,
@@ -58,5 +74,6 @@ export async function GET(req: NextRequest) {
     tokensByModel,
     avgLatencyByModel,
     topModels,
+    apiKeyUsage,
   });
 }

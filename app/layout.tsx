@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale } from "next-intl/server";
+import { SessionProvider } from "@/components/providers/session-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { DensityProvider } from "@/components/providers/density-provider";
 import { ToastProvider } from "@/components/ui/toast";
@@ -31,13 +32,15 @@ export default async function RootLayout({
           Skip to main content
         </a>
         <NextIntlClientProvider>
-          <ThemeProvider>
-            <DensityProvider>
-            <ToastProvider>
-              <AppShell>{children}</AppShell>
-            </ToastProvider>
-            </DensityProvider>
-          </ThemeProvider>
+          <SessionProvider>
+            <ThemeProvider>
+              <DensityProvider>
+                <ToastProvider>
+                  <AppShell>{children}</AppShell>
+                </ToastProvider>
+              </DensityProvider>
+            </ThemeProvider>
+          </SessionProvider>
         </NextIntlClientProvider>
       </body>
     </html>

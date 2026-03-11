@@ -73,6 +73,8 @@ model Log {
   statusCode       Int
   userId           String?
   user             User?    @relation(fields: [userId], references: [id])
+  apiKeyId         String?
+  apiKey           ApiKey?  @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
   ip               String?
   createdAt        DateTime @default(now())
 }
@@ -107,6 +109,7 @@ model ApiKey {
   lastUsed  DateTime?
   active    Boolean   @default(true)
   createdAt DateTime  @default(now())
+  logs      Log[]
 }
 
 model Settings {

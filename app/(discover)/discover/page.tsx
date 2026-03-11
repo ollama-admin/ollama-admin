@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useSession } from "next-auth/react";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Search, Check, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,8 @@ const CAPABILITY_OPTIONS = ["tools", "vision", "embedding", "thinking"];
 
 export default function DiscoverPage() {
   const t = useTranslations("discover");
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "admin";
   const { toast } = useToast();
   const { servers, selectedServer, setSelectedServer } = useServers();
   const [models, setModels] = useState<CatalogModel[]>([]);
@@ -259,6 +262,11 @@ export default function DiscoverPage() {
                         </Badge>
                       );
                     }
+                    if (!isAdmin) {
+                      return (
+                        <Badge key={size} variant="muted" className="text-[10px]">{size}</Badge>
+                      );
+                    }
                     return (
                       <button
                         key={size}
@@ -271,7 +279,7 @@ export default function DiscoverPage() {
                       </button>
                     );
                   })
-                ) : (
+                ) : isAdmin ? (
                   <button
                     onClick={() => handlePull(model.name)}
                     disabled={isDownloading(model.name, "latest") || isModelTagDownloaded(model.name, "latest") || !selectedServer}
@@ -286,7 +294,7 @@ export default function DiscoverPage() {
                       <><Download className="mr-0.5 h-2.5 w-2.5" />{t("pullModel")}</>
                     )}
                   </button>
-                )}
+                ) : null}
               </div>
               <div className="mt-2 flex items-center gap-3 text-[10px] text-[hsl(var(--muted-foreground))]">
                 {model.pulls && <span>{model.pulls} pulls</span>}

@@ -37,7 +37,9 @@
     "gpu": "GPU",
     "users": "Usuarios",
     "tools": "Herramientas",
-    "settings": "Ajustes"
+    "apiKeys": "Claves API",
+    "settings": "Ajustes",
+    "logout": "Cerrar sesión"
   },
   "dashboard": {
     "title": "Panel",
@@ -267,7 +269,39 @@
       "fastest": "Más rápido",
       "errors": "errores",
       "emptyTitle": "Sin métricas",
-      "emptyDescription": "Las métricas aparecerán conforme las peticiones pasen por el gateway."
+      "emptyDescription": "Las métricas aparecerán conforme las peticiones pasen por el gateway.",
+      "apiKeyUsage": "Uso por clave API"
+    },
+    "apiKeys": {
+      "title": "Claves API",
+      "subtitle": "{count, plural, one {# clave} other {# claves}}",
+      "createKey": "Crear clave",
+      "nameLabel": "Nombre de la clave",
+      "namePlaceholder": "Ej. CI/CD, mi-app...",
+      "keyCreated": "Clave API creada",
+      "keyDeleted": "Clave API eliminada",
+      "keyCopied": "Copiado al portapapeles",
+      "keyCopy": "Copiar clave API",
+      "keyNewWarning": "Copia esta clave ahora — no se mostrará de nuevo.",
+      "active": "Activa",
+      "revoked": "Revocada",
+      "revoke": "Revocar",
+      "activate": "Activar",
+      "deleteKey": "Eliminar clave API",
+      "lastUsed": "Último uso",
+      "createdAt": "Creada",
+      "name": "Nombre",
+      "key": "Clave",
+      "status": "Estado",
+      "actions": "Acciones",
+      "never": "Nunca",
+      "emptyTitle": "Sin claves API",
+      "emptyDescription": "Crea una clave API para acceso programático al proxy de Ollama.",
+      "deleteTitle": "Eliminar clave API",
+      "deleteDescription": "¿Eliminar \"{name}\"? Las integraciones que usen esta clave dejarán de funcionar.",
+      "createError": "Error al crear la clave API",
+      "toggleError": "Error al actualizar la clave API",
+      "deleteError": "Error al eliminar la clave API"
     },
     "gpu": {
       "title": "Monitorización GPU",

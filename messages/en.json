@@ -37,7 +37,9 @@
     "gpu": "GPU",
     "users": "Users",
     "tools": "Tools",
-    "settings": "Settings"
+    "apiKeys": "API Keys",
+    "settings": "Settings",
+    "logout": "Log out"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -267,7 +269,39 @@
       "fastest": "Fastest",
       "errors": "errors",
       "emptyTitle": "No metrics yet",
-      "emptyDescription": "Metrics will appear as requests flow through the gateway."
+      "emptyDescription": "Metrics will appear as requests flow through the gateway.",
+      "apiKeyUsage": "Usage by API Key"
+    },
+    "apiKeys": {
+      "title": "API Keys",
+      "subtitle": "{count, plural, one {# key} other {# keys}}",
+      "createKey": "Create Key",
+      "nameLabel": "Key name",
+      "namePlaceholder": "e.g. CI/CD, my-app...",
+      "keyCreated": "API key created",
+      "keyDeleted": "API key deleted",
+      "keyCopied": "Copied to clipboard",
+      "keyCopy": "Copy API key",
+      "keyNewWarning": "Copy this key now — it will not be shown again.",
+      "active": "Active",
+      "revoked": "Revoked",
+      "revoke": "Revoke",
+      "activate": "Activate",
+      "deleteKey": "Delete API key",
+      "lastUsed": "Last used",
+      "createdAt": "Created",
+      "name": "Name",
+      "key": "Key",
+      "status": "Status",
+      "actions": "Actions",
+      "never": "Never",
+      "emptyTitle": "No API keys",
+      "emptyDescription": "Create an API key for programmatic access to the Ollama proxy.",
+      "deleteTitle": "Delete API key",
+      "deleteDescription": "Are you sure you want to delete \"{name}\"? Any integrations using this key will stop working.",
+      "createError": "Error creating API key",
+      "toggleError": "Error updating API key",
+      "deleteError": "Error deleting API key"
     },
     "gpu": {
       "title": "GPU Monitoring",

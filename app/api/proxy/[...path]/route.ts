@@ -6,9 +6,10 @@ import { withRateLimit } from "@/lib/with-rate-limit";
 import { validateApiKey } from "@/lib/validate-api-key";
 
 async function proxyToOllama(req: NextRequest) {
+  let apiKeyId: string | undefined;
   const hasApiKey = req.headers.get("authorization")?.startsWith("Bearer oa-");
   if (hasApiKey) {
-    const { valid } = await validateApiKey(req);
+    const { valid, keyId } = await validateApiKey(req);
     if (!valid) {
       logger.warn("Proxy auth failed", { ip: req.headers.get("x-forwarded-for") });
       return new Response(JSON.stringify({ error: "Invalid or revoked API key" }), {
@@ -16,6 +17,7 @@ async function proxyToOllama(req: NextRequest) {
         headers: { "Content-Type": "application/json" },
       });
     }
+    apiKeyId = keyId;
   }
 
   const path = req.nextUrl.pathname.replace("/api/proxy", "");
@@ -89,6 +91,7 @@ async function proxyToOllama(req: NextRequest) {
       endpoint,
       latencyMs,
       statusCode,
+      apiKeyId: apiKeyId ?? null,
       ip: req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || null,
     });
 
@@ -111,6 +114,7 @@ async function proxyToOllama(req: NextRequest) {
       endpoint,
       latencyMs,
       statusCode: 502,
+      apiKeyId: apiKeyId ?? null,
     });
 
     return new Response(JSON.stringify({ error: message }), {

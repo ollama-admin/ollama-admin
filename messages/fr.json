@@ -37,7 +37,9 @@
     "gpu": "GPU",
     "users": "Utilisateurs",
     "tools": "Outils",
-    "settings": "Paramètres"
+    "apiKeys": "Clés API",
+    "settings": "Paramètres",
+    "logout": "Se déconnecter"
   },
   "dashboard": {
     "title": "Tableau de bord",
@@ -269,7 +271,39 @@
       "fastest": "Plus rapide",
       "errors": "erreurs",
       "emptyTitle": "Aucune métrique",
-      "emptyDescription": "Les métriques apparaîtront au fur et à mesure que les requêtes passeront par la passerelle."
+      "emptyDescription": "Les métriques apparaîtront au fur et à mesure que les requêtes passeront par la passerelle.",
+      "apiKeyUsage": "Utilisation par clé API"
+    },
+    "apiKeys": {
+      "title": "Clés API",
+      "subtitle": "{count, plural, one {# clé} other {# clés}}",
+      "createKey": "Créer une clé",
+      "nameLabel": "Nom de la clé",
+      "namePlaceholder": "Ex. CI/CD, mon-app...",
+      "keyCreated": "Clé API créée",
+      "keyDeleted": "Clé API supprimée",
+      "keyCopied": "Copié dans le presse-papiers",
+      "keyCopy": "Copier la clé API",
+      "keyNewWarning": "Copiez cette clé maintenant — elle ne sera plus affichée.",
+      "active": "Active",
+      "revoked": "Révoquée",
+      "revoke": "Révoquer",
+      "activate": "Activer",
+      "deleteKey": "Supprimer la clé API",
+      "lastUsed": "Dernière utilisation",
+      "createdAt": "Créée",
+      "name": "Nom",
+      "key": "Clé",
+      "status": "Statut",
+      "actions": "Actions",
+      "never": "Jamais",
+      "emptyTitle": "Aucune clé API",
+      "emptyDescription": "Créez une clé API pour un accès programmatique au proxy Ollama.",
+      "deleteTitle": "Supprimer la clé API",
+      "deleteDescription": "Voulez-vous supprimer \"{name}\" ? Les intégrations utilisant cette clé cesseront de fonctionner.",
+      "createError": "Erreur lors de la création de la clé API",
+      "toggleError": "Erreur lors de la mise à jour de la clé API",
+      "deleteError": "Erreur lors de la suppression de la clé API"
     },
     "gpu": {
       "title": "Surveillance GPU",
