@@ -53,7 +53,24 @@
     "addServer": "Afegir servidor",
     "emptyTitle": "Benvingut a Ollama Admin",
     "emptyDescription": "Afegeix el teu primer servidor Ollama per començar.",
-    "emptyAction": "Afegir servidor"
+    "emptyAction": "Afegir servidor",
+    "requestsToday": "Peticions avui",
+    "tokensToday": "Tokens avui",
+    "avgLatency": "Latència mitjana",
+    "p95Latency": "p95",
+    "errorRate": "Taxa d'error",
+    "vsYesterday": "vs ahir",
+    "requestsLast24h": "Peticions / hora (darreres 24h)",
+    "topModelsToday": "Models més usats avui",
+    "requests": "pet",
+    "serverStatus": "Estat dels servidors",
+    "online": "En línia",
+    "offline": "Fora de línia",
+    "vram": "VRAM",
+    "runningModels": "Models a VRAM",
+    "unload": "Descarregar",
+    "expires": "Expira",
+    "noActivity": "Sense activitat recent"
   },
   "chat": {
     "title": "Xat",
@@ -325,7 +342,14 @@
       "utilization": "Utilització GPU",
       "powerDraw": "Consum",
       "emptyTitle": "No hi ha servidors configurats",
-      "emptyDescription": "Afegeix un servidor Ollama per monitoritzar l'ús de GPU."
+      "emptyDescription": "Afegeix un servidor Ollama per monitoritzar l'ús de GPU.",
+      "modelCompatibility": "Compatibilitat de models",
+      "model": "Model",
+      "modelSize": "Mida",
+      "estimatedTps": "t/s est.",
+      "vramPct": "VRAM %",
+      "grade": "Nota",
+      "noModelsOnServer": "No hi ha models instal·lats en aquest servidor."
     },
     "users": {
       "title": "Usuaris",
