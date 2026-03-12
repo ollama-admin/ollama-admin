@@ -23,7 +23,9 @@
     "connectionErrorDescription": "El servidor no responde. Comprueba que Ollama esté en ejecución y que la URL configurada sea correcta.",
     "unload": "Descargar",
     "unloadSuccess": "Modelo \"{model}\" descargado de memoria",
-    "unloadError": "Error al descargar el modelo"
+    "unloadError": "Error al descargar el modelo",
+    "noServerBanner": "No hay ningún servidor Ollama configurado — algunas funciones no están disponibles.",
+    "noServerBannerAction": "Añadir servidor"
   },
   "sidebar": {
     "dashboard": "Panel",

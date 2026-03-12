@@ -23,7 +23,9 @@
     "connectionErrorDescription": "The server is not responding. Check that Ollama is running and the configured URL is correct.",
     "unload": "Unload",
     "unloadSuccess": "Model \"{model}\" unloaded from memory",
-    "unloadError": "Failed to unload model"
+    "unloadError": "Failed to unload model",
+    "noServerBanner": "No Ollama server configured — some features are unavailable.",
+    "noServerBannerAction": "Add a server"
   },
   "sidebar": {
     "dashboard": "Dashboard",

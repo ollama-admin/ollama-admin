@@ -23,7 +23,9 @@
     "connectionErrorDescription": "Le serveur ne répond pas. Vérifiez qu'Ollama est en cours d'exécution et que l'URL configurée est correcte.",
     "unload": "Décharger",
     "unloadSuccess": "Modèle \"{model}\" déchargé de la mémoire",
-    "unloadError": "Erreur lors du déchargement du modèle"
+    "unloadError": "Erreur lors du déchargement du modèle",
+    "noServerBanner": "Aucun serveur Ollama configuré — certaines fonctionnalités sont indisponibles.",
+    "noServerBannerAction": "Ajouter un serveur"
   },
   "sidebar": {
     "dashboard": "Tableau de bord",

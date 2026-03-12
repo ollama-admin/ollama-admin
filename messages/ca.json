@@ -23,7 +23,9 @@
     "connectionErrorDescription": "El servidor no respon. Comprova que Ollama estigui en execució i que la URL configurada sigui correcta.",
     "unload": "Descarregar",
     "unloadSuccess": "Model \"{model}\" descarregat de memòria",
-    "unloadError": "Error en descarregar el model"
+    "unloadError": "Error en descarregar el model",
+    "noServerBanner": "No hi ha cap servidor Ollama configurat — algunes funcions no estan disponibles.",
+    "noServerBannerAction": "Afegir servidor"
   },
   "sidebar": {
     "dashboard": "Tauler",
