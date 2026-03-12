@@ -1,9 +1,10 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { LayoutDashboard, MessageSquarePlus, Download } from "lucide-react";
+import { LayoutDashboard, MessageSquarePlus, Download, Server } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -71,6 +72,8 @@ function DashboardSkeleton() {
 
 export default function DashboardPage() {
   const t = useTranslations("dashboard");
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "admin";
   const [data, setData] = useState<DashboardData | null>(null);
   const [initialLogs, setInitialLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -113,9 +116,11 @@ export default function DashboardPage() {
         title={t("emptyTitle")}
         description={t("emptyDescription")}
         action={
-          <Link href="/admin/servers">
-            <Button>{t("emptyAction")}</Button>
-          </Link>
+          isAdmin ? (
+            <Link href="/admin/servers">
+              <Button>{t("emptyAction")}</Button>
+            </Link>
+          ) : undefined
         }
       />
     );
@@ -137,7 +142,43 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-4 p-6">
-      <h1 className="text-2xl font-bold">{t("title")}</h1>
+      {/* Header with title, live indicator, and quick actions */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold">{t("title")}</h1>
+          <div className="flex items-center gap-1.5">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
+            </span>
+            <span className="text-xs text-[hsl(var(--muted-foreground))]">{t("live")}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link href="/chat">
+            <Button variant="secondary" size="sm" className="gap-1.5">
+              <MessageSquarePlus className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">{t("newChat")}</span>
+            </Button>
+          </Link>
+          {isAdmin && (
+            <>
+              <Link href="/discover">
+                <Button variant="secondary" size="sm" className="gap-1.5">
+                  <Download className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{t("pullModel")}</span>
+                </Button>
+              </Link>
+              <Link href="/admin/servers">
+                <Button variant="secondary" size="sm" className="gap-1.5">
+                  <Server className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{t("addServer")}</span>
+                </Button>
+              </Link>
+            </>
+          )}
+        </div>
+      </div>
 
       {/* KPI strip */}
       <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
@@ -145,45 +186,44 @@ export default function DashboardPage() {
           label={t("servers")}
           value={`${kpis.serversOnline}/${kpis.serversTotal}`}
           subLabel={kpis.serversOnline === kpis.serversTotal ? t("online") : t("offline")}
-          href="/admin/servers"
+          href={isAdmin ? "/admin/servers" : undefined}
         />
         <KpiCard
           label={t("requestsToday")}
           value={kpis.requestsToday.toLocaleString()}
           delta={requestsDelta}
           subLabel={t("vsYesterday")}
-          href="/admin/logs"
+          href={isAdmin ? "/admin/logs" : undefined}
         />
         <KpiCard
           label={t("tokensToday")}
           value={formatTokens(kpis.tokensToday)}
-          href="/admin/metrics"
+          href={isAdmin ? "/admin/metrics" : undefined}
         />
         <KpiCard
           label={t("avgLatency")}
           value={`${kpis.avgLatencyMs}ms`}
           subLabel={`${t("p95Latency")}: ${kpis.p95LatencyMs}ms`}
-          href="/admin/metrics"
+          href={isAdmin ? "/admin/metrics" : undefined}
         />
         <KpiCard
           label={t("errorRate")}
           value={`${kpis.errorRate}%`}
-          subLabel={`${kpis.errorCount} errors`}
-          href="/admin/logs"
+          subLabel={`${kpis.errorCount} ${t("errors")}`}
+          href={isAdmin ? "/admin/logs" : undefined}
         />
       </div>
 
       {/* Main bento: chart + server status */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <RequestsChart data={requestsPerHour} label={t("requestsLast24h")} />
-        </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <RequestsChart data={requestsPerHour} label={t("requestsLast24h")} labelNoData={t("noRequestsYet")} />
         <ServerStatusPanel
           servers={servers}
           labelOnline={t("online")}
           labelOffline={t("offline")}
           labelVram={t("vram")}
           labelModels={t("activeModels")}
+          labelGpuDetails={t("gpuDetails")}
         />
       </div>
 
@@ -193,6 +233,7 @@ export default function DashboardPage() {
           data={topModels}
           label={t("topModelsToday")}
           labelRequests={t("requests")}
+          labelNoData={t("noData")}
         />
         <RunningModelsPanel
           models={runningModels}
@@ -200,39 +241,16 @@ export default function DashboardPage() {
           labelUnload={t("unload")}
           labelExpires={t("expires")}
           labelVram={t("vram")}
+          labelNoModels={t("noModelsInVram")}
         />
       </div>
 
-      {/* Activity feed + quick actions */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <ActivityFeed
-            initialLogs={initialLogs}
-            label={t("recentActivity")}
-            labelNoActivity={t("noActivity")}
-          />
-        </div>
-        <div className="flex flex-col gap-3">
-          <Link href="/chat">
-            <Button variant="secondary" className="w-full justify-start gap-2">
-              <MessageSquarePlus className="h-4 w-4" />
-              {t("newChat")}
-            </Button>
-          </Link>
-          <Link href="/discover">
-            <Button variant="secondary" className="w-full justify-start gap-2">
-              <Download className="h-4 w-4" />
-              {t("pullModel")}
-            </Button>
-          </Link>
-          <Link href="/admin/servers">
-            <Button variant="secondary" className="w-full justify-start gap-2">
-              <LayoutDashboard className="h-4 w-4" />
-              {t("addServer")}
-            </Button>
-          </Link>
-        </div>
-      </div>
+      {/* Activity feed */}
+      <ActivityFeed
+        initialLogs={initialLogs}
+        label={t("recentActivity")}
+        labelNoActivity={t("noActivity")}
+      />
     </div>
   );
 }

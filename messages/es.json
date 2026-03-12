@@ -72,7 +72,13 @@
     "runningModels": "Modelos en VRAM",
     "unload": "Descargar",
     "expires": "Expira",
-    "noActivity": "Sin actividad reciente"
+    "noActivity": "Sin actividad reciente",
+    "live": "En vivo",
+    "errors": "errores",
+    "gpuDetails": "Detalles de GPU",
+    "noData": "Sin datos aún",
+    "noModelsInVram": "Sin modelos en VRAM",
+    "noRequestsYet": "Sin peticiones en las últimas 24 horas"
   },
   "chat": {
     "title": "Chat",
@@ -522,5 +528,21 @@
     "database": "Base de datos",
     "connected": "Conectado",
     "databaseType": "SQLite (por defecto)"
+  },
+  "notFound": {
+    "title": "Página no encontrada",
+    "description": "La página que buscas no existe o ha sido movida.",
+    "back": "Volver",
+    "home": "Ir al inicio"
+  },
+  "auth": {
+    "title": "Accede a Ollama Admin",
+    "subtitle": "Introduce tus credenciales para continuar",
+    "username": "Usuario",
+    "password": "Contraseña",
+    "showPassword": "Mostrar contraseña",
+    "hidePassword": "Ocultar contraseña",
+    "signIn": "Entrar",
+    "invalidCredentials": "Usuario o contraseña incorrectos"
   }
 }

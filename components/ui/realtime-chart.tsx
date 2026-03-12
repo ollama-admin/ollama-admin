@@ -58,7 +58,7 @@ function RealtimeChart({
 
   return (
     <div className={cn("w-full", className)} role="img" aria-label={label}>
-      <svg viewBox={`0 0 ${width} ${height}`} className="w-full" style={{ maxHeight: height }}>
+      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full" style={{ minHeight: height }}>
         {gridLines.map((pct) => {
           const y = padding.top + innerH * (1 - pct);
           const val = minVal + range * pct;

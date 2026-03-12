@@ -17,6 +17,42 @@ fi
 
 echo "Version: $MAIN_VERSION -> $CURRENT_VERSION"
 
+# i18n completeness check
+echo "Checking i18n translations..."
+node -e "
+const fs = require('fs');
+const path = require('path');
+const dir = path.join(process.cwd(), 'messages');
+const locales = fs.readdirSync(dir).filter(f => f.endsWith('.json')).map(f => f.replace('.json',''));
+const ref = JSON.parse(fs.readFileSync(path.join(dir, 'en.json'), 'utf8'));
+
+function getKeys(obj, prefix = '') {
+  return Object.entries(obj).flatMap(([k, v]) =>
+    typeof v === 'object' && v !== null
+      ? getKeys(v, prefix ? prefix + '.' + k : k)
+      : [prefix ? prefix + '.' + k : k]
+  );
+}
+
+const refKeys = new Set(getKeys(ref));
+let missing = false;
+
+for (const locale of locales) {
+  if (locale === 'en') continue;
+  const data = JSON.parse(fs.readFileSync(path.join(dir, locale + '.json'), 'utf8'));
+  const localeKeys = new Set(getKeys(data));
+  const absent = [...refKeys].filter(k => !localeKeys.has(k));
+  if (absent.length > 0) {
+    console.error('Missing keys in ' + locale + '.json (' + absent.length + '):');
+    absent.forEach(k => console.error('  - ' + k));
+    missing = true;
+  }
+}
+
+if (missing) process.exit(1);
+console.log('All locales complete.');
+" || exit 1
+
 # Full lint
 echo "Running lint..."
 npx eslint . || exit 1

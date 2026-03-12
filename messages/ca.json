@@ -72,7 +72,13 @@
     "runningModels": "Models a VRAM",
     "unload": "Descarregar",
     "expires": "Expira",
-    "noActivity": "Sense activitat recent"
+    "noActivity": "Sense activitat recent",
+    "live": "En directe",
+    "errors": "errors",
+    "gpuDetails": "Detalls de GPU",
+    "noData": "Sense dades encara",
+    "noModelsInVram": "Sense models a VRAM",
+    "noRequestsYet": "Sense peticions en les darreres 24 hores"
   },
   "chat": {
     "title": "Xat",
@@ -524,5 +530,21 @@
     "database": "Base de dades",
     "connected": "Connectat",
     "databaseType": "SQLite (per defecte)"
+  },
+  "notFound": {
+    "title": "Pàgina no trobada",
+    "description": "La pàgina que busques no existeix o s'ha mogut.",
+    "back": "Tornar",
+    "home": "Anar a l'inici"
+  },
+  "auth": {
+    "title": "Accedeix a Ollama Admin",
+    "subtitle": "Introdueix les teves credencials per continuar",
+    "username": "Usuari",
+    "password": "Contrasenya",
+    "showPassword": "Mostra la contrasenya",
+    "hidePassword": "Amaga la contrasenya",
+    "signIn": "Entrar",
+    "invalidCredentials": "Usuari o contrasenya incorrectes"
   }
 }

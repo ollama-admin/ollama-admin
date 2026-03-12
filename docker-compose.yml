@@ -33,14 +33,37 @@ services:
   # Then set: DATABASE_URL=postgresql://ollamaadmin:changeme@postgres:5432/ollamaadmin
 
   # Optional: GPU monitoring agent
-  # Uncomment to enable GPU monitoring. Requires NVIDIA Container Toolkit.
-  # Then set GPU Agent URL to http://gpu-agent:11435 in your server config.
+  # Set GPU_AGENT_URL to http://gpu-agent:11435 in your server config after enabling.
+  #
+  # NVIDIA (requires NVIDIA Container Toolkit on host):
   # gpu-agent:
   #   image: ghcr.io/ollama-admin/ollama-admin-gpu-agent:${VERSION:-latest}
   #   build: ./gpu-agent
-  #   runtime: nvidia
   #   environment:
-  #     NVIDIA_VISIBLE_DEVICES: all
+  #     GPU_BACKEND: nvidia
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: all
+  #             capabilities: [gpu]
+  #   ports:
+  #     - "11435:11435"
+  #   restart: unless-stopped
+  #
+  # AMD (requires ROCm drivers on host):
+  # gpu-agent:
+  #   image: ghcr.io/ollama-admin/ollama-admin-gpu-agent:${VERSION:-latest}
+  #   build: ./gpu-agent
+  #   environment:
+  #     GPU_BACKEND: amd
+  #   devices:
+  #     - /dev/kfd:/dev/kfd
+  #     - /dev/dri:/dev/dri
+  #   group_add:
+  #     - video
+  #     - render
   #   ports:
   #     - "11435:11435"
   #   restart: unless-stopped

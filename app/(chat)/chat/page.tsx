@@ -636,7 +636,7 @@ export default function ChatPage() {
               className="h-8 w-full rounded-md border bg-transparent pl-8 pr-3 text-xs transition-colors placeholder:text-[hsl(var(--muted-foreground))] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]" />
           </div>
         </div>
-        <div className="flex-1 overflow-auto" role="list">
+        <div className="flex-1 overflow-auto scrollbar-hidden" role="list">
           {chats.map((chat) => (
             <button
               key={chat.id}

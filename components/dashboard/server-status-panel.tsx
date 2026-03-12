@@ -25,6 +25,7 @@ interface ServerStatusPanelProps {
   labelOffline: string;
   labelVram: string;
   labelModels: string;
+  labelGpuDetails?: string;
 }
 
 function formatBytes(bytes: number) {
@@ -38,6 +39,7 @@ function ServerStatusPanel({
   labelOffline,
   labelVram,
   labelModels,
+  labelGpuDetails,
 }: ServerStatusPanelProps) {
   return (
     <Card className="flex flex-col gap-3">
@@ -91,6 +93,15 @@ function ServerStatusPanel({
               <p className="text-xs text-[hsl(var(--muted-foreground))]">
                 {labelModels}: {server.runningModels.map((m) => m.name).join(", ")}
               </p>
+            )}
+
+            {gpu && labelGpuDetails && (
+              <Link
+                href="/gpu"
+                className="text-xs text-[hsl(var(--primary))] hover:underline"
+              >
+                {labelGpuDetails} →
+              </Link>
             )}
           </div>
         );
