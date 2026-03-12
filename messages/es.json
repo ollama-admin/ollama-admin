@@ -522,5 +522,11 @@
     "database": "Base de datos",
     "connected": "Conectado",
     "databaseType": "SQLite (por defecto)"
+  },
+  "notFound": {
+    "title": "Página no encontrada",
+    "description": "La página que buscas no existe o ha sido movida.",
+    "back": "Volver",
+    "home": "Ir al inicio"
   }
 }

@@ -38,7 +38,7 @@ describe("POST /api/locale", () => {
     const { POST } = await import("@/app/api/locale/route");
     const req = new Request("http://localhost/api/locale", {
       method: "POST",
-      body: JSON.stringify({ locale: "fr" }),
+      body: JSON.stringify({ locale: "klingon" }),
     });
     const res = await POST(req as any);
 

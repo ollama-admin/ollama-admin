@@ -174,6 +174,13 @@ export default function SettingsPage() {
             >
               <option value="en">English</option>
               <option value="es">Español</option>
+              <option value="ca">Català</option>
+              <option value="fr">Français</option>
+              <option value="ja">日本語</option>
+              <option value="zh">中文</option>
+              <option value="hi">हिन्दी</option>
+              <option value="luffy">Luffy English 🏴‍☠️</option>
+              <option value="pirate">Pirate Speak, arr!</option>
             </Select>
           </div>
         </CardContent>

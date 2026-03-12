@@ -524,5 +524,11 @@
     "database": "Base de dades",
     "connected": "Connectat",
     "databaseType": "SQLite (per defecte)"
+  },
+  "notFound": {
+    "title": "Pàgina no trobada",
+    "description": "La pàgina que busques no existeix o s'ha mogut.",
+    "back": "Tornar",
+    "home": "Anar a l'inici"
   }
 }
