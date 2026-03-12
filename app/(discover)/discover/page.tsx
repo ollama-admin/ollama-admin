@@ -14,6 +14,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 import { useServers } from "@/lib/hooks/use-servers";
 import { scoreModel, gradeColor } from "@/lib/model-scoring";
+import { Tooltip } from "@/components/ui/tooltip";
 
 interface CatalogModel {
   id: string;
@@ -311,10 +312,19 @@ export default function DiscoverPage() {
                     const downloaded = isModelTagDownloaded(model.name, size);
                     const pulling = isDownloading(model.name, size);
                     const score = getTagScore(size);
+                    const tooltipText = score
+                      ? score.fits && score.tps > 0
+                        ? `~${Math.round(score.tps)} t/s`
+                        : score.fits
+                        ? `Grade ${score.grade}`
+                        : `Doesn't fit VRAM`
+                      : undefined;
                     const gradeEl = score && (
-                      <span className="ml-1 font-bold" style={{ color: gradeColor(score.grade) }}>
-                        {score.grade}
-                      </span>
+                      <Tooltip content={tooltipText!} side="top">
+                        <span className="ml-1 font-bold" style={{ color: gradeColor(score.grade) }}>
+                          {score.grade}
+                        </span>
+                      </Tooltip>
                     );
 
                     if (downloaded) {
