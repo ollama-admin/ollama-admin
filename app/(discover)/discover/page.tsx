@@ -77,7 +77,7 @@ export default function DiscoverPage() {
   const { servers, selectedServer, setSelectedServer } = useServers();
   const [models, setModels] = useState<CatalogModel[]>([]);
   const [search, setSearch] = useState("");
-  const [selectedCaps, setSelectedCaps] = useState<string[]>([]);
+  const [selectedCaps, setSelectedCaps] = useState<string[]>(["text"]);
   const [loading, setLoading] = useState(true);
   const [downloadedModels, setDownloadedModels] = useState<Set<string>>(new Set());
   const [downloadingRefs, setDownloadingRefs] = useState<Set<string>>(new Set());
