@@ -366,7 +366,7 @@ export default function DiscoverPage() {
             {gpuSpecs && (
               <button
                 onClick={() => { setSortBy("grade"); setSortDir(sortBy === "grade" ? (sortDir === 1 ? -1 : 1) : 1); }}
-                className={`w-10 shrink-0 text-center hover:text-[hsl(var(--foreground))] transition-colors ${sortBy === "grade" ? "text-[hsl(var(--foreground))]" : ""}`}
+                className={`w-16 shrink-0 text-center whitespace-nowrap hover:text-[hsl(var(--foreground))] transition-colors ${sortBy === "grade" ? "text-[hsl(var(--foreground))]" : ""}`}
               >
                 Grade <span>{sortBy === "grade" ? (sortDir === 1 ? "↓" : "↑") : <span className="opacity-30">↕</span>}</span>
               </button>
@@ -436,7 +436,7 @@ export default function DiscoverPage() {
 
                 {/* Grade */}
                 {gpuSpecs && (
-                  <div className="w-10 shrink-0 flex justify-center">
+                  <div className="w-16 shrink-0 flex justify-center">
                     {score ? (
                       <span className="text-xl font-bold leading-none" style={{ color: gradeColor(score.grade) }}>
                         {score.grade}
