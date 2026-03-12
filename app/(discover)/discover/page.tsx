@@ -355,13 +355,11 @@ export default function DiscoverPage() {
               : null;
             const noFit = score && !score.fits;
             const isLast = idx === flatRows.length - 1;
-            const clickable = isAdmin && !downloaded && !pulling;
 
             const rowInner = (
               <div className={[
-                "flex items-center gap-4 px-4 py-3 text-sm transition-colors",
+                "flex items-center gap-4 px-4 py-3 text-sm",
                 noFit ? "opacity-40" : "",
-                clickable ? "hover:bg-[hsl(var(--muted)/0.5)]" : "",
                 !isLast ? "border-b border-[hsl(var(--border))]" : "",
               ].join(" ")}>
                 {/* Name + size tag + capability icons */}
@@ -427,26 +425,20 @@ export default function DiscoverPage() {
                   ) : pulling ? (
                     <Loader2 className="h-4 w-4 animate-spin text-[hsl(var(--muted-foreground))]" />
                   ) : isAdmin ? (
-                    <Download className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
+                    <button
+                      onClick={() => handlePull(row.name, row.size !== "latest" ? row.size : undefined)}
+                      disabled={!selectedServer}
+                      aria-label={`${t("pullModel")} ${row.name}:${row.size}`}
+                      className="rounded p-1 text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))] disabled:opacity-50"
+                    >
+                      <Download className="h-4 w-4" />
+                    </button>
                   ) : null}
                 </div>
               </div>
             );
 
-            if (!clickable) {
-              return <div key={`${row.id}-${row.size}`}>{rowInner}</div>;
-            }
-            return (
-              <button
-                key={`${row.id}-${row.size}`}
-                onClick={() => handlePull(row.name, row.size !== "latest" ? row.size : undefined)}
-                disabled={!selectedServer}
-                aria-label={`${t("pullModel")} ${row.name}:${row.size}`}
-                className="w-full text-left disabled:opacity-50"
-              >
-                {rowInner}
-              </button>
-            );
+            return <div key={`${row.id}-${row.size}`}>{rowInner}</div>;
           })}
         </div>
       )}
