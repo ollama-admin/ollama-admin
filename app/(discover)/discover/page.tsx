@@ -51,7 +51,8 @@ const CAP_COLORS: Record<string, string> = {
 
 // Estimate model size in GB from a tag like "7b", "13b", "70b" using Q4 approximation.
 function parseTagToSizeGB(tag: string): number | null {
-  const t = tag.toLowerCase();
+  // For MoE tags like "8x7b", use only the expert size (after "x")
+  const t = tag.toLowerCase().replace(/^\d+x/, "");
   const bMatch = t.match(/^(\d+(?:\.\d+)?)b$/);
   if (bMatch) return parseFloat(bMatch[1]) * 0.55;
   const mMatch = t.match(/^(\d+(?:\.\d+)?)m$/);
