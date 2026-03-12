@@ -10,7 +10,9 @@ import {
   Activity,
   MemoryStick,
   Gauge,
+  Layers,
 } from "lucide-react";
+import { gradeColor, gradeBg, type Grade } from "@/lib/model-scoring";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ProgressBar } from "@/components/ui/progress-bar";
@@ -35,11 +37,22 @@ interface GpuInfo {
   powerDraw: number | null;
 }
 
+interface ModelCompatibility {
+  name: string;
+  sizeGB: number;
+  tps: number;
+  memPct: number;
+  fits: boolean;
+  grade: Grade;
+  hasBandwidth: boolean;
+}
+
 interface ServerGpuData {
   serverId: string;
   serverName: string;
   runningModels: RunningModel[];
   gpuInfo: GpuInfo[] | null;
+  modelCompatibility: ModelCompatibility[] | null;
   error?: string;
 }
 
@@ -98,6 +111,90 @@ function StatCard({
         </p>
         {sub && (
           <p className="text-xs text-[hsl(var(--muted-foreground))]">{sub}</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function GradeBadge({ grade }: { grade: Grade }) {
+  return (
+    <span
+      className="inline-flex h-6 w-7 items-center justify-center rounded text-xs font-bold"
+      style={{ color: gradeColor(grade), background: gradeBg(grade) }}
+    >
+      {grade}
+    </span>
+  );
+}
+
+function ModelCompatibilityCard({
+  models,
+  t,
+}: {
+  models: ModelCompatibility[];
+  t: ReturnType<typeof useTranslations<"admin.gpu">>;
+}) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Layers className="h-4 w-4" />
+          {t("modelCompatibility")}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {models.length === 0 ? (
+          <p className="text-sm text-[hsl(var(--muted-foreground))]">
+            {t("noModelsOnServer")}
+          </p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-xs text-[hsl(var(--muted-foreground))]">
+                  <th className="pb-2 text-left font-medium">{t("model")}</th>
+                  <th className="pb-2 text-right font-medium">{t("modelSize")}</th>
+                  <th className="pb-2 text-right font-medium">{t("estimatedTps")}</th>
+                  <th className="pb-2 text-right font-medium">{t("vramPct")}</th>
+                  <th className="pb-2 text-center font-medium">{t("grade")}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[hsl(var(--border))]">
+                {models.map((m) => (
+                  <tr
+                    key={m.name}
+                    className={
+                      m.fits
+                        ? "hover:bg-[hsl(var(--muted)/0.4)]"
+                        : "opacity-50 hover:bg-[hsl(var(--muted)/0.4)]"
+                    }
+                  >
+                    <td className="py-2 pr-4 font-mono text-xs">{m.name}</td>
+                    <td className="py-2 pr-4 text-right tabular-nums text-[hsl(var(--muted-foreground))]">
+                      {m.sizeGB.toFixed(1)} GB
+                    </td>
+                    <td className="py-2 pr-4 text-right tabular-nums">
+                      {m.hasBandwidth && m.fits
+                        ? `${m.tps.toFixed(1)} t/s`
+                        : "—"}
+                    </td>
+                    <td className="py-2 pr-4 text-right tabular-nums">
+                      <span
+                        className="font-medium"
+                        style={{ color: m.memPct > 95 ? "hsl(var(--destructive))" : undefined }}
+                      >
+                        {Math.min(m.memPct, 999).toFixed(0)}%
+                      </span>
+                    </td>
+                    <td className="py-2 text-center">
+                      <GradeBadge grade={m.grade} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </CardContent>
     </Card>
@@ -402,6 +499,11 @@ export default function GpuPage() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Model Compatibility card */}
+            {server.modelCompatibility && server.modelCompatibility.length > 0 && (
+              <ModelCompatibilityCard models={server.modelCompatibility} t={t} />
+            )}
           </div>
         );
       })}
