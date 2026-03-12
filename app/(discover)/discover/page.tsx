@@ -62,6 +62,14 @@ function parseTagToSizeGB(tag: string): number | null {
   return null;
 }
 
+function parseRelativeTime(text: string): number {
+  const match = text.toLowerCase().match(/(\d+)\s+(second|minute|hour|day|week|month|year)s?\s+ago/);
+  if (!match) return 0;
+  const n = parseInt(match[1]);
+  const ms: Record<string, number> = { second: 1e3, minute: 6e4, hour: 3.6e6, day: 86.4e6, week: 6.048e8, month: 2.628e9, year: 3.154e10 };
+  return Date.now() - n * (ms[match[2]] ?? 0);
+}
+
 function vramStyle(memPct: number): React.CSSProperties {
   if (memPct >= 100) return { color: "hsl(var(--muted-foreground))", background: "hsl(var(--muted))" };
   if (memPct >= 80)  return { color: "hsl(0 84% 60%)",    background: "hsl(0 84% 60% / 0.15)" };
@@ -83,6 +91,8 @@ export default function DiscoverPage() {
   const [downloadingRefs, setDownloadingRefs] = useState<Set<string>>(new Set());
   const [gpuSpecs, setGpuSpecs] = useState<GpuSpecs | null>(null);
   const [fitsGpuOnly, setFitsGpuOnly] = useState(false);
+  const [sortBy, setSortBy] = useState<"updated" | "grade">("updated");
+  const [sortDir, setSortDir] = useState<1 | -1>(1);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -239,19 +249,20 @@ export default function DiscoverPage() {
       return all;
     });
 
-    if (!gpuSpecs) return rows;
-
     return [...rows].sort((a, b) => {
-      const scoreA = getTagScore(a.size);
-      const scoreB = getTagScore(b.size);
-      const gradeA = scoreA ? GRADE_ORDER[scoreA.grade] ?? 6 : 6;
-      const gradeB = scoreB ? GRADE_ORDER[scoreB.grade] ?? 6 : 6;
-      if (gradeA !== gradeB) return gradeA - gradeB;
-      // Within same grade, sort by tps descending
-      return (scoreB?.tps ?? 0) - (scoreA?.tps ?? 0);
+      if (sortBy === "grade" && gpuSpecs) {
+        const scoreA = getTagScore(a.size);
+        const scoreB = getTagScore(b.size);
+        const gradeA = scoreA ? GRADE_ORDER[scoreA.grade] ?? 6 : 6;
+        const gradeB = scoreB ? GRADE_ORDER[scoreB.grade] ?? 6 : 6;
+        if (gradeA !== gradeB) return (gradeA - gradeB) * sortDir;
+        return ((scoreB?.tps ?? 0) - (scoreA?.tps ?? 0)) * sortDir;
+      }
+      // Default: sort by updated (most recent first)
+      return (parseRelativeTime(b.updated) - parseRelativeTime(a.updated)) * sortDir;
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [models, fitsGpuOnly, gpuSpecs]);
+  }, [models, fitsGpuOnly, gpuSpecs, sortBy, sortDir]);
 
   const gpuLabel = gpuSpecs
     ? `${gpuSpecs.gpuName.replace(/NVIDIA GeForce /i, "").replace(/NVIDIA /i, "")} · ${Math.round(gpuSpecs.vramGB)}GB`
@@ -344,10 +355,22 @@ export default function DiscoverPage() {
           {/* Column headers */}
           <div className="flex items-center gap-4 border-b border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.6)] px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
             <span className="flex-1">Model</span>
-            <span className="w-24 shrink-0 text-right hidden sm:block">Updated</span>
+            <button
+              onClick={() => { setSortBy("updated"); setSortDir(sortBy === "updated" ? (sortDir === 1 ? -1 : 1) : 1); }}
+              className={`w-24 shrink-0 text-right hidden sm:flex items-center justify-end gap-0.5 hover:text-[hsl(var(--foreground))] transition-colors ${sortBy === "updated" ? "text-[hsl(var(--foreground))]" : ""}`}
+            >
+              Updated {sortBy === "updated" ? (sortDir === 1 ? "↑" : "↓") : ""}
+            </button>
             <span className="w-28 shrink-0 text-right">Size</span>
             {gpuSpecs && <span className="w-24 shrink-0 text-right hidden md:block">Speed</span>}
-            {gpuSpecs && <span className="w-10 shrink-0 text-center">Grade</span>}
+            {gpuSpecs && (
+              <button
+                onClick={() => { setSortBy("grade"); setSortDir(sortBy === "grade" ? (sortDir === 1 ? -1 : 1) : 1); }}
+                className={`w-10 shrink-0 text-center hover:text-[hsl(var(--foreground))] transition-colors ${sortBy === "grade" ? "text-[hsl(var(--foreground))]" : ""}`}
+              >
+                Grade {sortBy === "grade" ? (sortDir === 1 ? "↑" : "↓") : ""}
+              </button>
+            )}
             <span className="w-8 shrink-0" />
           </div>
 
