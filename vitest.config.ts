@@ -9,6 +9,10 @@ export default defineConfig({
     globals: true,
     setupFiles: [],
     exclude: ["e2e/**", "node_modules/**"],
+    pool: "forks",
+    poolOptions: {
+      forks: { singleFork: true },
+    },
   },
   resolve: {
     alias: {
