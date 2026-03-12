@@ -1,14 +1,12 @@
 <p align="center">
   <img src="public/logo.jpeg" alt="Ollama Admin" width="100" />
 </p>
-
 <h1 align="center">Ollama Admin</h1>
-
 <p align="center">
-  Administration panel, chat client, and observability gateway for <a href="https://ollama.com">Ollama</a>.<br/>
-  Manage multiple servers, monitor GPUs, browse the model catalog, and chat with your models — all from a single self-hosted web app.
+  <strong>The infrastructure layer your Ollama servers are missing.</strong><br/><br/>
+  Most Ollama UIs give you a chat box. Ollama Admin gives you visibility and control over what's actually happening on your GPUs: which models are loaded, how much VRAM they're consuming, how fast they're generating tokens, and whether your servers can handle one more model before running out of memory.<br/><br/>
+  It's the difference between <em>using</em> Ollama and <em>operating</em> Ollama.
 </p>
-
 <p align="center">
   <a href="https://github.com/ollama-admin/ollama-admin/actions/workflows/ci.yml">
     <img src="https://github.com/ollama-admin/ollama-admin/actions/workflows/ci.yml/badge.svg" alt="CI" />
@@ -22,12 +20,12 @@
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License" />
   <img src="https://img.shields.io/badge/TypeScript-strict-blue?logo=typescript" alt="TypeScript" />
 </p>
-
 <p align="center">
+  <a href="#-why-ollama-admin">Why Ollama Admin</a> ·
   <a href="#-install">Install</a> ·
+  <a href="#-gpu-monitoring">GPU Monitoring</a> ·
+  <a href="#-the-observable-proxy">Observable Proxy</a> ·
   <a href="#-features">Features</a> ·
-  <a href="#-gpu-agent">GPU Agent</a> ·
-  <a href="#%EF%B8%8F-configuration">Configuration</a> ·
   <a href="#-api-reference">API</a> ·
   <a href="#-development">Development</a>
 </p>
@@ -35,6 +33,21 @@
 ---
 
 > **Screenshots coming soon.** Run the app and open [http://localhost:3000](http://localhost:3000) to see it in action.
+
+---
+
+## 🎯 Why Ollama Admin?
+
+If you're running Ollama on one GPU for personal use, you probably don't need this.
+
+But if you're running **multiple servers**, sharing GPUs across a team, or need to know *who used what model, when, and how much* — there's nothing else that does this:
+
+- **GPU-aware model management** — See real-time VRAM usage per GPU, which models are loaded in memory, and whether a new model will fit before you pull it. Supports NVIDIA, AMD, Intel, and Apple Silicon.
+- **Observable API gateway** — Every request to Ollama flows through a proxy that logs tokens, latency, model, user, and IP. You get a metrics dashboard with throughput (tokens/s), latency percentiles, error rates, and usage by model — without touching Prometheus or Grafana.
+- **Multi-server from one panel** — Add your Ollama instances, route requests to specific servers, and manage models across all of them. Your clients never need to know which server is behind the proxy.
+- **Access control that actually works** — API keys per client/team, role-based access (admin/user), rate limiting per IP, and optional GitHub OAuth. Revoke one key without touching the others.
+
+And yes, it also has a full-featured chat interface with streaming, model comparison, parameter presets, and conversation history — because you still need to actually *talk* to your models.
 
 ---
 
@@ -231,6 +244,112 @@ Open [http://localhost:3000](http://localhost:3000). Requires Node.js 20+ and an
 
 ---
 
+## 🖥 GPU Monitoring
+
+This is the core of what makes Ollama Admin different. The GPU Agent is a lightweight Python sidecar that exposes real-time GPU metrics over HTTP. Deploy it on any machine with a GPU — it does not need to be co-located with Ollama Admin.
+
+### What you see
+
+| Metric | Description |
+|---|---|
+| **VRAM usage** | Used / total memory per GPU — know exactly how much room you have for another model |
+| **Models in memory** | Which models are currently loaded and consuming VRAM |
+| **Temperature** | Real-time GPU temperature with configurable threshold alerts |
+| **Utilization** | GPU compute utilization percentage |
+| **Power draw** | Current power consumption per GPU |
+| **Tokens/s** | Throughput calculated from request logs — per model, per server |
+
+### Supported hardware
+
+| Backend | Detection | Requirements |
+|---|---|---|
+| **NVIDIA** | `nvidia-smi` | NVIDIA Container Toolkit (Docker) or drivers |
+| **AMD** | `rocm-smi` | ROCm drivers |
+| **Intel** | `xpu-smi` | Intel GPU drivers |
+| **Apple Silicon** | `system_profiler` | macOS only |
+
+### Install the GPU Agent
+
+```bash
+# One-liner (online)
+curl -fsSL https://raw.githubusercontent.com/ollama-admin/ollama-admin/main/scripts/install-gpu-agent.sh | bash
+```
+
+<details>
+<summary>Other install methods</summary>
+
+**Offline (air-gapped):**
+Include the GPU agent in your bundle (Step 1 above with `--with-gpu-agent`), then pass `--with-gpu-agent` to `install-offline.sh`.
+
+**Python standalone:**
+
+```bash
+cd gpu-agent
+pip install -r requirements.txt
+GPU_BACKEND=nvidia python main.py   # or: amd, intel, apple, auto
+```
+
+</details>
+
+Runs on port `11435` by default. Connect it in Ollama Admin → **Admin → Servers** → edit a server → set **GPU Agent URL** to `http://<gpu-server-ip>:11435`.
+
+### Alerts
+
+Set threshold-based alerts for GPU temperature, VRAM usage, error rates, and latency. Get warned before your GPU runs out of memory or overheats — from **Admin → Alerts**.
+
+### Endpoints
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/gpu` | Array of GPU objects — name, memory, temperature, utilization, power draw |
+| `GET` | `/health` | `{"status":"ok","backend":"nvidia"}` |
+
+See [gpu-agent/README.md](gpu-agent/README.md) for full documentation.
+
+---
+
+## 📡 The Observable Proxy
+
+All Ollama traffic goes through `/api/proxy` — never directly from clients to Ollama. This is what turns your Ollama instance into a managed, auditable API gateway.
+
+**Why this matters:**
+
+- **Full visibility** — every request is logged with model, tokens, latency, status code, user, and IP. You always know who is using what, when, and how much.
+- **Multi-client support** — point any app (LangChain, Open WebUI, custom scripts, CI pipelines) at the proxy instead of Ollama directly. All traffic flows through one place.
+- **Per-client API keys** — create a separate `oa-` key for each app or team. Revoke one key without touching the others. See usage broken down by key in the metrics dashboard.
+- **Rate limiting** — per-IP token bucket prevents any single client from saturating your GPU.
+- **Privacy control** — set `LOG_STORE_PROMPTS=false` to log only metadata (tokens, latency) without storing prompt content.
+- **Multi-server routing** — pass `?serverId=` to route a request to a specific Ollama instance. Your clients never need to know which server is behind the proxy.
+
+```bash
+# List models on a specific server
+curl -H "Authorization: Bearer oa-your-key-here" \
+  "http://localhost:3000/api/proxy/api/tags?serverId=SERVER_ID"
+
+# Streaming generation — works as a drop-in for the Ollama API
+curl -H "Authorization: Bearer oa-your-key-here" \
+  -d '{"model":"llama3","prompt":"Hello"}' \
+  "http://localhost:3000/api/proxy/api/generate?serverId=SERVER_ID"
+```
+
+Generate API keys from **Settings → API Keys**.
+
+---
+
+## 🔍 Model Catalog & Management
+
+Browse the full Ollama model catalog from inside the app, pull models to any connected server, and manage everything without touching the terminal.
+
+| Action | Where |
+|---|---|
+| Browse & pull models from ollama.com | `/discover` (admin only) |
+| Inspect Modelfile, parameters, template | `/admin/models` |
+| Delete, copy, unload models | `/admin/models` |
+| See running models per server | `/admin/gpu` |
+| Track pull progress in real-time | `/admin/models` |
+
+---
+
 ## ✨ Features
 
 ### 💬 Chat & Models
@@ -241,7 +360,6 @@ Open [http://localhost:3000](http://localhost:3000). Requires Node.js 20+ and an
 | **Model comparison** | Side-by-side streaming from two models with token counts and latency stats |
 | **Parameter presets** | Save and reuse temperature, top-k, top-p, context size, and system prompts |
 | **Conversation history** | Search, browse, and export past conversations to JSON or Markdown |
-| **Model catalog** | Browse and pull models from ollama.com without leaving the app (admin only) |
 
 ### 🛠 Tools
 
@@ -249,18 +367,6 @@ Open [http://localhost:3000](http://localhost:3000). Requires Node.js 20+ and an
 |---|---|
 | **OCR / Vision** | Extract text from images using any multimodal model (PNG, JPG, WebP up to 20 MB) |
 | **Embeddings** | Generate text embeddings and calculate cosine similarity between two inputs |
-
-### ⚙️ Administration
-
-| Feature | Description |
-|---|---|
-| **Multi-server management** | Add, edit, test, and switch between multiple Ollama instances |
-| **Model management** | Pull, delete, copy, inspect, and unload models per server |
-| **Gateway proxy** | All Ollama traffic routed through `/api/proxy` — logged, rate-limited, and authenticated |
-| **Request logs** | Every API call logged with tokens, latency, model, user, and IP; filterable and exportable |
-| **Metrics dashboard** | Requests over time, tokens by model, latency percentiles, error rates |
-| **GPU monitoring** | Running models, VRAM usage, temperature, utilization via optional sidecar agent |
-| **Configurable alerts** | Threshold-based alerts for GPU temperature, VRAM, error rate, and latency |
 
 ### 🔐 Security & Access
 
@@ -280,54 +386,6 @@ Open [http://localhost:3000](http://localhost:3000). Requires Node.js 20+ and an
 | **UI density** | Compact, normal, and spacious modes |
 | **Setup wizard** | Guided first-run with Ollama auto-detection, model download, and admin creation |
 | **Accessibility** | WCAG 2.1 AA: keyboard navigation, ARIA labels, 4.5:1 contrast ratios |
-
----
-
-## 🖥 GPU Agent
-
-The GPU Agent is a lightweight Python sidecar that exposes GPU metrics over HTTP. Deploy it on any machine with a GPU — it does not need to be co-located with Ollama Admin.
-
-### Supported hardware
-
-| Backend | Detection | Requirements |
-|---|---|---|
-| **NVIDIA** | `nvidia-smi` | NVIDIA Container Toolkit (Docker) or drivers |
-| **AMD** | `rocm-smi` | ROCm drivers |
-| **Intel** | `xpu-smi` | Intel GPU drivers |
-| **Apple Silicon** | `system_profiler` | macOS only |
-
-### Install — online
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/ollama-admin/ollama-admin/main/scripts/install-gpu-agent.sh | bash
-```
-
-### Install — offline (air-gapped)
-
-Include the GPU agent in your bundle (Step 1 above with `--with-gpu-agent`), then pass `--with-gpu-agent` to `install-offline.sh`.
-
-### Install — Python standalone
-
-```bash
-cd gpu-agent
-pip install -r requirements.txt
-GPU_BACKEND=nvidia python main.py   # or: amd, intel, apple, auto
-```
-
-Runs on port `11435` by default.
-
-### Connect to Ollama Admin
-
-In Ollama Admin → **Admin → Servers** → edit a server → set **GPU Agent URL** to `http://<gpu-server-ip>:11435`.
-
-### Endpoints
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/gpu` | Array of GPU objects — name, memory, temperature, utilization, power draw |
-| `GET` | `/health` | `{"status":"ok","backend":"nvidia"}` |
-
-See [gpu-agent/README.md](gpu-agent/README.md) for full documentation.
 
 ---
 
@@ -426,27 +484,7 @@ All Ollama traffic goes through the `/api/proxy` gateway — never directly from
 <details>
 <summary><strong>Proxy Gateway</strong></summary>
 
-All Ollama traffic is routed through `/api/proxy/[...path]` — never directly from the browser or external apps. This is one of the most powerful features of Ollama Admin: **it turns your Ollama instance into an observable, access-controlled API gateway**.
-
-**Why this matters:**
-
-- **Full visibility** — every request is logged with model, tokens, latency, status code, user, and IP. You always know who is using what, when, and how much.
-- **Multi-client support** — point any app (LangChain, Open WebUI, custom scripts, CI pipelines) at the proxy instead of Ollama directly. All traffic flows through one place.
-- **Per-client API keys** — create a separate `oa-` key for each app or team. Revoke one key without touching the others. See usage broken down by key in the metrics dashboard.
-- **Rate limiting** — per-IP token bucket prevents any single client from saturating your GPU.
-- **Privacy control** — set `LOG_STORE_PROMPTS=false` to log only metadata (tokens, latency) without storing prompt content.
-- **Multi-server routing** — pass `?serverId=` to route a request to a specific Ollama instance. Your clients never need to know which server is behind the proxy.
-
-```bash
-# List models on a specific server
-curl -H "Authorization: Bearer oa-your-key-here" \
-  "http://localhost:3000/api/proxy/api/tags?serverId=SERVER_ID"
-
-# Streaming generation — works as a drop-in for the Ollama API
-curl -H "Authorization: Bearer oa-your-key-here" \
-  -d '{"model":"llama3","prompt":"Hello"}' \
-  "http://localhost:3000/api/proxy/api/generate?serverId=SERVER_ID"
-```
+All Ollama traffic is routed through `/api/proxy/[...path]` — never directly from the browser or external apps.
 
 | Method | Endpoint | Description |
 |---|---|---|
@@ -648,36 +686,51 @@ Docker images are tagged as `:latest`, `:0.11.0`, `:0.11`, `:0`, and `:sha-<comm
 
 ## 🔧 Troubleshooting
 
-**"Connection refused" when adding an Ollama server**
+<details>
+<summary><strong>"Connection refused" when adding an Ollama server</strong></summary>
 
 - Verify Ollama is running: `ollama list`
 - Inside Docker on Mac/Windows, use `http://host.docker.internal:11434` instead of `localhost`
 - On Linux, use the host's actual IP: `ip route show default | awk '{print $3}'`
 - Check firewall: `sudo ufw allow 11434/tcp`
 
-**GPU not detected**
+</details>
+
+<details>
+<summary><strong>GPU not detected</strong></summary>
 
 - Confirm NVIDIA drivers work: `nvidia-smi`
 - Set `GPU_AGENT_ENABLED=true` in `.env` and restart
 - Check GPU Agent logs: `docker compose logs gpu-agent`
 - Confirm the GPU Agent URL is set in **Admin → Servers → edit server**
 
-**Setup wizard redirects loop / database locked**
+</details>
+
+<details>
+<summary><strong>Setup wizard redirects loop / database locked</strong></summary>
 
 - SQLite is single-writer; ensure only one instance is running
 - Delete stale WAL file: `rm ollama-admin.db-wal ollama-admin.db-shm`
 - Use PostgreSQL for concurrent or multi-replica deployments
 
-**Chat responses are slow or timing out**
+</details>
+
+<details>
+<summary><strong>Chat responses are slow or timing out</strong></summary>
 
 - Confirm the model is loaded: **Admin → GPU** shows running models
 - Check Ollama logs: `docker logs <ollama-container>`
 - Smaller quantisations (e.g. `q4_K_M`) are significantly faster than full-precision
 
-**Logs not appearing**
+</details>
+
+<details>
+<summary><strong>Logs not appearing</strong></summary>
 
 - `LOG_STORE_PROMPTS=false` stores only metadata (tokens, latency), not content
 - Confirm the proxy endpoint is being used (`/api/proxy/*`) — direct Ollama calls are not logged
+
+</details>
 
 ---
 

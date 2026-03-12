@@ -178,7 +178,9 @@
     "emptyDescription": "Update the list to find models!",
     "emptyAction": "Update it!",
     "downloading": "Getting it...",
+    "fitsGpu": "Fits my ship!",
     "capabilities": {
+      "text": "Words",
       "tools": "Skills",
       "vision": "Eyes",
       "embedding": "Memory",

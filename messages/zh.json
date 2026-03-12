@@ -178,7 +178,9 @@
     "emptyDescription": "刷新目录以浏览可用模型。",
     "emptyAction": "刷新目录",
     "downloading": "下载中...",
+    "fitsGpu": "适合我的GPU",
     "capabilities": {
+      "text": "文本",
       "tools": "工具",
       "vision": "视觉 / OCR",
       "embedding": "嵌入",

@@ -13,10 +13,10 @@ interface ScrapedModel {
 }
 
 const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
-const MAX_PAGES = 3;
+const MAX_PAGES = 100;
 let cache: { data: ScrapedModel[]; timestamp: number } | null = null;
 
-const KNOWN_CAPABILITIES = ["tools", "vision", "embedding", "thinking", "cloud"];
+const KNOWN_CAPABILITIES = ["tools", "vision", "embedding", "thinking", "cloud", "text"];
 
 function parseModelsFromHtml(html: string): ScrapedModel[] {
   const $ = cheerio.load(html);
@@ -36,18 +36,21 @@ function parseModelsFromHtml(html: string): ScrapedModel[] {
     let pulls = "";
     let updated = "";
 
-    $el.find("span").each((_, span) => {
-      const text = $(span).text().trim();
-      if (text.match(/Pulls$/i)) {
-        pulls = text.replace(/\s*Pulls$/i, "");
-      } else if (text.match(/^Updated/i)) {
-        updated = text;
-      } else if (text.match(/^\d+(\.\d+)?[bBmM]$/)) {
-        sizes.push(text.toLowerCase());
-      } else if (KNOWN_CAPABILITIES.includes(text.toLowerCase())) {
-        capabilities.push(text.toLowerCase());
-      }
+    $el.find("span[x-test-size]").each((_, span) => {
+      const text = $(span).text().trim().toLowerCase();
+      if (text) sizes.push(text);
     });
+
+    $el.find("span[x-test-capability]").each((_, span) => {
+      const text = $(span).text().trim().toLowerCase();
+      if (text && KNOWN_CAPABILITIES.includes(text)) capabilities.push(text);
+    });
+
+    const pullSpan = $el.find("span[x-test-pull-count]").first().text().trim();
+    if (pullSpan) pulls = pullSpan;
+
+    const updatedSpan = $el.find("span[x-test-updated]").first().text().trim();
+    if (updatedSpan) updated = updatedSpan;
 
     models.push({ id, name: heading || id, description, capabilities, sizes, pulls, updated });
   });
@@ -98,6 +101,9 @@ async function scrapeAllModels(): Promise<ScrapedModel[]> {
 
   for (const model of models) {
     model.capabilities = model.capabilities.filter((c) => c !== "cloud");
+    if (!model.capabilities.includes("embedding")) {
+      model.capabilities.unshift("text");
+    }
   }
 
   models.sort((a, b) => {

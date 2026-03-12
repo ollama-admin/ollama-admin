@@ -180,7 +180,9 @@
     "emptyDescription": "Actualisez le catalogue pour parcourir les modèles disponibles.",
     "emptyAction": "Actualiser le catalogue",
     "downloading": "Téléchargement...",
+    "fitsGpu": "Compatible GPU",
     "capabilities": {
+      "text": "Texte",
       "tools": "Outils",
       "vision": "Vision / OCR",
       "embedding": "Embedding",
