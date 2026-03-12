@@ -72,7 +72,13 @@
     "runningModels": "Crew in Action",
     "unload": "Kick Out",
     "expires": "Goes Away",
-    "noActivity": "Nothing happened... boring!"
+    "noActivity": "Nothing happened... boring!",
+    "live": "LIVE! Shishishi!",
+    "errors": "epic fails",
+    "gpuDetails": "Gear stats!",
+    "noData": "No treasure found yet!",
+    "noModelsInVram": "No nakama in VRAM!",
+    "noRequestsYet": "Nobody asked me anything in 24 hours..."
   },
   "chat": {
     "title": "Talk!",
@@ -528,5 +534,15 @@
     "description": "This place doesn't exist! Like the All Blue... but not as cool.",
     "back": "Go back",
     "home": "Head home"
+  },
+  "auth": {
+    "title": "Join the Straw Hat Crew!",
+    "subtitle": "Prove you're a nakama to get on board!",
+    "username": "Crew name",
+    "password": "Secret code",
+    "showPassword": "Show the code!",
+    "hidePassword": "Hide the code!",
+    "signIn": "I'm gonna be King of the Pirates!",
+    "invalidCredentials": "That's not right! You're not my nakama!"
   }
 }

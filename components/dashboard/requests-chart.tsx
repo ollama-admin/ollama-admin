@@ -34,7 +34,7 @@ function RequestsChart({ data, label, labelNoData }: RequestsChartProps) {
   const isEmpty = data.length === 0 || totalRequests === 0;
 
   return (
-    <Card className="flex flex-col gap-3">
+    <Card className="flex h-full flex-col gap-3">
       <div className="flex items-center justify-between">
         <p className="text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wide">
           {label}
@@ -53,14 +53,17 @@ function RequestsChart({ data, label, labelNoData }: RequestsChartProps) {
           </p>
         </div>
       ) : (
-        <RealtimeChart
-          data={chartData}
-          height={140}
-          unit="req"
-          label={label}
-          color="hsl(var(--primary))"
-          fillOpacity={0.12}
-        />
+        <div className="min-h-[120px] flex-1">
+          <RealtimeChart
+            data={chartData}
+            height={160}
+            unit="req"
+            label={label}
+            color="hsl(var(--primary))"
+            fillOpacity={0.12}
+            className="h-full"
+          />
+        </div>
       )}
     </Card>
   );

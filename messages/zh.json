@@ -72,7 +72,13 @@
     "runningModels": "显存中的模型",
     "unload": "卸载",
     "expires": "过期时间",
-    "noActivity": "暂无最近活动"
+    "noActivity": "暂无最近活动",
+    "live": "实时",
+    "errors": "错误",
+    "gpuDetails": "GPU 详情",
+    "noData": "暂无数据",
+    "noModelsInVram": "显存中无模型",
+    "noRequestsYet": "过去24小时内无请求"
   },
   "chat": {
     "title": "对话",
@@ -528,5 +534,15 @@
     "description": "您查找的页面不存在或已被移动。",
     "back": "返回",
     "home": "回到首页"
+  },
+  "auth": {
+    "title": "登录 Ollama Admin",
+    "subtitle": "请输入您的凭据以继续",
+    "username": "用户名",
+    "password": "密码",
+    "showPassword": "显示密码",
+    "hidePassword": "隐藏密码",
+    "signIn": "登录",
+    "invalidCredentials": "用户名或密码错误"
   }
 }

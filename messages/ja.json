@@ -72,7 +72,13 @@
     "runningModels": "VRAM内のモデル",
     "unload": "アンロード",
     "expires": "期限",
-    "noActivity": "最近のアクティビティなし"
+    "noActivity": "最近のアクティビティなし",
+    "live": "ライブ",
+    "errors": "エラー",
+    "gpuDetails": "GPU詳細",
+    "noData": "データなし",
+    "noModelsInVram": "VRAMにモデルなし",
+    "noRequestsYet": "過去24時間にリクエストなし"
   },
   "chat": {
     "title": "チャット",
@@ -528,5 +534,15 @@
     "description": "探しているページは存在しないか、移動されました。",
     "back": "戻る",
     "home": "ホームへ"
+  },
+  "auth": {
+    "title": "Ollama Admin にサインイン",
+    "subtitle": "続けるには認証情報を入力してください",
+    "username": "ユーザー名",
+    "password": "パスワード",
+    "showPassword": "パスワードを表示",
+    "hidePassword": "パスワードを非表示",
+    "signIn": "サインイン",
+    "invalidCredentials": "ユーザー名またはパスワードが正しくありません"
   }
 }

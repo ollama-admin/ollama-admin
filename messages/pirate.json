@@ -72,7 +72,13 @@
     "runningModels": "Crew on Deck",
     "unload": "Overboard!",
     "expires": "Sets Sail Away",
-    "noActivity": "The seas be calm... too calm"
+    "noActivity": "The seas be calm... too calm",
+    "live": "Live on the high seas!",
+    "errors": "blunders",
+    "gpuDetails": "Cannon details",
+    "noData": "No plunder yet, arr!",
+    "noModelsInVram": "No crew in the hold!",
+    "noRequestsYet": "No ships spotted in 24 hours..."
   },
   "chat": {
     "title": "Parley",
@@ -528,5 +534,15 @@
     "description": "This port doesn't exist or has been plundered. Shiver me timbers!",
     "back": "Turn back!",
     "home": "Back to port!"
+  },
+  "auth": {
+    "title": "Board the Ollama Admin ship, arr!",
+    "subtitle": "State yer name and secret code to board, ye scallywag!",
+    "username": "Pirate name",
+    "password": "Secret plunder code",
+    "showPassword": "Show the code, arr!",
+    "hidePassword": "Hide the code, arr!",
+    "signIn": "Hoist the sails!",
+    "invalidCredentials": "Wrong code, landlubber! Walk the plank!"
   }
 }
