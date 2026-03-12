@@ -357,9 +357,9 @@ export default function DiscoverPage() {
             <span className="flex-1">Model</span>
             <button
               onClick={() => { setSortBy("updated"); setSortDir(sortBy === "updated" ? (sortDir === 1 ? -1 : 1) : 1); }}
-              className={`w-24 shrink-0 text-right hidden sm:flex items-center justify-end gap-0.5 hover:text-[hsl(var(--foreground))] transition-colors ${sortBy === "updated" ? "text-[hsl(var(--foreground))]" : ""}`}
+              className={`w-24 shrink-0 hidden sm:flex items-center justify-end gap-0.5 hover:text-[hsl(var(--foreground))] transition-colors ${sortBy === "updated" ? "text-[hsl(var(--foreground))]" : ""}`}
             >
-              Updated {sortBy === "updated" ? (sortDir === 1 ? "↑" : "↓") : ""}
+              Updated <span>{sortBy === "updated" ? (sortDir === 1 ? "↓" : "↑") : <span className="opacity-30">↕</span>}</span>
             </button>
             <span className="w-28 shrink-0 text-right">Size</span>
             {gpuSpecs && <span className="w-24 shrink-0 text-right hidden md:block">Speed</span>}
@@ -368,7 +368,7 @@ export default function DiscoverPage() {
                 onClick={() => { setSortBy("grade"); setSortDir(sortBy === "grade" ? (sortDir === 1 ? -1 : 1) : 1); }}
                 className={`w-10 shrink-0 text-center hover:text-[hsl(var(--foreground))] transition-colors ${sortBy === "grade" ? "text-[hsl(var(--foreground))]" : ""}`}
               >
-                Grade {sortBy === "grade" ? (sortDir === 1 ? "↑" : "↓") : ""}
+                Grade <span>{sortBy === "grade" ? (sortDir === 1 ? "↓" : "↑") : <span className="opacity-30">↕</span>}</span>
               </button>
             )}
             <span className="w-8 shrink-0" />
