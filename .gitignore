@@ -48,6 +48,8 @@ prisma/*.db-journal
 # Python
 __pycache__/
 *.pyc
+.venv/
+venv/
 
 # Testing
 coverage/
