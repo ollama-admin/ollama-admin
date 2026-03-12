@@ -16,7 +16,7 @@ const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 const MAX_PAGES = 100;
 let cache: { data: ScrapedModel[]; timestamp: number } | null = null;
 
-const KNOWN_CAPABILITIES = ["tools", "vision", "embedding", "thinking", "cloud"];
+const KNOWN_CAPABILITIES = ["tools", "vision", "embedding", "thinking", "cloud", "text"];
 
 function parseModelsFromHtml(html: string): ScrapedModel[] {
   const $ = cheerio.load(html);
@@ -101,6 +101,9 @@ async function scrapeAllModels(): Promise<ScrapedModel[]> {
 
   for (const model of models) {
     model.capabilities = model.capabilities.filter((c) => c !== "cloud");
+    if (!model.capabilities.includes("embedding")) {
+      model.capabilities.unshift("text");
+    }
   }
 
   models.sort((a, b) => {

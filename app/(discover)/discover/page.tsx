@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
 import { useEffect, useState, useRef, useMemo } from "react";
-import { Search, Check, Download, Loader2, Wrench, Eye, Layers, Zap, Code } from "lucide-react";
+import { Search, Check, Download, Loader2, Wrench, Eye, Layers, Zap, Code, MessageSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -27,13 +27,14 @@ interface GpuSpecs {
   bandwidthGBs: number | null;
 }
 
-const CAPABILITY_OPTIONS = ["tools", "vision", "embedding", "thinking"];
+const CAPABILITY_OPTIONS = ["text", "tools", "vision", "embedding", "thinking"];
 
 const GRADE_LABELS: Record<Grade, string> = {
   S: "≥50 t/s", A: "≥30 t/s", B: "≥15 t/s", C: "≥8 t/s", D: "≥3 t/s", F: "no fit",
 };
 
 const CAP_ICONS: Record<string, React.ReactNode> = {
+  text:      <MessageSquare className="h-3.5 w-3.5" />,
   tools:     <Wrench className="h-3.5 w-3.5" />,
   vision:    <Eye    className="h-3.5 w-3.5" />,
   embedding: <Layers className="h-3.5 w-3.5" />,
@@ -42,6 +43,7 @@ const CAP_ICONS: Record<string, React.ReactNode> = {
 };
 
 const CAP_COLORS: Record<string, string> = {
+  text:      "hsl(var(--muted-foreground))",
   tools:     "hsl(38 92% 50%)",
   vision:    "hsl(217 91% 60%)",
   embedding: "hsl(271 81% 56%)",
