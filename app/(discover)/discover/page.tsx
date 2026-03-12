@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
-import { useEffect, useState, useRef, Fragment } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Search, Check, Download, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -289,7 +289,8 @@ export default function DiscoverPage() {
       </div>
 
       {gpuSpecs && (
-        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[hsl(var(--muted-foreground))]">
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.4)] px-3 py-2 text-xs text-[hsl(var(--muted-foreground))]">
+          <span className="font-semibold text-[hsl(var(--foreground))]">GPU:</span>
           {(["S", "A", "B", "C", "D", "F"] as Grade[]).map((g) => (
             <span key={g} className="flex items-center gap-1.5">
               <span className="rounded px-1.5 py-0.5 text-[10px] font-bold" style={{ color: gradeColor(g), background: gradeBg(g) }}>
@@ -302,122 +303,108 @@ export default function DiscoverPage() {
       )}
 
       {loading ? (
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} variant="card" />)}
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          {[1, 2, 3, 4].map((i) => <Skeleton key={i} variant="card" />)}
         </div>
       ) : displayedModels.length === 0 ? (
         <EmptyState icon={Search} title={t("emptyTitle")} description={t("emptyDescription")} />
       ) : (
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
           {displayedModels.map((model) => (
-            <Card key={model.id}>
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-medium">{model.name}</h3>
-                  {model.capabilities.length > 0 && (
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {model.capabilities.map((cap) => (
-                        <Badge key={cap} variant="muted" className="text-[10px]">{t(`capabilities.${cap}`)}</Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
+            <Card key={model.id} className="flex flex-col">
+              <div>
+                <h3 className="font-semibold">{model.name}</h3>
+                {model.capabilities.length > 0 && (
+                  <div className="mt-1.5 flex flex-wrap gap-1">
+                    {model.capabilities.map((cap) => (
+                      <Badge key={cap} variant="muted" className="text-[10px]">{t(`capabilities.${cap}`)}</Badge>
+                    ))}
+                  </div>
+                )}
+                {model.description && (
+                  <p className="mt-2 line-clamp-2 text-xs text-[hsl(var(--muted-foreground))]">{model.description}</p>
+                )}
               </div>
-              {model.description && (
-                <p className="mt-2 line-clamp-2 text-xs text-[hsl(var(--muted-foreground))]">{model.description}</p>
-              )}
-              <div className="mt-3 flex flex-wrap gap-2">
-                {model.sizes.length > 0 ? (
-                  model.sizes.map((size) => {
-                    const downloaded = isModelTagDownloaded(model.name, size);
-                    const pulling = isDownloading(model.name, size);
-                    const score = getTagScore(size);
-                    const sizeGB = parseTagToSizeGB(size);
-                    const gbLabel = sizeGB != null
-                      ? sizeGB < 10 ? `${sizeGB.toFixed(1)} GB` : `${Math.round(sizeGB)} GB`
-                      : null;
-                    const cardBg = score
-                      ? gradeBg(score.grade)
-                      : "hsl(var(--muted))";
-                    const cardFg = score ? gradeColor(score.grade) : undefined;
 
-                    const cardContent = (
-                      <div
-                        className="flex min-w-[72px] flex-col gap-0.5 rounded-lg p-2"
-                        style={{ background: cardBg }}
+              {(model.sizes.length > 0 || isAdmin) && (
+                <>
+                  <div className="my-3 border-t border-[hsl(var(--border))]" />
+                  <div className="space-y-0.5">
+                    {model.sizes.length > 0 ? (
+                      model.sizes.map((size) => {
+                        const downloaded = isModelTagDownloaded(model.name, size);
+                        const pulling = isDownloading(model.name, size);
+                        const score = getTagScore(size);
+                        const sizeGB = parseTagToSizeGB(size);
+                        const gbLabel = sizeGB != null
+                          ? sizeGB < 10 ? `${sizeGB.toFixed(1)} GB` : `${Math.round(sizeGB)} GB`
+                          : null;
+
+                        const rowInner = (
+                          <div className={`flex items-center gap-3 rounded-md px-2 py-1.5 text-sm transition-colors${score && !score.fits ? " opacity-50" : ""}${isAdmin && !downloaded && !pulling ? " hover:bg-[hsl(var(--muted))]" : ""}`}>
+                            <span className="w-10 shrink-0 font-mono font-semibold">{size}</span>
+                            <span className="w-14 shrink-0 text-xs text-[hsl(var(--muted-foreground))]">{gbLabel ?? ""}</span>
+                            {gpuSpecs && (
+                              <span className="w-16 shrink-0 text-xs tabular-nums" style={{ color: score?.fits && score.tps > 0 ? gradeColor(score.grade) : undefined }}>
+                                {score?.fits && score.tps > 0 ? `~${Math.round(score.tps)} t/s` : ""}
+                              </span>
+                            )}
+                            {gpuSpecs && score && (
+                              <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold" style={{ color: gradeColor(score.grade), background: gradeBg(score.grade) }}>
+                                {score.grade}
+                              </span>
+                            )}
+                            <div className="ml-auto shrink-0">
+                              {downloaded ? (
+                                <Check className="h-4 w-4 text-[hsl(142_71%_45%)]" />
+                              ) : pulling ? (
+                                <Loader2 className="h-4 w-4 animate-spin text-[hsl(var(--muted-foreground))]" />
+                              ) : isAdmin ? (
+                                <Download className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
+                              ) : null}
+                            </div>
+                          </div>
+                        );
+
+                        if (!isAdmin || downloaded || pulling) {
+                          return <div key={size}>{rowInner}</div>;
+                        }
+                        return (
+                          <button
+                            key={size}
+                            onClick={() => handlePull(model.name, size)}
+                            disabled={!selectedServer}
+                            aria-label={`${t("pullModel")} ${model.name}:${size}`}
+                            className="w-full text-left disabled:opacity-50"
+                          >
+                            {rowInner}
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <button
+                        onClick={() => handlePull(model.name)}
+                        disabled={isDownloading(model.name, "latest") || isModelTagDownloaded(model.name, "latest") || !selectedServer}
+                        aria-label={`${t("pullModel")} ${model.name}`}
+                        className="flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-[hsl(var(--muted))] disabled:opacity-50"
                       >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-sm font-bold leading-none" style={{ color: cardFg }}>
-                            {size}
-                          </span>
-                          {score && (
-                            <span className="text-xs font-bold leading-none" style={{ color: cardFg }}>
-                              {score.grade}
-                            </span>
+                        <span className="w-10 shrink-0 font-mono font-semibold text-[hsl(var(--muted-foreground))]">latest</span>
+                        <div className="ml-auto shrink-0">
+                          {isModelTagDownloaded(model.name, "latest") ? (
+                            <Check className="h-4 w-4 text-[hsl(142_71%_45%)]" />
+                          ) : isDownloading(model.name, "latest") ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-[hsl(var(--muted-foreground))]" />
+                          ) : (
+                            <Download className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
                           )}
                         </div>
-                        {gbLabel && (
-                          <span className="text-[11px] text-[hsl(var(--muted-foreground))]">{gbLabel}</span>
-                        )}
-                        {score && score.fits && score.tps > 0 && (
-                          <span className="text-[11px] font-medium" style={{ color: cardFg }}>
-                            ~{Math.round(score.tps)} t/s
-                          </span>
-                        )}
-                        {score && !score.fits && (
-                          <span className="text-[11px] text-[hsl(var(--destructive))]">no fit</span>
-                        )}
-                        <div className="mt-1 flex items-center gap-1 text-[11px] font-medium">
-                          {downloaded ? (
-                            <span className="flex items-center gap-0.5" style={{ color: cardFg ?? "hsl(142 71% 45%)" }}>
-                              <Check className="h-3 w-3" />{t("downloaded")}
-                            </span>
-                          ) : pulling ? (
-                            <span className="flex items-center gap-0.5 text-[hsl(var(--muted-foreground))]">
-                              <Loader2 className="h-3 w-3 animate-spin" />{t("downloading")}
-                            </span>
-                          ) : isAdmin ? (
-                            <span className="flex items-center gap-0.5" style={{ color: cardFg ?? "hsl(var(--muted-foreground))" }}>
-                              <Download className="h-3 w-3" />{t("pullModel")}
-                            </span>
-                          ) : null}
-                        </div>
-                      </div>
-                    );
-
-                    if (!isAdmin || downloaded || pulling) {
-                      return <Fragment key={size}>{cardContent}</Fragment>;
-                    }
-                    return (
-                      <button
-                        key={size}
-                        onClick={() => handlePull(model.name, size)}
-                        disabled={!selectedServer}
-                        aria-label={`${t("pullModel")} ${model.name}:${size}`}
-                        className="text-left transition-opacity hover:opacity-75 disabled:opacity-50"
-                      >
-                        {cardContent}
                       </button>
-                    );
-                  })
-                ) : isAdmin ? (
-                  <button
-                    onClick={() => handlePull(model.name)}
-                    disabled={isDownloading(model.name, "latest") || isModelTagDownloaded(model.name, "latest") || !selectedServer}
-                    aria-label={`${t("pullModel")} ${model.name}`}
-                    className="inline-flex items-center gap-1 rounded-lg bg-[hsl(var(--muted))] px-3 py-1.5 text-xs font-medium text-[hsl(var(--muted-foreground))] transition-opacity hover:opacity-75 disabled:opacity-50"
-                  >
-                    {isModelTagDownloaded(model.name, "latest") ? (
-                      <><Check className="h-3.5 w-3.5" />{t("downloaded")}</>
-                    ) : isDownloading(model.name, "latest") ? (
-                      <><Loader2 className="h-3.5 w-3.5 animate-spin" />{t("downloading")}</>
-                    ) : (
-                      <><Download className="h-3.5 w-3.5" />{t("pullModel")}</>
                     )}
-                  </button>
-                ) : null}
-              </div>
-              <div className="mt-2 flex items-center gap-3 text-[11px] text-[hsl(var(--muted-foreground))]">
+                  </div>
+                </>
+              )}
+
+              <div className="mt-auto pt-3 flex items-center gap-3 text-[11px] text-[hsl(var(--muted-foreground))]">
                 {model.pulls && <span>{model.pulls} pulls</span>}
                 {model.updated && <span>{model.updated}</span>}
               </div>
