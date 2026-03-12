@@ -178,6 +178,7 @@
     "emptyDescription": "Actualiza el catálogo para explorar los modelos disponibles.",
     "emptyAction": "Actualizar catálogo",
     "downloading": "Descargando...",
+    "fitsGpu": "Cabe en mi GPU",
     "capabilities": {
       "tools": "Herramientas",
       "vision": "Visión / OCR",

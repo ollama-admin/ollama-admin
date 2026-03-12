@@ -178,6 +178,7 @@
     "emptyDescription": "カタログを更新して利用可能なモデルを閲覧してください。",
     "emptyAction": "カタログを更新",
     "downloading": "ダウンロード中...",
+    "fitsGpu": "GPUに収まる",
     "capabilities": {
       "tools": "ツール",
       "vision": "ビジョン / OCR",

@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Search, Check, Download, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 import { useServers } from "@/lib/hooks/use-servers";
+import { scoreModel, gradeColor } from "@/lib/model-scoring";
 
 interface CatalogModel {
   id: string;
@@ -24,7 +25,20 @@ interface CatalogModel {
   updated: string;
 }
 
+interface GpuSpecs {
+  gpuName: string;
+  vramGB: number;
+  bandwidthGBs: number | null;
+}
+
 const CAPABILITY_OPTIONS = ["tools", "vision", "embedding", "thinking"];
+
+// Estimate model size in GB from a tag like "7b", "13b", "70b" using Q4 approximation.
+function parseTagToSizeGB(tag: string): number | null {
+  const match = tag.toLowerCase().match(/^(\d+(?:\.\d+)?)b$/);
+  if (!match) return null;
+  return parseFloat(match[1]) * 0.55;
+}
 
 export default function DiscoverPage() {
   const t = useTranslations("discover");
@@ -38,6 +52,8 @@ export default function DiscoverPage() {
   const [loading, setLoading] = useState(true);
   const [downloadedModels, setDownloadedModels] = useState<Set<string>>(new Set());
   const [downloadingRefs, setDownloadingRefs] = useState<Set<string>>(new Set());
+  const [gpuSpecs, setGpuSpecs] = useState<GpuSpecs | null>(null);
+  const [fitsGpuOnly, setFitsGpuOnly] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -56,6 +72,14 @@ export default function DiscoverPage() {
       }
     })();
     return () => { cancelled = true; };
+  }, [selectedServer]);
+
+  useEffect(() => {
+    if (!selectedServer) return;
+    fetch(`/api/gpu/specs?serverId=${selectedServer}`)
+      .then((r) => r.json())
+      .then((data: GpuSpecs | null) => setGpuSpecs(data))
+      .catch(() => {});
   }, [selectedServer]);
 
   // Poll for download status
@@ -185,10 +209,36 @@ export default function DiscoverPage() {
   const isDownloading = (modelName: string, tag: string) =>
     downloadingRefs.has(`${modelName}:${tag}`);
 
+  const getTagScore = (tag: string) => {
+    if (!gpuSpecs) return null;
+    const sizeGB = parseTagToSizeGB(tag);
+    if (sizeGB === null) return null;
+    return scoreModel(sizeGB, gpuSpecs.vramGB, gpuSpecs.bandwidthGBs ?? undefined);
+  };
+
+  const displayedModels = fitsGpuOnly && gpuSpecs
+    ? models.filter((model) =>
+        model.sizes.length === 0 ||
+        model.sizes.some((size) => {
+          const sizeGB = parseTagToSizeGB(size);
+          return sizeGB === null || sizeGB <= gpuSpecs.vramGB;
+        })
+      )
+    : models;
+
+  const gpuLabel = gpuSpecs
+    ? `${gpuSpecs.gpuName.replace(/NVIDIA GeForce /i, "").replace(/NVIDIA /i, "")} · ${Math.round(gpuSpecs.vramGB)}GB`
+    : null;
+
   return (
     <div className="p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">{t("title")}</h1>
+        {gpuLabel && (
+          <span className="rounded-full border border-[hsl(var(--border))] bg-[hsl(var(--muted))] px-2.5 py-0.5 text-xs text-[hsl(var(--muted-foreground))]">
+            {gpuLabel}
+          </span>
+        )}
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -215,17 +265,30 @@ export default function DiscoverPage() {
             {t(`capabilities.${cap}`)}
           </button>
         ))}
+        {gpuSpecs && (
+          <button
+            onClick={() => setFitsGpuOnly((v) => !v)}
+            aria-pressed={fitsGpuOnly}
+            className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+              fitsGpuOnly
+                ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))]"
+                : "border-[hsl(var(--border))] hover:bg-[hsl(var(--accent))]"
+            }`}
+          >
+            {t("fitsGpu")}
+          </button>
+        )}
       </div>
 
       {loading ? (
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} variant="card" />)}
         </div>
-      ) : models.length === 0 ? (
+      ) : displayedModels.length === 0 ? (
         <EmptyState icon={Search} title={t("emptyTitle")} description={t("emptyDescription")} />
       ) : (
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {models.map((model) => (
+          {displayedModels.map((model) => (
             <Card key={model.id}>
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
@@ -247,11 +310,17 @@ export default function DiscoverPage() {
                   model.sizes.map((size) => {
                     const downloaded = isModelTagDownloaded(model.name, size);
                     const pulling = isDownloading(model.name, size);
+                    const score = getTagScore(size);
+                    const gradeEl = score && (
+                      <span className="ml-1 font-bold" style={{ color: gradeColor(score.grade) }}>
+                        {score.grade}
+                      </span>
+                    );
 
                     if (downloaded) {
                       return (
                         <Badge key={size} variant="success" className="text-[10px]">
-                          <Check className="mr-0.5 h-2.5 w-2.5" />{size}
+                          <Check className="mr-0.5 h-2.5 w-2.5" />{size}{gradeEl}
                         </Badge>
                       );
                     }
@@ -264,7 +333,7 @@ export default function DiscoverPage() {
                     }
                     if (!isAdmin) {
                       return (
-                        <Badge key={size} variant="muted" className="text-[10px]">{size}</Badge>
+                        <Badge key={size} variant="muted" className="text-[10px]">{size}{gradeEl}</Badge>
                       );
                     }
                     return (
@@ -275,7 +344,7 @@ export default function DiscoverPage() {
                         aria-label={`${t("pullModel")} ${model.name}:${size}`}
                         className="inline-flex items-center rounded bg-[hsl(var(--muted))] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--primary))] hover:text-[hsl(var(--primary-foreground))] disabled:opacity-50"
                       >
-                        <Download className="mr-0.5 h-2.5 w-2.5" />{size}
+                        <Download className="mr-0.5 h-2.5 w-2.5" />{size}{gradeEl}
                       </button>
                     );
                   })

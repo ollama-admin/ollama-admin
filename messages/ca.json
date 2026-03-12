@@ -180,6 +180,7 @@
     "emptyDescription": "Actualitza el catàleg per explorar els models disponibles.",
     "emptyAction": "Actualitzar catàleg",
     "downloading": "Descarregant...",
+    "fitsGpu": "Cap a la meva GPU",
     "capabilities": {
       "tools": "Eines",
       "vision": "Visió / OCR",

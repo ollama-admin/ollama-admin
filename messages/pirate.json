@@ -178,6 +178,7 @@
     "emptyDescription": "Update the list to find crew members!",
     "emptyAction": "Scan the seas!",
     "downloading": "Sailing in...",
+    "fitsGpu": "Fits me hold!",
     "capabilities": {
       "tools": "Skills",
       "vision": "Eagle Eyes",

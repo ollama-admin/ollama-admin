@@ -178,6 +178,7 @@
     "emptyDescription": "Refresh the catalog to browse available models.",
     "emptyAction": "Refresh catalog",
     "downloading": "Downloading...",
+    "fitsGpu": "Fits in GPU",
     "capabilities": {
       "tools": "Tools",
       "vision": "Vision / OCR",

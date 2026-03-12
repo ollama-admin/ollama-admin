@@ -178,6 +178,7 @@
     "emptyDescription": "उपलब्ध मॉडल ब्राउज़ करने के लिए कैटलॉग रीफ्रेश करें।",
     "emptyAction": "कैटलॉग रीफ्रेश करें",
     "downloading": "डाउनलोड हो रहा है...",
+    "fitsGpu": "GPU में फिट",
     "capabilities": {
       "tools": "टूल्स",
       "vision": "दृष्टि / OCR",
