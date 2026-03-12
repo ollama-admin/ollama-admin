@@ -23,7 +23,9 @@
     "connectionErrorDescription": "The server is not responding. Check that Ollama is running and the configured URL is correct.",
     "unload": "Unload",
     "unloadSuccess": "Model \"{model}\" unloaded from memory",
-    "unloadError": "Failed to unload model"
+    "unloadError": "Failed to unload model",
+    "noServerBanner": "No Ollama server configured — some features are unavailable.",
+    "noServerBannerAction": "Add a server"
   },
   "sidebar": {
     "dashboard": "Dashboard",
@@ -53,7 +55,24 @@
     "addServer": "Add Server",
     "emptyTitle": "Welcome to Ollama Admin",
     "emptyDescription": "Add your first Ollama server to get started.",
-    "emptyAction": "Add Server"
+    "emptyAction": "Add Server",
+    "requestsToday": "Requests Today",
+    "tokensToday": "Tokens Today",
+    "avgLatency": "Avg Latency",
+    "p95Latency": "p95",
+    "errorRate": "Error Rate",
+    "vsYesterday": "vs yesterday",
+    "requestsLast24h": "Requests / hour (last 24h)",
+    "topModelsToday": "Top Models Today",
+    "requests": "req",
+    "serverStatus": "Server Status",
+    "online": "Online",
+    "offline": "Offline",
+    "vram": "VRAM",
+    "runningModels": "Models in VRAM",
+    "unload": "Unload",
+    "expires": "Expires",
+    "noActivity": "No recent activity"
   },
   "chat": {
     "title": "Chat",
@@ -323,7 +342,14 @@
       "utilization": "GPU Utilization",
       "powerDraw": "Power Draw",
       "emptyTitle": "No servers configured",
-      "emptyDescription": "Add an Ollama server to monitor GPU usage."
+      "emptyDescription": "Add an Ollama server to monitor GPU usage.",
+      "modelCompatibility": "Model Compatibility",
+      "model": "Model",
+      "modelSize": "Size",
+      "estimatedTps": "Est. t/s",
+      "vramPct": "VRAM %",
+      "grade": "Grade",
+      "noModelsOnServer": "No models installed on this server."
     },
     "users": {
       "title": "Users",

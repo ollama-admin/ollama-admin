@@ -3,89 +3,110 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { LayoutDashboard } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { LayoutDashboard, MessageSquarePlus, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
+import { KpiCard } from "@/components/dashboard/kpi-card";
+import { RequestsChart } from "@/components/dashboard/requests-chart";
+import { ServerStatusPanel } from "@/components/dashboard/server-status-panel";
+import { TopModelsChart } from "@/components/dashboard/top-models-chart";
+import { RunningModelsPanel } from "@/components/dashboard/running-models-panel";
+import { ActivityFeed } from "@/components/dashboard/activity-feed";
+import type { ServerStatus } from "@/components/dashboard/server-status-panel";
+import type { RunningModel } from "@/components/dashboard/running-models-panel";
+import type { LogEntry } from "@/components/dashboard/activity-feed";
 
-interface Server {
-  id: string;
-  name: string;
-  url: string;
-  active: boolean;
+interface DashboardData {
+  kpis: {
+    serversOnline: number;
+    serversTotal: number;
+    requestsToday: number;
+    requestsYesterday: number;
+    tokensToday: number;
+    avgLatencyMs: number;
+    p95LatencyMs: number;
+    errorCount: number;
+    errorRate: string;
+  };
+  requestsPerHour: { hour: string; count: number }[];
+  topModels: { model: string; count: number }[];
+  servers: ServerStatus[];
 }
 
-interface HealthStatus {
-  status: "online" | "offline";
-  version?: string;
+function formatTokens(n: number) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
+  return String(n);
 }
 
-interface LogEntry {
-  id: string;
-  model: string;
-  endpoint: string;
-  latencyMs: number;
-  statusCode: number;
-  createdAt: string;
-  server: { name: string };
+function calcDelta(today: number, yesterday: number) {
+  if (yesterday === 0) return undefined;
+  return Math.round(((today - yesterday) / yesterday) * 100);
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="space-y-4 p-6">
+      <Skeleton className="h-7 w-40" />
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-5">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} variant="card" />
+        ))}
+      </div>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <Skeleton variant="card" className="h-48" />
+        </div>
+        <Skeleton variant="card" className="h-48" />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Skeleton variant="card" className="h-40" />
+        <Skeleton variant="card" className="h-40" />
+      </div>
+      <Skeleton variant="card" className="h-48" />
+    </div>
+  );
 }
 
 export default function DashboardPage() {
   const t = useTranslations("dashboard");
-  const [servers, setServers] = useState<Server[]>([]);
-  const [health, setHealth] = useState<Record<string, HealthStatus>>({});
-  const [recentLogs, setRecentLogs] = useState<LogEntry[]>([]);
-  const [modelCount, setModelCount] = useState(0);
+  const [data, setData] = useState<DashboardData | null>(null);
+  const [initialLogs, setInitialLogs] = useState<LogEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [noServers, setNoServers] = useState(false);
 
   useEffect(() => {
-    fetch("/api/servers")
-      .then((r) => r.json())
-      .then(async (data: Server[]) => {
-        setServers(data);
-        setLoading(false);
-        for (const s of data) {
-          try {
-            const res = await fetch(`/api/servers/${s.id}/health`);
-            const h = await res.json();
-            setHealth((prev) => ({ ...prev, [s.id]: h }));
-          } catch {
-            setHealth((prev) => ({ ...prev, [s.id]: { status: "offline" } }));
-          }
-        }
-        if (data.length > 0) {
-          try {
-            const modelsRes = await fetch(`/api/admin/models?serverId=${data[0].id}`);
-            const modelsData = await modelsRes.json();
-            setModelCount(modelsData.models?.length || 0);
-          } catch {
-            // server may be offline
-          }
+    Promise.all([
+      fetch("/api/dashboard").then((r) => r.json()),
+      fetch("/api/logs?limit=8").then((r) => r.json()),
+    ])
+      .then(([dashboard, logsData]) => {
+        if (dashboard.kpis?.serversTotal === 0) {
+          setNoServers(true);
+        } else {
+          setData(dashboard);
+          setInitialLogs(logsData.logs ?? []);
         }
       })
-      .catch(() => setLoading(false));
-
-    fetch("/api/logs?limit=10")
-      .then((r) => r.json())
-      .then((data) => setRecentLogs(data.logs || []));
+      .catch(() => setNoServers(true))
+      .finally(() => setLoading(false));
   }, []);
 
-  if (loading) {
-    return (
-      <div className="p-6">
-        <Skeleton className="h-8 w-48" />
-        <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Skeleton variant="card" />
-          <Skeleton variant="card" />
-          <Skeleton variant="card" />
-        </div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!data) return;
+    const id = setInterval(() => {
+      fetch("/api/dashboard")
+        .then((r) => r.json())
+        .then((d) => setData(d))
+        .catch(() => {});
+    }, 30_000);
+    return () => clearInterval(id);
+  }, [data]);
 
-  if (servers.length === 0) {
+  if (loading) return <DashboardSkeleton />;
+
+  if (noServers) {
     return (
       <EmptyState
         icon={LayoutDashboard}
@@ -100,82 +121,117 @@ export default function DashboardPage() {
     );
   }
 
+  if (!data) return null;
+
+  const { kpis, requestsPerHour, topModels, servers } = data;
+
+  const requestsDelta = calcDelta(kpis.requestsToday, kpis.requestsYesterday);
+
+  const runningModels: RunningModel[] = servers.flatMap((s) =>
+    s.runningModels.map((m) => ({
+      ...m,
+      serverName: s.name,
+      serverId: s.id,
+    }))
+  );
+
   return (
-    <div className="p-6">
+    <div className="space-y-4 p-6">
       <h1 className="text-2xl font-bold">{t("title")}</h1>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Link href="/admin/servers">
-          <Card interactive>
-            <h3 className="text-sm font-medium text-[hsl(var(--muted-foreground))]">{t("servers")}</h3>
-            <p className="mt-1 text-2xl font-bold">
-              {Object.values(health).filter((h) => h.status === "online").length}/{servers.length}
-            </p>
-            <div className="mt-2 flex gap-1">
-              {servers.map((s) => (
-                <span
-                  key={s.id}
-                  className={`h-2 w-2 rounded-full ${
-                    health[s.id]?.status === "online"
-                      ? "bg-[hsl(var(--success))]"
-                      : "bg-[hsl(var(--destructive))]"
-                  }`}
-                  title={s.name}
-                />
-              ))}
-            </div>
-          </Card>
-        </Link>
-
-        <Link href="/admin/models">
-          <Card interactive>
-            <h3 className="text-sm font-medium text-[hsl(var(--muted-foreground))]">{t("models")}</h3>
-            <p className="mt-1 text-2xl font-bold">{modelCount}</p>
-          </Card>
-        </Link>
-
-        <Card>
-          <h3 className="text-sm font-medium text-[hsl(var(--muted-foreground))]">{t("quickActions")}</h3>
-          <div className="mt-2 space-y-2">
-            <Link href="/chat">
-              <Button variant="secondary" className="w-full justify-start">
-                {t("newChat")}
-              </Button>
-            </Link>
-            <Link href="/discover">
-              <Button variant="secondary" className="w-full justify-start">
-                {t("pullModel")}
-              </Button>
-            </Link>
-          </div>
-        </Card>
+      {/* KPI strip */}
+      <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+        <KpiCard
+          label={t("servers")}
+          value={`${kpis.serversOnline}/${kpis.serversTotal}`}
+          subLabel={kpis.serversOnline === kpis.serversTotal ? t("online") : t("offline")}
+          href="/admin/servers"
+        />
+        <KpiCard
+          label={t("requestsToday")}
+          value={kpis.requestsToday.toLocaleString()}
+          delta={requestsDelta}
+          subLabel={t("vsYesterday")}
+          href="/admin/logs"
+        />
+        <KpiCard
+          label={t("tokensToday")}
+          value={formatTokens(kpis.tokensToday)}
+          href="/admin/metrics"
+        />
+        <KpiCard
+          label={t("avgLatency")}
+          value={`${kpis.avgLatencyMs}ms`}
+          subLabel={`${t("p95Latency")}: ${kpis.p95LatencyMs}ms`}
+          href="/admin/metrics"
+        />
+        <KpiCard
+          label={t("errorRate")}
+          value={`${kpis.errorRate}%`}
+          subLabel={`${kpis.errorCount} errors`}
+          href="/admin/logs"
+        />
       </div>
 
-      <div className="mt-6">
-        <h2 className="text-lg font-semibold">{t("recentActivity")}</h2>
-        {recentLogs.length === 0 ? (
-          <p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">
-            No recent activity
-          </p>
-        ) : (
-          <div className="mt-3 space-y-2">
-            {recentLogs.map((log) => (
-              <div key={log.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                <div className="flex items-center gap-3">
-                  <Badge variant={log.statusCode < 400 ? "success" : "destructive"}>
-                    {log.statusCode}
-                  </Badge>
-                  <span className="font-medium">{log.model}</span>
-                  <span className="text-[hsl(var(--muted-foreground))]">{log.endpoint}</span>
-                </div>
-                <div className="flex items-center gap-3 text-xs text-[hsl(var(--muted-foreground))]">
-                  <span>{log.latencyMs}ms</span>
-                  <span>{new Date(log.createdAt).toLocaleTimeString()}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+      {/* Main bento: chart + server status */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <RequestsChart data={requestsPerHour} label={t("requestsLast24h")} />
+        </div>
+        <ServerStatusPanel
+          servers={servers}
+          labelOnline={t("online")}
+          labelOffline={t("offline")}
+          labelVram={t("vram")}
+          labelModels={t("activeModels")}
+        />
+      </div>
+
+      {/* Second bento: top models + running models */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <TopModelsChart
+          data={topModels}
+          label={t("topModelsToday")}
+          labelRequests={t("requests")}
+        />
+        <RunningModelsPanel
+          models={runningModels}
+          label={t("runningModels")}
+          labelUnload={t("unload")}
+          labelExpires={t("expires")}
+          labelVram={t("vram")}
+        />
+      </div>
+
+      {/* Activity feed + quick actions */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <ActivityFeed
+            initialLogs={initialLogs}
+            label={t("recentActivity")}
+            labelNoActivity={t("noActivity")}
+          />
+        </div>
+        <div className="flex flex-col gap-3">
+          <Link href="/chat">
+            <Button variant="secondary" className="w-full justify-start gap-2">
+              <MessageSquarePlus className="h-4 w-4" />
+              {t("newChat")}
+            </Button>
+          </Link>
+          <Link href="/discover">
+            <Button variant="secondary" className="w-full justify-start gap-2">
+              <Download className="h-4 w-4" />
+              {t("pullModel")}
+            </Button>
+          </Link>
+          <Link href="/admin/servers">
+            <Button variant="secondary" className="w-full justify-start gap-2">
+              <LayoutDashboard className="h-4 w-4" />
+              {t("addServer")}
+            </Button>
+          </Link>
+        </div>
       </div>
     </div>
   );

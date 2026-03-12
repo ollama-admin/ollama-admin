@@ -23,7 +23,9 @@
     "connectionErrorDescription": "El servidor no responde. Comprueba que Ollama esté en ejecución y que la URL configurada sea correcta.",
     "unload": "Descargar",
     "unloadSuccess": "Modelo \"{model}\" descargado de memoria",
-    "unloadError": "Error al descargar el modelo"
+    "unloadError": "Error al descargar el modelo",
+    "noServerBanner": "No hay ningún servidor Ollama configurado — algunas funciones no están disponibles.",
+    "noServerBannerAction": "Añadir servidor"
   },
   "sidebar": {
     "dashboard": "Panel",
@@ -53,7 +55,24 @@
     "addServer": "Añadir servidor",
     "emptyTitle": "Bienvenido a Ollama Admin",
     "emptyDescription": "Añade tu primer servidor Ollama para comenzar.",
-    "emptyAction": "Añadir servidor"
+    "emptyAction": "Añadir servidor",
+    "requestsToday": "Peticiones hoy",
+    "tokensToday": "Tokens hoy",
+    "avgLatency": "Latencia media",
+    "p95Latency": "p95",
+    "errorRate": "Tasa de error",
+    "vsYesterday": "vs ayer",
+    "requestsLast24h": "Peticiones / hora (últimas 24h)",
+    "topModelsToday": "Modelos más usados hoy",
+    "requests": "pet",
+    "serverStatus": "Estado de servidores",
+    "online": "En línea",
+    "offline": "Sin conexión",
+    "vram": "VRAM",
+    "runningModels": "Modelos en VRAM",
+    "unload": "Descargar",
+    "expires": "Expira",
+    "noActivity": "Sin actividad reciente"
   },
   "chat": {
     "title": "Chat",
@@ -323,7 +342,14 @@
       "utilization": "Utilización GPU",
       "powerDraw": "Consumo",
       "emptyTitle": "No hay servidores configurados",
-      "emptyDescription": "Añade un servidor Ollama para monitorizar el uso de GPU."
+      "emptyDescription": "Añade un servidor Ollama para monitorizar el uso de GPU.",
+      "modelCompatibility": "Compatibilidad de modelos",
+      "model": "Modelo",
+      "modelSize": "Tamaño",
+      "estimatedTps": "t/s est.",
+      "vramPct": "VRAM %",
+      "grade": "Nota",
+      "noModelsOnServer": "No hay modelos instalados en este servidor."
     },
     "users": {
       "title": "Usuarios",

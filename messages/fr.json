@@ -23,7 +23,9 @@
     "connectionErrorDescription": "Le serveur ne répond pas. Vérifiez qu'Ollama est en cours d'exécution et que l'URL configurée est correcte.",
     "unload": "Décharger",
     "unloadSuccess": "Modèle \"{model}\" déchargé de la mémoire",
-    "unloadError": "Erreur lors du déchargement du modèle"
+    "unloadError": "Erreur lors du déchargement du modèle",
+    "noServerBanner": "Aucun serveur Ollama configuré — certaines fonctionnalités sont indisponibles.",
+    "noServerBannerAction": "Ajouter un serveur"
   },
   "sidebar": {
     "dashboard": "Tableau de bord",
@@ -53,7 +55,24 @@
     "addServer": "Ajouter un serveur",
     "emptyTitle": "Bienvenue sur Ollama Admin",
     "emptyDescription": "Ajoutez votre premier serveur Ollama pour commencer.",
-    "emptyAction": "Ajouter un serveur"
+    "emptyAction": "Ajouter un serveur",
+    "requestsToday": "Requêtes aujourd'hui",
+    "tokensToday": "Tokens aujourd'hui",
+    "avgLatency": "Latence moyenne",
+    "p95Latency": "p95",
+    "errorRate": "Taux d'erreur",
+    "vsYesterday": "vs hier",
+    "requestsLast24h": "Requêtes / heure (dernières 24h)",
+    "topModelsToday": "Modèles les plus utilisés aujourd'hui",
+    "requests": "req",
+    "serverStatus": "État des serveurs",
+    "online": "En ligne",
+    "offline": "Hors ligne",
+    "vram": "VRAM",
+    "runningModels": "Modèles en VRAM",
+    "unload": "Décharger",
+    "expires": "Expire",
+    "noActivity": "Aucune activité récente"
   },
   "chat": {
     "title": "Chat",
@@ -325,7 +344,14 @@
       "utilization": "Utilisation GPU",
       "powerDraw": "Consommation",
       "emptyTitle": "Aucun serveur configuré",
-      "emptyDescription": "Ajoutez un serveur Ollama pour surveiller l'utilisation GPU."
+      "emptyDescription": "Ajoutez un serveur Ollama pour surveiller l'utilisation GPU.",
+      "modelCompatibility": "Compatibilité des modèles",
+      "model": "Modèle",
+      "modelSize": "Taille",
+      "estimatedTps": "t/s est.",
+      "vramPct": "VRAM %",
+      "grade": "Note",
+      "noModelsOnServer": "Aucun modèle installé sur ce serveur."
     },
     "users": {
       "title": "Utilisateurs",

@@ -1,6 +1,6 @@
 {
   "name": "ollama-admin",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -22,6 +22,9 @@
   "lint-staged": {
     "*.{ts,tsx}": "eslint --max-warnings 0",
     "gpu-agent/**/*.py": "ruff check"
+  },
+  "overrides": {
+    "@swc/helpers": "0.5.19"
   },
   "dependencies": {
     "@prisma/client": "^5.20.0",
