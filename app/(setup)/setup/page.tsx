@@ -131,14 +131,16 @@ export default function SetupPage() {
   };
 
   const handleStep2Next = async () => {
-    const res = await fetch("/api/setup/server", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: serverName, url }),
-    });
-    if (res.ok) {
-      const server = await res.json();
-      setServerId(server.id);
+    if (connectionStatus === "online") {
+      const res = await fetch("/api/setup/server", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: serverName, url }),
+      });
+      if (res.ok) {
+        const server = await res.json();
+        setServerId(server.id);
+      }
     }
     setStep(3);
   };
@@ -380,13 +382,21 @@ export default function SetupPage() {
                 )}
               </div>
 
-              <button
-                onClick={handleStep2Next}
-                disabled={connectionStatus !== "online"}
-                className="w-full rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm text-[hsl(var(--primary-foreground))] disabled:opacity-50"
-              >
-                {t("next") || "Next"}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setStep(4)}
+                  className="rounded-md border px-4 py-2 text-sm hover:bg-[hsl(var(--accent))]"
+                >
+                  {t("step2Skip")}
+                </button>
+                <button
+                  onClick={handleStep2Next}
+                  disabled={connectionStatus !== "online"}
+                  className="flex-1 rounded-md bg-[hsl(var(--primary))] px-4 py-2 text-sm text-[hsl(var(--primary-foreground))] disabled:opacity-50"
+                >
+                  {t("next") || "Next"}
+                </button>
+              </div>
             </div>
           </div>
         )}
