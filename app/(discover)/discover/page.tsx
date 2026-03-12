@@ -2,13 +2,10 @@
 
 import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
-import { useEffect, useState, useRef } from "react";
-import { Search, Check, Download, Loader2 } from "lucide-react";
+import { useEffect, useState, useRef, useMemo } from "react";
+import { Search, Check, Download, Loader2, Wrench, Eye, Layers, Zap, Code } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 import { useServers } from "@/lib/hooks/use-servers";
@@ -33,12 +30,23 @@ interface GpuSpecs {
 const CAPABILITY_OPTIONS = ["tools", "vision", "embedding", "thinking"];
 
 const GRADE_LABELS: Record<Grade, string> = {
-  S: "≥50 t/s",
-  A: "≥30 t/s",
-  B: "≥15 t/s",
-  C: "≥8 t/s",
-  D: "≥3 t/s",
-  F: "no fit",
+  S: "≥50 t/s", A: "≥30 t/s", B: "≥15 t/s", C: "≥8 t/s", D: "≥3 t/s", F: "no fit",
+};
+
+const CAP_ICONS: Record<string, React.ReactNode> = {
+  tools:     <Wrench className="h-3.5 w-3.5" />,
+  vision:    <Eye    className="h-3.5 w-3.5" />,
+  embedding: <Layers className="h-3.5 w-3.5" />,
+  thinking:  <Zap    className="h-3.5 w-3.5" />,
+  code:      <Code   className="h-3.5 w-3.5" />,
+};
+
+const CAP_COLORS: Record<string, string> = {
+  tools:     "hsl(38 92% 50%)",
+  vision:    "hsl(217 91% 60%)",
+  embedding: "hsl(271 81% 56%)",
+  thinking:  "hsl(142 71% 45%)",
+  code:      "hsl(25 95% 53%)",
 };
 
 // Estimate model size in GB from a tag like "7b", "13b", "70b" using Q4 approximation.
@@ -46,6 +54,13 @@ function parseTagToSizeGB(tag: string): number | null {
   const match = tag.toLowerCase().match(/^(\d+(?:\.\d+)?)b$/);
   if (!match) return null;
   return parseFloat(match[1]) * 0.55;
+}
+
+function vramStyle(memPct: number): React.CSSProperties {
+  if (memPct >= 100) return { color: "hsl(var(--muted-foreground))", background: "hsl(var(--muted))" };
+  if (memPct >= 80)  return { color: "hsl(0 84% 60%)",    background: "hsl(0 84% 60% / 0.15)" };
+  if (memPct >= 60)  return { color: "hsl(38 92% 50%)",   background: "hsl(38 92% 50% / 0.15)" };
+  return               { color: "hsl(142 71% 45%)",  background: "hsl(142 71% 45% / 0.15)" };
 }
 
 export default function DiscoverPage() {
@@ -93,18 +108,13 @@ export default function DiscoverPage() {
   // Poll for download status
   useEffect(() => {
     if (downloadingRefs.size === 0) {
-      if (pollRef.current) {
-        clearInterval(pollRef.current);
-        pollRef.current = null;
-      }
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
       return;
     }
-
     if (pollRef.current) return;
 
     pollRef.current = setInterval(async () => {
       if (!selectedServer) return;
-
       try {
         const [statusRes, modelsRes] = await Promise.all([
           fetch(`/api/admin/models/pull/status?serverId=${selectedServer}`),
@@ -118,8 +128,7 @@ export default function DiscoverPage() {
             if (job.status === "error") {
               setDownloadingRefs((prev) => {
                 if (!prev.has(ref)) return prev;
-                const next = new Set(prev);
-                next.delete(ref);
+                const next = new Set(prev); next.delete(ref);
                 toast(job.error ? `${t("pullError", { name: ref })}: ${job.error}` : t("pullError", { name: ref }), "error");
                 return next;
               });
@@ -132,14 +141,11 @@ export default function DiscoverPage() {
           if (data.models) {
             const names = new Set<string>(data.models.map((m: { name: string }) => m.name));
             setDownloadedModels(names);
-
             setDownloadingRefs((prev) => {
-              const next = new Set(prev);
-              let changed = false;
+              const next = new Set(prev); let changed = false;
               for (const ref of prev) {
                 if (names.has(ref) || [...names].some((n) => n.startsWith(`${ref}-`))) {
-                  next.delete(ref);
-                  changed = true;
+                  next.delete(ref); changed = true;
                   toast(t("pullComplete", { name: ref }), "success");
                 }
               }
@@ -147,17 +153,10 @@ export default function DiscoverPage() {
             });
           }
         }
-      } catch {
-        // ignore polling errors
-      }
+      } catch { /* ignore polling errors */ }
     }, 5000);
 
-    return () => {
-      if (pollRef.current) {
-        clearInterval(pollRef.current);
-        pollRef.current = null;
-      }
-    };
+    return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
   }, [downloadingRefs.size, selectedServer, t, toast]);
 
   useEffect(() => {
@@ -165,7 +164,6 @@ export default function DiscoverPage() {
       const params = new URLSearchParams();
       if (search) params.set("q", search);
       if (selectedCaps.length > 0) params.set("c", selectedCaps.join(","));
-
       const r = await fetch(`/api/catalog?${params}`);
       const data = await r.json();
       if (Array.isArray(data)) setModels(data);
@@ -175,25 +173,20 @@ export default function DiscoverPage() {
   }, [search, selectedCaps]);
 
   const toggleCap = (cap: string) => {
-    setSelectedCaps((prev) =>
-      prev.includes(cap) ? prev.filter((c) => c !== cap) : [...prev, cap]
-    );
+    setSelectedCaps((prev) => prev.includes(cap) ? prev.filter((c) => c !== cap) : [...prev, cap]);
   };
 
   const handlePull = async (modelName: string, tag?: string) => {
     if (!selectedServer) return;
     const ref = tag ? `${modelName}:${tag}` : modelName;
     if (downloadingRefs.has(ref)) return;
-
     setDownloadingRefs((prev) => new Set(prev).add(ref));
-
     try {
       const res = await fetch("/api/admin/models/pull", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ serverId: selectedServer, name: ref }),
       });
-
       if (!res.ok) {
         toast(t("pullError", { name: ref }), "error");
         setDownloadingRefs((prev) => { const next = new Set(prev); next.delete(ref); return next; });
@@ -224,15 +217,20 @@ export default function DiscoverPage() {
     return scoreModel(sizeGB, gpuSpecs.vramGB, gpuSpecs.bandwidthGBs ?? undefined);
   };
 
-  const displayedModels = fitsGpuOnly && gpuSpecs
-    ? models.filter((model) =>
-        model.sizes.length === 0 ||
-        model.sizes.some((size) => {
+  // Flatten models × sizes into individual rows; apply GPU filter at row level.
+  const flatRows = useMemo(() => {
+    return models.flatMap((model) => {
+      const sizes = model.sizes.length > 0 ? model.sizes : ["latest"];
+      const rows = sizes.map((size) => ({ ...model, size }));
+      if (fitsGpuOnly && gpuSpecs) {
+        return rows.filter(({ size }) => {
           const sizeGB = parseTagToSizeGB(size);
           return sizeGB === null || sizeGB <= gpuSpecs.vramGB;
-        })
-      )
-    : models;
+        });
+      }
+      return rows;
+    });
+  }, [models, fitsGpuOnly, gpuSpecs]);
 
   const gpuLabel = gpuSpecs
     ? `${gpuSpecs.gpuName.replace(/NVIDIA GeForce /i, "").replace(/NVIDIA /i, "")} · ${Math.round(gpuSpecs.vramGB)}GB`
@@ -240,6 +238,7 @@ export default function DiscoverPage() {
 
   return (
     <div className="p-6">
+      {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">{t("title")}</h1>
         {gpuLabel && (
@@ -249,6 +248,7 @@ export default function DiscoverPage() {
         )}
       </div>
 
+      {/* Search + Server */}
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("searchModels")} className="flex-1" />
         {servers.length > 1 && (
@@ -258,6 +258,7 @@ export default function DiscoverPage() {
         )}
       </div>
 
+      {/* Capability filters + Fits GPU */}
       <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Filter by capability">
         {CAPABILITY_OPTIONS.map((cap) => (
           <button
@@ -288,6 +289,7 @@ export default function DiscoverPage() {
         )}
       </div>
 
+      {/* GPU grade legend */}
       {gpuSpecs && (
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.4)] px-3 py-2 text-xs text-[hsl(var(--muted-foreground))]">
           <span className="font-semibold text-[hsl(var(--foreground))]">GPU:</span>
@@ -302,114 +304,135 @@ export default function DiscoverPage() {
         </div>
       )}
 
+      {/* Model list */}
       {loading ? (
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
-          {[1, 2, 3, 4].map((i) => <Skeleton key={i} variant="card" />)}
+        <div className="mt-4 overflow-hidden rounded-lg border border-[hsl(var(--border))]">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <div key={i} className="flex items-center gap-6 border-b border-[hsl(var(--border))] px-4 py-3 last:border-0">
+              <div className="h-4 w-40 animate-pulse rounded bg-[hsl(var(--muted))]" />
+              <div className="h-4 flex-1 animate-pulse rounded bg-[hsl(var(--muted))] opacity-30" />
+              <div className="h-4 w-20 animate-pulse rounded bg-[hsl(var(--muted))]" />
+              <div className="h-6 w-6 animate-pulse rounded bg-[hsl(var(--muted))]" />
+            </div>
+          ))}
         </div>
-      ) : displayedModels.length === 0 ? (
+      ) : flatRows.length === 0 ? (
         <EmptyState icon={Search} title={t("emptyTitle")} description={t("emptyDescription")} />
       ) : (
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
-          {displayedModels.map((model) => (
-            <Card key={model.id} className="flex flex-col">
-              <div>
-                <h3 className="font-semibold">{model.name}</h3>
-                {model.capabilities.length > 0 && (
-                  <div className="mt-1.5 flex flex-wrap gap-1">
-                    {model.capabilities.map((cap) => (
-                      <Badge key={cap} variant="muted" className="text-[10px]">{t(`capabilities.${cap}`)}</Badge>
+        <div className="mt-4 overflow-hidden rounded-lg border border-[hsl(var(--border))]">
+          {/* Column headers */}
+          <div className="flex items-center gap-4 border-b border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.6)] px-4 py-2 text-[11px] font-medium uppercase tracking-wide text-[hsl(var(--muted-foreground))]">
+            <span className="flex-1">Model</span>
+            <span className="w-24 shrink-0 text-right hidden sm:block">Updated</span>
+            <span className="w-28 shrink-0 text-right">Size</span>
+            {gpuSpecs && <span className="w-24 shrink-0 text-right hidden md:block">Speed</span>}
+            {gpuSpecs && <span className="w-10 shrink-0 text-center">Grade</span>}
+            <span className="w-8 shrink-0" />
+          </div>
+
+          {flatRows.map((row, idx) => {
+            const downloaded = isModelTagDownloaded(row.name, row.size);
+            const pulling = isDownloading(row.name, row.size);
+            const score = getTagScore(row.size);
+            const sizeGB = parseTagToSizeGB(row.size);
+            const gbLabel = sizeGB != null
+              ? sizeGB < 10 ? `${sizeGB.toFixed(1)} GB` : `${Math.round(sizeGB)} GB`
+              : null;
+            const noFit = score && !score.fits;
+            const isLast = idx === flatRows.length - 1;
+            const clickable = isAdmin && !downloaded && !pulling;
+
+            const rowInner = (
+              <div className={[
+                "flex items-center gap-4 px-4 py-3 text-sm transition-colors",
+                noFit ? "opacity-40" : "",
+                clickable ? "hover:bg-[hsl(var(--muted)/0.5)]" : "",
+                !isLast ? "border-b border-[hsl(var(--border))]" : "",
+              ].join(" ")}>
+                {/* Name + size tag + capability icons */}
+                <div className="min-w-0 flex-1 flex items-center gap-3">
+                  <div className="min-w-0 flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold truncate">{row.name}</span>
+                    <span className="shrink-0 rounded bg-[hsl(var(--muted))] px-1.5 py-0.5 font-mono text-[11px] text-[hsl(var(--muted-foreground))]">
+                      {row.size}
+                    </span>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    {row.capabilities.map((cap) => (
+                      <span key={cap} title={cap} style={{ color: CAP_COLORS[cap] ?? "hsl(var(--muted-foreground))" }}>
+                        {CAP_ICONS[cap] ?? null}
+                      </span>
                     ))}
                   </div>
-                )}
-                {model.description && (
-                  <p className="mt-2 line-clamp-2 text-xs text-[hsl(var(--muted-foreground))]">{model.description}</p>
-                )}
-              </div>
+                </div>
 
-              {(model.sizes.length > 0 || isAdmin) && (
-                <>
-                  <div className="my-3 border-t border-[hsl(var(--border))]" />
-                  <div className="space-y-0.5">
-                    {model.sizes.length > 0 ? (
-                      model.sizes.map((size) => {
-                        const downloaded = isModelTagDownloaded(model.name, size);
-                        const pulling = isDownloading(model.name, size);
-                        const score = getTagScore(size);
-                        const sizeGB = parseTagToSizeGB(size);
-                        const gbLabel = sizeGB != null
-                          ? sizeGB < 10 ? `${sizeGB.toFixed(1)} GB` : `${Math.round(sizeGB)} GB`
-                          : null;
+                {/* Updated */}
+                <span className="w-24 shrink-0 text-right text-xs text-[hsl(var(--muted-foreground))] hidden sm:block">
+                  {row.updated}
+                </span>
 
-                        const rowInner = (
-                          <div className={`flex items-center gap-3 rounded-md px-2 py-1.5 text-sm transition-colors${score && !score.fits ? " opacity-50" : ""}${isAdmin && !downloaded && !pulling ? " hover:bg-[hsl(var(--muted))]" : ""}`}>
-                            <span className="w-10 shrink-0 font-mono font-semibold">{size}</span>
-                            <span className="w-14 shrink-0 text-xs text-[hsl(var(--muted-foreground))]">{gbLabel ?? ""}</span>
-                            {gpuSpecs && (
-                              <span className="w-16 shrink-0 text-xs tabular-nums" style={{ color: score?.fits && score.tps > 0 ? gradeColor(score.grade) : undefined }}>
-                                {score?.fits && score.tps > 0 ? `~${Math.round(score.tps)} t/s` : ""}
-                              </span>
-                            )}
-                            {gpuSpecs && score && (
-                              <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold" style={{ color: gradeColor(score.grade), background: gradeBg(score.grade) }}>
-                                {score.grade}
-                              </span>
-                            )}
-                            <div className="ml-auto shrink-0">
-                              {downloaded ? (
-                                <Check className="h-4 w-4 text-[hsl(142_71%_45%)]" />
-                              ) : pulling ? (
-                                <Loader2 className="h-4 w-4 animate-spin text-[hsl(var(--muted-foreground))]" />
-                              ) : isAdmin ? (
-                                <Download className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
-                              ) : null}
-                            </div>
-                          </div>
-                        );
+                {/* GB + VRAM% */}
+                <div className="w-28 shrink-0 flex items-center justify-end gap-1.5">
+                  {gbLabel && <span className="tabular-nums">{gbLabel}</span>}
+                  {score && gpuSpecs && (
+                    <span className="rounded px-1.5 py-0.5 text-[11px] font-bold tabular-nums" style={vramStyle(score.memPct)}>
+                      {Math.round(score.memPct)}%
+                    </span>
+                  )}
+                </div>
 
-                        if (!isAdmin || downloaded || pulling) {
-                          return <div key={size}>{rowInner}</div>;
-                        }
-                        return (
-                          <button
-                            key={size}
-                            onClick={() => handlePull(model.name, size)}
-                            disabled={!selectedServer}
-                            aria-label={`${t("pullModel")} ${model.name}:${size}`}
-                            className="w-full text-left disabled:opacity-50"
-                          >
-                            {rowInner}
-                          </button>
-                        );
-                      })
+                {/* Speed */}
+                {gpuSpecs && (
+                  <div className="w-24 shrink-0 text-right text-sm tabular-nums hidden md:block">
+                    {score?.fits && score.tps > 0 ? (
+                      <span style={{ color: gradeColor(score.grade) }}>~{Math.round(score.tps)} t/s</span>
                     ) : (
-                      <button
-                        onClick={() => handlePull(model.name)}
-                        disabled={isDownloading(model.name, "latest") || isModelTagDownloaded(model.name, "latest") || !selectedServer}
-                        aria-label={`${t("pullModel")} ${model.name}`}
-                        className="flex w-full items-center gap-3 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-[hsl(var(--muted))] disabled:opacity-50"
-                      >
-                        <span className="w-10 shrink-0 font-mono font-semibold text-[hsl(var(--muted-foreground))]">latest</span>
-                        <div className="ml-auto shrink-0">
-                          {isModelTagDownloaded(model.name, "latest") ? (
-                            <Check className="h-4 w-4 text-[hsl(142_71%_45%)]" />
-                          ) : isDownloading(model.name, "latest") ? (
-                            <Loader2 className="h-4 w-4 animate-spin text-[hsl(var(--muted-foreground))]" />
-                          ) : (
-                            <Download className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
-                          )}
-                        </div>
-                      </button>
+                      <span className="text-[hsl(var(--muted-foreground))]">—</span>
                     )}
                   </div>
-                </>
-              )}
+                )}
 
-              <div className="mt-auto pt-3 flex items-center gap-3 text-[11px] text-[hsl(var(--muted-foreground))]">
-                {model.pulls && <span>{model.pulls} pulls</span>}
-                {model.updated && <span>{model.updated}</span>}
+                {/* Grade */}
+                {gpuSpecs && (
+                  <div className="w-10 shrink-0 flex justify-center">
+                    {score ? (
+                      <span className="text-xl font-bold leading-none" style={{ color: gradeColor(score.grade) }}>
+                        {score.grade}
+                      </span>
+                    ) : (
+                      <span className="text-[hsl(var(--muted-foreground))]">—</span>
+                    )}
+                  </div>
+                )}
+
+                {/* Action */}
+                <div className="w-8 shrink-0 flex justify-end">
+                  {downloaded ? (
+                    <Check className="h-4 w-4 text-[hsl(142_71%_45%)]" />
+                  ) : pulling ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-[hsl(var(--muted-foreground))]" />
+                  ) : isAdmin ? (
+                    <Download className="h-4 w-4 text-[hsl(var(--muted-foreground))]" />
+                  ) : null}
+                </div>
               </div>
-            </Card>
-          ))}
+            );
+
+            if (!clickable) {
+              return <div key={`${row.id}-${row.size}`}>{rowInner}</div>;
+            }
+            return (
+              <button
+                key={`${row.id}-${row.size}`}
+                onClick={() => handlePull(row.name, row.size !== "latest" ? row.size : undefined)}
+                disabled={!selectedServer}
+                aria-label={`${t("pullModel")} ${row.name}:${row.size}`}
+                className="w-full text-left disabled:opacity-50"
+              >
+                {rowInner}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
