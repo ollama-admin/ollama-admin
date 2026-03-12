@@ -1,0 +1,10 @@
+.next
+node_modules
+.git
+*.md
+.env*
+!.env.example
+gpu-agent/venv
+gpu-agent/__pycache__
+e2e
+coverage
