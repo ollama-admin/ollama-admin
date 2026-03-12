@@ -2,9 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import { useSession } from "next-auth/react";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, Fragment } from "react";
 import { Search, Check, Download, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
@@ -13,8 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useToast } from "@/components/ui/toast";
 import { useServers } from "@/lib/hooks/use-servers";
-import { scoreModel, gradeColor } from "@/lib/model-scoring";
-import { Tooltip } from "@/components/ui/tooltip";
+import { scoreModel, gradeColor, gradeBg, type Grade } from "@/lib/model-scoring";
 
 interface CatalogModel {
   id: string;
@@ -33,6 +31,15 @@ interface GpuSpecs {
 }
 
 const CAPABILITY_OPTIONS = ["tools", "vision", "embedding", "thinking"];
+
+const GRADE_LABELS: Record<Grade, string> = {
+  S: "≥50 t/s",
+  A: "≥30 t/s",
+  B: "≥15 t/s",
+  C: "≥8 t/s",
+  D: "≥3 t/s",
+  F: "no fit",
+};
 
 // Estimate model size in GB from a tag like "7b", "13b", "70b" using Q4 approximation.
 function parseTagToSizeGB(tag: string): number | null {
@@ -281,6 +288,19 @@ export default function DiscoverPage() {
         )}
       </div>
 
+      {gpuSpecs && (
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-[hsl(var(--muted-foreground))]">
+          {(["S", "A", "B", "C", "D", "F"] as Grade[]).map((g) => (
+            <span key={g} className="flex items-center gap-1.5">
+              <span className="rounded px-1.5 py-0.5 text-[10px] font-bold" style={{ color: gradeColor(g), background: gradeBg(g) }}>
+                {g}
+              </span>
+              <span>{GRADE_LABELS[g]}</span>
+            </span>
+          ))}
+        </div>
+      )}
+
       {loading ? (
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} variant="card" />)}
@@ -306,45 +326,67 @@ export default function DiscoverPage() {
               {model.description && (
                 <p className="mt-2 line-clamp-2 text-xs text-[hsl(var(--muted-foreground))]">{model.description}</p>
               )}
-              <div className="mt-3 flex flex-wrap gap-1.5">
+              <div className="mt-3 flex flex-wrap gap-2">
                 {model.sizes.length > 0 ? (
                   model.sizes.map((size) => {
                     const downloaded = isModelTagDownloaded(model.name, size);
                     const pulling = isDownloading(model.name, size);
                     const score = getTagScore(size);
-                    const tooltipText = score
-                      ? score.fits && score.tps > 0
-                        ? `~${Math.round(score.tps)} t/s`
-                        : score.fits
-                        ? `Grade ${score.grade}`
-                        : `Doesn't fit VRAM`
-                      : undefined;
-                    const gradeEl = score && (
-                      <Tooltip content={tooltipText!} side="top">
-                        <span className="ml-1 font-bold" style={{ color: gradeColor(score.grade) }}>
-                          {score.grade}
-                        </span>
-                      </Tooltip>
+                    const sizeGB = parseTagToSizeGB(size);
+                    const gbLabel = sizeGB != null
+                      ? sizeGB < 10 ? `${sizeGB.toFixed(1)} GB` : `${Math.round(sizeGB)} GB`
+                      : null;
+                    const cardBg = score
+                      ? gradeBg(score.grade)
+                      : "hsl(var(--muted))";
+                    const cardFg = score ? gradeColor(score.grade) : undefined;
+
+                    const cardContent = (
+                      <div
+                        className="flex min-w-[72px] flex-col gap-0.5 rounded-lg p-2"
+                        style={{ background: cardBg }}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-bold leading-none" style={{ color: cardFg }}>
+                            {size}
+                          </span>
+                          {score && (
+                            <span className="text-xs font-bold leading-none" style={{ color: cardFg }}>
+                              {score.grade}
+                            </span>
+                          )}
+                        </div>
+                        {gbLabel && (
+                          <span className="text-[11px] text-[hsl(var(--muted-foreground))]">{gbLabel}</span>
+                        )}
+                        {score && score.fits && score.tps > 0 && (
+                          <span className="text-[11px] font-medium" style={{ color: cardFg }}>
+                            ~{Math.round(score.tps)} t/s
+                          </span>
+                        )}
+                        {score && !score.fits && (
+                          <span className="text-[11px] text-[hsl(var(--destructive))]">no fit</span>
+                        )}
+                        <div className="mt-1 flex items-center gap-1 text-[11px] font-medium">
+                          {downloaded ? (
+                            <span className="flex items-center gap-0.5" style={{ color: cardFg ?? "hsl(142 71% 45%)" }}>
+                              <Check className="h-3 w-3" />{t("downloaded")}
+                            </span>
+                          ) : pulling ? (
+                            <span className="flex items-center gap-0.5 text-[hsl(var(--muted-foreground))]">
+                              <Loader2 className="h-3 w-3 animate-spin" />{t("downloading")}
+                            </span>
+                          ) : isAdmin ? (
+                            <span className="flex items-center gap-0.5" style={{ color: cardFg ?? "hsl(var(--muted-foreground))" }}>
+                              <Download className="h-3 w-3" />{t("pullModel")}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
                     );
 
-                    if (downloaded) {
-                      return (
-                        <Badge key={size} variant="success" className="text-[10px]">
-                          <Check className="mr-0.5 h-2.5 w-2.5" />{size}{gradeEl}
-                        </Badge>
-                      );
-                    }
-                    if (pulling) {
-                      return (
-                        <Badge key={size} variant="default" className="text-[10px]">
-                          <Loader2 className="mr-0.5 h-2.5 w-2.5 animate-spin" />{size}
-                        </Badge>
-                      );
-                    }
-                    if (!isAdmin) {
-                      return (
-                        <Badge key={size} variant="muted" className="text-[10px]">{size}{gradeEl}</Badge>
-                      );
+                    if (!isAdmin || downloaded || pulling) {
+                      return <Fragment key={size}>{cardContent}</Fragment>;
                     }
                     return (
                       <button
@@ -352,9 +394,9 @@ export default function DiscoverPage() {
                         onClick={() => handlePull(model.name, size)}
                         disabled={!selectedServer}
                         aria-label={`${t("pullModel")} ${model.name}:${size}`}
-                        className="inline-flex items-center rounded bg-[hsl(var(--muted))] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--primary))] hover:text-[hsl(var(--primary-foreground))] disabled:opacity-50"
+                        className="text-left transition-opacity hover:opacity-75 disabled:opacity-50"
                       >
-                        <Download className="mr-0.5 h-2.5 w-2.5" />{size}{gradeEl}
+                        {cardContent}
                       </button>
                     );
                   })
@@ -363,19 +405,19 @@ export default function DiscoverPage() {
                     onClick={() => handlePull(model.name)}
                     disabled={isDownloading(model.name, "latest") || isModelTagDownloaded(model.name, "latest") || !selectedServer}
                     aria-label={`${t("pullModel")} ${model.name}`}
-                    className="inline-flex items-center rounded bg-[hsl(var(--muted))] px-1.5 py-0.5 text-[10px] font-medium text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--primary))] hover:text-[hsl(var(--primary-foreground))] disabled:opacity-50"
+                    className="inline-flex items-center gap-1 rounded-lg bg-[hsl(var(--muted))] px-3 py-1.5 text-xs font-medium text-[hsl(var(--muted-foreground))] transition-opacity hover:opacity-75 disabled:opacity-50"
                   >
                     {isModelTagDownloaded(model.name, "latest") ? (
-                      <><Check className="mr-0.5 h-2.5 w-2.5" />{t("downloaded")}</>
+                      <><Check className="h-3.5 w-3.5" />{t("downloaded")}</>
                     ) : isDownloading(model.name, "latest") ? (
-                      <><Loader2 className="mr-0.5 h-2.5 w-2.5 animate-spin" />{t("downloading")}</>
+                      <><Loader2 className="h-3.5 w-3.5 animate-spin" />{t("downloading")}</>
                     ) : (
-                      <><Download className="mr-0.5 h-2.5 w-2.5" />{t("pullModel")}</>
+                      <><Download className="h-3.5 w-3.5" />{t("pullModel")}</>
                     )}
                   </button>
                 ) : null}
               </div>
-              <div className="mt-2 flex items-center gap-3 text-[10px] text-[hsl(var(--muted-foreground))]">
+              <div className="mt-2 flex items-center gap-3 text-[11px] text-[hsl(var(--muted-foreground))]">
                 {model.pulls && <span>{model.pulls} pulls</span>}
                 {model.updated && <span>{model.updated}</span>}
               </div>
