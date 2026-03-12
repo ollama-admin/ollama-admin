@@ -217,19 +217,34 @@ export default function DiscoverPage() {
     return scoreModel(sizeGB, gpuSpecs.vramGB, gpuSpecs.bandwidthGBs ?? undefined);
   };
 
-  // Flatten models × sizes into individual rows; apply GPU filter at row level.
+  // Flatten models × sizes into individual rows; apply GPU filter and sort by grade.
   const flatRows = useMemo(() => {
-    return models.flatMap((model) => {
+    const GRADE_ORDER: Record<string, number> = { S: 0, A: 1, B: 2, C: 3, D: 4, F: 5 };
+
+    const rows = models.flatMap((model) => {
       const sizes = model.sizes.length > 0 ? model.sizes : ["latest"];
-      const rows = sizes.map((size) => ({ ...model, size }));
+      const all = sizes.map((size) => ({ ...model, size }));
       if (fitsGpuOnly && gpuSpecs) {
-        return rows.filter(({ size }) => {
+        return all.filter(({ size }) => {
           const sizeGB = parseTagToSizeGB(size);
           return sizeGB === null || sizeGB <= gpuSpecs.vramGB;
         });
       }
-      return rows;
+      return all;
     });
+
+    if (!gpuSpecs) return rows;
+
+    return [...rows].sort((a, b) => {
+      const scoreA = getTagScore(a.size);
+      const scoreB = getTagScore(b.size);
+      const gradeA = scoreA ? GRADE_ORDER[scoreA.grade] ?? 6 : 6;
+      const gradeB = scoreB ? GRADE_ORDER[scoreB.grade] ?? 6 : 6;
+      if (gradeA !== gradeB) return gradeA - gradeB;
+      // Within same grade, sort by tps descending
+      return (scoreB?.tps ?? 0) - (scoreA?.tps ?? 0);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [models, fitsGpuOnly, gpuSpecs]);
 
   const gpuLabel = gpuSpecs
