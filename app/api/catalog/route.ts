@@ -13,7 +13,7 @@ interface ScrapedModel {
 }
 
 const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
-const MAX_PAGES = 3;
+const MAX_PAGES = 50;
 let cache: { data: ScrapedModel[]; timestamp: number } | null = null;
 
 const KNOWN_CAPABILITIES = ["tools", "vision", "embedding", "thinking", "cloud"];
