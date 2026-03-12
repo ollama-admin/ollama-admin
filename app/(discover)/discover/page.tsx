@@ -51,9 +51,12 @@ const CAP_COLORS: Record<string, string> = {
 
 // Estimate model size in GB from a tag like "7b", "13b", "70b" using Q4 approximation.
 function parseTagToSizeGB(tag: string): number | null {
-  const match = tag.toLowerCase().match(/^(\d+(?:\.\d+)?)b$/);
-  if (!match) return null;
-  return parseFloat(match[1]) * 0.55;
+  const t = tag.toLowerCase();
+  const bMatch = t.match(/^(\d+(?:\.\d+)?)b$/);
+  if (bMatch) return parseFloat(bMatch[1]) * 0.55;
+  const mMatch = t.match(/^(\d+(?:\.\d+)?)m$/);
+  if (mMatch) return (parseFloat(mMatch[1]) / 1000) * 0.55;
+  return null;
 }
 
 function vramStyle(memPct: number): React.CSSProperties {
