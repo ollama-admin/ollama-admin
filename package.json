@@ -23,6 +23,9 @@
     "*.{ts,tsx}": "eslint --max-warnings 0",
     "gpu-agent/**/*.py": "ruff check"
   },
+  "overrides": {
+    "@swc/helpers": "0.5.19"
+  },
   "dependencies": {
     "@prisma/client": "^5.20.0",
     "bcryptjs": "^3.0.3",
