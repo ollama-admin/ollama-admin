@@ -21,7 +21,7 @@ function KpiCard({ label, value, subLabel, delta, href, className }: KpiCardProp
         {label}
       </p>
       <p className="font-mono text-3xl font-bold tabular-nums leading-none">{value}</p>
-      <div className="mt-1 flex items-center gap-2">
+      <div className="mt-1 flex min-h-[1.25rem] items-center gap-2">
         {deltaSign && (
           <span
             className={cn(

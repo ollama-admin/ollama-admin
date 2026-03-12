@@ -72,7 +72,13 @@
     "runningModels": "Modèles en VRAM",
     "unload": "Décharger",
     "expires": "Expire",
-    "noActivity": "Aucune activité récente"
+    "noActivity": "Aucune activité récente",
+    "live": "En direct",
+    "errors": "erreurs",
+    "gpuDetails": "Détails GPU",
+    "noData": "Aucune donnée",
+    "noModelsInVram": "Aucun modèle en VRAM",
+    "noRequestsYet": "Aucune requête dans les dernières 24 heures"
   },
   "chat": {
     "title": "Chat",
@@ -530,5 +536,15 @@
     "description": "La page que vous cherchez n'existe pas ou a été déplacée.",
     "back": "Retour",
     "home": "Page d'accueil"
+  },
+  "auth": {
+    "title": "Connexion à Ollama Admin",
+    "subtitle": "Entrez vos identifiants pour continuer",
+    "username": "Nom d'utilisateur",
+    "password": "Mot de passe",
+    "showPassword": "Afficher le mot de passe",
+    "hidePassword": "Masquer le mot de passe",
+    "signIn": "Se connecter",
+    "invalidCredentials": "Nom d'utilisateur ou mot de passe incorrect"
   }
 }

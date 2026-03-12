@@ -1,3 +1,4 @@
+import { Package } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
 interface ModelEntry {
@@ -9,19 +10,23 @@ interface TopModelsChartProps {
   data: ModelEntry[];
   label: string;
   labelRequests: string;
+  labelNoData?: string;
 }
 
-function TopModelsChart({ data, label, labelRequests }: TopModelsChartProps) {
+function TopModelsChart({ data, label, labelRequests, labelNoData }: TopModelsChartProps) {
   const max = Math.max(...data.map((d) => d.count), 1);
 
   return (
-    <Card className="flex flex-col gap-3" role="img" aria-label={label}>
+    <Card className="flex flex-col gap-3" role="list" aria-label={label}>
       <p className="text-xs font-medium text-[hsl(var(--muted-foreground))] uppercase tracking-wide">
         {label}
       </p>
 
       {data.length === 0 ? (
-        <p className="text-sm text-[hsl(var(--muted-foreground))]">No data yet</p>
+        <div className="flex flex-col items-center justify-center py-8 text-center">
+          <Package className="h-10 w-10 text-[hsl(var(--muted-foreground)/0.5)]" />
+          <p className="mt-2 text-sm text-[hsl(var(--muted-foreground))]">{labelNoData ?? "No data yet"}</p>
+        </div>
       ) : (
         <div className="flex flex-col gap-2.5">
           {data.map((entry) => {
@@ -29,7 +34,7 @@ function TopModelsChart({ data, label, labelRequests }: TopModelsChartProps) {
             const shortName =
               entry.model.length > 22 ? entry.model.slice(0, 20) + "…" : entry.model;
             return (
-              <div key={entry.model} className="flex flex-col gap-1">
+              <div key={entry.model} role="listitem" className="flex flex-col gap-1">
                 <div className="flex justify-between text-xs">
                   <span className="font-mono font-medium truncate" title={entry.model}>
                     {shortName}

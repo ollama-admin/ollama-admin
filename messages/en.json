@@ -72,7 +72,13 @@
     "runningModels": "Models in VRAM",
     "unload": "Unload",
     "expires": "Expires",
-    "noActivity": "No recent activity"
+    "noActivity": "No recent activity",
+    "live": "Live",
+    "errors": "errors",
+    "gpuDetails": "GPU details",
+    "noData": "No data yet",
+    "noModelsInVram": "No models in VRAM",
+    "noRequestsYet": "No requests in the last 24 hours"
   },
   "chat": {
     "title": "Chat",
@@ -528,5 +534,15 @@
     "description": "The page you're looking for doesn't exist or has been moved.",
     "back": "Go back",
     "home": "Go home"
+  },
+  "auth": {
+    "title": "Sign in to Ollama Admin",
+    "subtitle": "Enter your credentials to continue",
+    "username": "Username",
+    "password": "Password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "signIn": "Sign In",
+    "invalidCredentials": "Invalid username or password"
   }
 }

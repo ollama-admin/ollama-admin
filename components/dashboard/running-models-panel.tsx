@@ -20,6 +20,7 @@ interface RunningModelsPanelProps {
   labelUnload: string;
   labelExpires: string;
   labelVram: string;
+  labelNoModels?: string;
   onUnload?: (serverUrl: string, model: string) => Promise<void>;
 }
 
@@ -118,6 +119,7 @@ function RunningModelsPanel({
   labelUnload,
   labelExpires,
   labelVram,
+  labelNoModels,
   onUnload,
 }: RunningModelsPanelProps) {
   return (
@@ -126,7 +128,7 @@ function RunningModelsPanel({
         {label}
       </p>
       {models.length === 0 ? (
-        <p className="text-sm text-[hsl(var(--muted-foreground))]">No models in VRAM</p>
+        <p className="text-sm text-[hsl(var(--muted-foreground))]">{labelNoModels ?? "No models in VRAM"}</p>
       ) : (
         <div className="flex flex-col gap-2">
           {models.map((m) => (
