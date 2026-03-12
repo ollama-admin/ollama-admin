@@ -180,6 +180,7 @@
     "downloading": "Downloading...",
     "fitsGpu": "Fits in GPU",
     "capabilities": {
+      "text": "Text",
       "tools": "Tools",
       "vision": "Vision / OCR",
       "embedding": "Embedding",

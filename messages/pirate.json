@@ -180,6 +180,7 @@
     "downloading": "Sailing in...",
     "fitsGpu": "Fits me hold!",
     "capabilities": {
+      "text": "Words",
       "tools": "Skills",
       "vision": "Eagle Eyes",
       "embedding": "Memory",

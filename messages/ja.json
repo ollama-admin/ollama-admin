@@ -180,6 +180,7 @@
     "downloading": "ダウンロード中...",
     "fitsGpu": "GPUに収まる",
     "capabilities": {
+      "text": "テキスト",
       "tools": "ツール",
       "vision": "ビジョン / OCR",
       "embedding": "埋め込み",

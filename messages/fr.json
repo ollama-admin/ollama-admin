@@ -182,6 +182,7 @@
     "downloading": "Téléchargement...",
     "fitsGpu": "Compatible GPU",
     "capabilities": {
+      "text": "Texte",
       "tools": "Outils",
       "vision": "Vision / OCR",
       "embedding": "Embedding",

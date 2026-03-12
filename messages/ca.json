@@ -182,6 +182,7 @@
     "downloading": "Descarregant...",
     "fitsGpu": "Cap a la meva GPU",
     "capabilities": {
+      "text": "Text",
       "tools": "Eines",
       "vision": "Visió / OCR",
       "embedding": "Embedding",
