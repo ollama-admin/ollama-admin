@@ -32,7 +32,25 @@
 
 ---
 
-> **Screenshots coming soon.** Run the app and open [http://localhost:3000](http://localhost:3000) to see it in action.
+### Dashboard
+<p align="center">
+  <img src="public/1.png" alt="Dashboard — server status, requests, GPU summary, active models" width="100%" />
+</p>
+
+### Chat
+<p align="center">
+  <img src="public/2.png" alt="Chat — streaming conversation with model selection" width="100%" />
+</p>
+
+### GPU Monitoring
+<p align="center">
+  <img src="public/3.png" alt="GPU Monitoring — VRAM usage, utilization, temperature, model compatibility" width="100%" />
+</p>
+
+### Discover Models
+<p align="center">
+  <img src="public/4.png" alt="Discover — model catalog with GPU fit grades and estimated speed" width="100%" />
+</p>
 
 ---
 
