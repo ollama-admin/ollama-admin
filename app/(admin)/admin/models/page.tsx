@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { CapabilityIcons } from "@/components/ui/capability-icons";
 import { Card } from "@/components/ui/card";
 import { Modal } from "@/components/ui/modal";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -31,6 +32,7 @@ export default function ModelsPage() {
   const unloadModel = useUnloadModel(tc);
   const [models, setModels] = useState<OllamaModel[]>([]);
   const [running, setRunning] = useState<OllamaRunningModel[]>([]);
+  const [capMap, setCapMap] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [connectionError, setConnectionError] = useState(false);
   const [search, setSearch] = useState("");
@@ -57,6 +59,14 @@ export default function ModelsPage() {
       const runningData = runningRes.ok ? await runningRes.json() : { models: [] };
       setModels(modelsData.models || []);
       setRunning(runningData.models || []);
+      fetch("/api/catalog")
+        .then((r) => (r.ok ? r.json() : []))
+        .then((catalog: { id: string; capabilities: string[] }[]) => {
+          const map: Record<string, string[]> = {};
+          for (const m of catalog) map[m.id] = m.capabilities;
+          setCapMap(map);
+        })
+        .catch(() => {});
     } catch {
       setConnectionError(true);
       setModels([]);
@@ -205,7 +215,14 @@ export default function ModelsPage() {
                       </Badge>
                     )}
                   </div>
-                  <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">{formatBytes(model.size)}</p>
+                  <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">
+                    {formatBytes(model.size)}
+                    {capMap[model.name.split(":")[0]] && (
+                      <span className="ml-2 inline-flex align-middle">
+                        <CapabilityIcons capabilities={capMap[model.name.split(":")[0]]} />
+                      </span>
+                    )}
+                  </p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {model.details?.family && <Badge variant="muted" className="text-[10px]">{model.details.family}</Badge>}
                     {model.details?.parameter_size && <Badge variant="muted" className="text-[10px]">{model.details.parameter_size}</Badge>}

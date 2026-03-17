@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import * as cheerio from "cheerio";
+import { ProxyAgent } from "undici";
 
 interface ScrapedModel {
   id: string;
@@ -58,13 +59,22 @@ function parseModelsFromHtml(html: string): ScrapedModel[] {
   return models;
 }
 
+function getProxyDispatcher(): ProxyAgent | undefined {
+  const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY || process.env.https_proxy || process.env.http_proxy;
+  if (!proxyUrl) return undefined;
+  return new ProxyAgent(proxyUrl);
+}
+
 async function fetchPage(url: string): Promise<string> {
-  const res = await fetch(url, {
+  const dispatcher = getProxyDispatcher();
+  const options: RequestInit & { dispatcher?: ProxyAgent } = {
     headers: {
       "User-Agent":
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
     },
-  });
+  };
+  if (dispatcher) options.dispatcher = dispatcher;
+  const res = await fetch(url, options);
   if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
   return res.text();
 }
