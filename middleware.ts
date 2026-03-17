@@ -59,9 +59,26 @@ export async function middleware(req: NextRequest) {
     return res;
   }
 
+  // Allow API key authentication for API routes
+  const authHeader = req.headers.get("authorization");
+  const hasApiKey = !!authHeader && authHeader.startsWith("Bearer oa-");
+
+  if (hasApiKey && path.startsWith("/api/")) {
+    const res = withNoCache(NextResponse.next(), path);
+    logRequest(method, path, res.status, Date.now() - start, "api-key");
+    return res;
+  }
+
   // Require authentication for everything else
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   if (!token) {
+    if (path.startsWith("/api/")) {
+      logRequest(method, path, 401, Date.now() - start, "unauthorized");
+      return new NextResponse(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
     const signInUrl = new URL("/auth/signin", req.url);
     signInUrl.searchParams.set("callbackUrl", path);
     logRequest(method, path, 302, Date.now() - start, "auth-redirect");
@@ -75,7 +92,7 @@ export async function middleware(req: NextRequest) {
     path.startsWith("/api/users") ||
     path.startsWith("/api/api-keys") ||
     path.startsWith("/settings");
-  if (isAdminOnly && token.role !== "admin") {
+  if (isAdminOnly && token?.role !== "admin") {
     logRequest(method, path, 403, Date.now() - start, "forbidden");
     return NextResponse.redirect(new URL("/", req.url));
   }

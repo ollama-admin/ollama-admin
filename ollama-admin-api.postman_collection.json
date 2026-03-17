@@ -1,0 +1,165 @@
+{
+  "info": {
+    "name": "Ollama Admin Proxy API",
+    "_postman_id": "ollama-admin-proxy-collection",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:3000" },
+    { "key": "api_key", "value": "" },
+    { "key": "model", "value": "gemma3:12b" },
+    { "key": "server_id", "value": "", "description": "Optional — defaults to first active server" }
+  ],
+  "item": [
+    {
+      "name": "List Servers",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/servers",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{api_key}}" }
+        ]
+      }
+    },
+    {
+      "name": "List Models",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/proxy/api/tags",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{api_key}}" }
+        ]
+      }
+    },
+    {
+      "name": "Running Models",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/proxy/api/ps",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{api_key}}" }
+        ]
+      }
+    },
+    {
+      "name": "Show Model Info",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/api/proxy/api/show",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{api_key}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"model\": \"{{model}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Generate (non-streaming)",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/api/proxy/api/generate",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{api_key}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"model\": \"{{model}}\",\n  \"prompt\": \"Hello, who are you?\",\n  \"stream\": false\n}"
+        }
+      }
+    },
+    {
+      "name": "Generate (streaming)",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/api/proxy/api/generate",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{api_key}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"model\": \"{{model}}\",\n  \"prompt\": \"Explain quantum computing in 2 sentences.\",\n  \"stream\": true\n}"
+        }
+      }
+    },
+    {
+      "name": "Chat (non-streaming)",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/api/proxy/api/chat",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{api_key}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"model\": \"{{model}}\",\n  \"messages\": [\n    { \"role\": \"system\", \"content\": \"You are a helpful assistant.\" },\n    { \"role\": \"user\", \"content\": \"What is 2+2?\" }\n  ],\n  \"stream\": false\n}"
+        }
+      }
+    },
+    {
+      "name": "Chat (streaming)",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/api/proxy/api/chat",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{api_key}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"model\": \"{{model}}\",\n  \"messages\": [\n    { \"role\": \"user\", \"content\": \"Write a haiku about programming.\" }\n  ],\n  \"stream\": true\n}"
+        }
+      }
+    },
+    {
+      "name": "Chat with Vision",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/api/proxy/api/chat",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{api_key}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"model\": \"{{model}}\",\n  \"messages\": [\n    { \"role\": \"user\", \"content\": \"What do you see in this image?\", \"images\": [\"BASE64_IMAGE_HERE\"] }\n  ],\n  \"stream\": false\n}"
+        }
+      }
+    },
+    {
+      "name": "Embeddings",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/api/proxy/api/embed",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{api_key}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"model\": \"{{model}}\",\n  \"input\": \"Hello world\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Unload Model",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/api/proxy/api/generate",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{api_key}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"model\": \"{{model}}\",\n  \"keep_alive\": 0\n}"
+        }
+      }
+    }
+  ]
+}
