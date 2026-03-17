@@ -3,8 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState, useCallback, useRef } from "react";
 import type { OllamaModel } from "@/lib/ollama";
-import { isVisionModel, loadCatalogCapabilities } from "@/lib/model-utils";
-import { Wrench, Upload, X, ImageIcon, AlertTriangle } from "lucide-react";
+import { Upload, X, ImageIcon, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -47,7 +46,7 @@ export default function OcrPage() {
   const { servers, selectedServer, setSelectedServer } = useServers();
   const unloadModel = useUnloadModel(tc);
 
-  const [visionModels, setVisionModels] = useState<OllamaModel[]>([]);
+  const [models, setModels] = useState<OllamaModel[]>([]);
   const [selectedModel, setSelectedModel] = useState("");
   const [loadingModels, setLoadingModels] = useState(true);
   const [connectionError, setConnectionError] = useState(false);
@@ -69,18 +68,17 @@ export default function OcrPage() {
       const res = await fetch(`/api/admin/models?serverId=${selectedServer}`);
       if (!res.ok) {
         setConnectionError(true);
-        setVisionModels([]);
+        setModels([]);
         setSelectedModel("");
         return;
       }
       const data = await res.json();
-      await loadCatalogCapabilities();
-      const vision = (data.models || []).filter(isVisionModel);
-      setVisionModels(vision);
-      setSelectedModel(vision.length > 0 ? vision[0].name : "");
+      const all = data.models || [];
+      setModels(all);
+      setSelectedModel(all.length > 0 ? all[0].name : "");
     } catch {
       setConnectionError(true);
-      setVisionModels([]);
+      setModels([]);
     } finally {
       setLoadingModels(false);
     }
@@ -185,7 +183,7 @@ export default function OcrPage() {
     setAnalyzing(false);
   };
 
-  if (loadingModels && visionModels.length === 0) {
+  if (loadingModels && models.length === 0) {
     return (
       <div className="p-6">
         <h1 className="text-2xl font-bold">{t("title")}</h1>
@@ -208,7 +206,7 @@ export default function OcrPage() {
     );
   }
 
-  if (visionModels.length === 0 && !loadingModels) {
+  if (models.length === 0 && !loadingModels) {
     return (
       <div className="p-6">
         <h1 className="text-2xl font-bold">{t("title")}</h1>
@@ -217,7 +215,7 @@ export default function OcrPage() {
             {servers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </Select>
         )}
-        <EmptyState icon={Wrench} title={t("noVisionModels")} description={t("noVisionModelsDescription")} />
+        <EmptyState icon={ImageIcon} title={t("noModels")} description={t("noModelsDescription")} />
       </div>
     );
   }
@@ -233,7 +231,7 @@ export default function OcrPage() {
             </Select>
           )}
           <Select value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)} className="w-auto">
-            {visionModels.map((m) => <option key={m.name} value={m.name}>{m.name}</option>)}
+            {models.map((m) => <option key={m.name} value={m.name}>{m.name}</option>)}
           </Select>
           <Button variant="secondary" size="sm" onClick={() => unloadModel(selectedModel, selectedServer)} title={tc("unload")} disabled={!selectedModel}>
             <Upload className="h-4 w-4" />
