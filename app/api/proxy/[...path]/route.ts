@@ -25,15 +25,9 @@ async function proxyToOllama(req: NextRequest) {
 
   logger.debug("Proxy request", { method: req.method, path, serverId });
 
-  if (!serverId) {
-    logger.warn("Proxy missing serverId", { path });
-    return new Response(JSON.stringify({ error: "serverId is required" }), {
-      status: 400,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-
-  const server = await prisma.server.findUnique({ where: { id: serverId } });
+  const server = serverId
+    ? await prisma.server.findUnique({ where: { id: serverId } })
+    : await prisma.server.findFirst({ where: { active: true }, orderBy: { createdAt: "asc" } });
   if (!server) {
     logger.warn("Proxy server not found", { serverId });
     return new Response(JSON.stringify({ error: "Server not found" }), {
